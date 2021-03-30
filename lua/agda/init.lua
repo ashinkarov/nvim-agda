@@ -177,7 +177,7 @@ local function handle_displayinfo(msg)
         end
         mk_window(p)
     else
-        print("Don't know how to handle DisplayInfo of kind: " 
+        print("Don't know how to handle DisplayInfo of kind: "
               .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
@@ -185,11 +185,11 @@ end
 
 -- Goals
 local function handle_interpoints(msg)
-    for k,v in pairs(msg["interactionPoints"]) do
-        local s = v["range"][1]["start"]
-        local e = v["range"][1]["end"]
-        goals[v["id"]] = {["start"] = {s["line"], s["col"]},
-                          ["end"] = {e["line"], e["col"]}}
+    for k,v in pairs(msg.interactionPoints) do
+        local s = v.range[1].start
+        local e = v.range[1]["end"]
+        goals[v.id] = {["start"] = {s.line, s.col},
+                       ["end"]   = {e.line, e.col}}
         --print("goal " .. v["id"] .. " :: " .. vim.inspect(goals[v["id"]]))
     end
 end
@@ -199,7 +199,7 @@ local function get_current_goal()
     local c = vim.fn.virtcol(".")
     --print("cur-loc: (" .. l .. ", " .. c ..")")
     local function cmp_lb(a, b)
-        if a[1] <= b[1] then return true
+        if a[1] < b[1] then return true
         elseif a[1] == b[1] then return a[2] <= b[2] end
         return false
     end
@@ -210,11 +210,12 @@ local function get_current_goal()
     end
     for k,v in pairs(goals) do
         if cmp_lb(v.start, {l,c}) and cmp_ub({l,c}, v["end"]) then
+           --print("cur-goal-found, loc=(" .. l ..  ", " .. c .. ")" 
+           --      .. vim.inspect(v.start) .. vim.inspect(v["end"]))
            return {k,v}
         end
     end
     return nil
-    --print(l, c)
 end
 
 -- The argument is a pair obtained from the get_current_goal.
@@ -291,7 +292,7 @@ local function handle_give(msg)
     local el = n["end"][1]
     local ec = n["end"][2]
 
-    -- Fucking vim apu is in bytes!
+    -- Fucking vim api is in bytes!
     local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, sl, true)
     local r = msg.giveResult.str
     local o = utf8.offset(content[1], sc)
@@ -300,6 +301,12 @@ local function handle_give(msg)
     vim.cmd("normal ca{" .. r)
 end
 
+local function handle_make_case(msg)
+    local n = goals[msg.interactionPoint.id]
+    local sl = n.start[1]
+    local el = n["end"][1]
+    vim.api.nvim_buf_set_lines(0, sl-1, el, true, msg.clauses)
+end
 --
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
@@ -311,6 +318,8 @@ local function handle_msg(msg)
         handle_interpoints(msg)
     elseif msg["kind"] == "GiveAction" then
         handle_give(msg)
+    elseif msg.kind == "MakeCase" then
+        handle_make_case(msg)
     else 
         print("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -426,6 +435,21 @@ function M.agda_infer(file)
     -- is empty, prompt the user for the expression.
     local g = vim.fn.input("Expression: ")
     agda_infer_toplevel(file, g)
+end
+
+function M.agda_make_case(file)
+    local n = get_current_goal()
+    if n ~= nil then
+        local content = get_goal_content(n)
+        if vim.trim(content) == "" then
+            content = vim.fn.input("Variables to split on:")
+        end
+        local g = vim.fn.json_encode(content)
+        local cmd = "(Cmd_make_case " .. n[1] .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    else
+        warning("cannot infer goal type, the cursor is not in the goal")
+    end
 end
 
 function M.agda_refine(file)
