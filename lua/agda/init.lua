@@ -2,10 +2,23 @@ local utf8 = require('lua-utf8')
 
 local M = {}
 
+-- Agda Process Handle.  Created by `agda_start`.
 local agda_job = nil
+
+-- The list of goals in the format {id = {start = {l,c}, end = {l,c}}}
+-- l and c are 1-based line and column as it is given by agda.
 local goals = {}
+
+-- Handles for the (vim)window and (vim)buffer that we use in
+-- `mk_window` to display popups.
 local msg_buf = nil
 local msg_win = nil
+
+-- Buffer for the bytes coming from the agda process.
+-- See `on_event` for the details on the usage.
+local evbuf = ""
+
+
 
 -- Helper functions
 local function error(msg)
@@ -110,20 +123,24 @@ local function handle_hl(msg)
         elseif (name == "comment") then return "Comment"
         -- TODO add more!
         else
-            print("Don't know hl-group for " .. name)
+            --name = name or "nil, WEIRD!!!"
+            --print("Don't know hl-group for " .. name)
             return "Normal"
         end
     end
 
     for k, v in pairs(msg["info"]["payload"]) do
         local r = v["range"]
+        -- FIXME s sometimes can be nil... Why?
         local s = find_line(r[1])
         local e = find_line(r[2])
-        local g = translate_hl_group(v["atoms"][1])
-        -- We are using the direct api call here instead of
-        -- vim.highlight.range(bufnr, -1, g, s, e), as we are sure
-        -- that the range that Agda sends is located on the same line.
-        vim.api.nvim_buf_add_highlight(bufnr, -1, g, s[1], s[2], e[2])
+        if #v.atoms > 0 then
+            local g = translate_hl_group(v.atoms[1])
+            -- We are using the direct api call here instead of
+            -- vim.highlight.range(bufnr, -1, g, s, e), as we are sure
+            -- that the range that Agda sends is located on the same line.
+            vim.api.nvim_buf_add_highlight(bufnr, -1, g, s[1], s[2], e[2])
+        end
         --print("hl: [" .. vim.inspect(s) .. ", " .. vim.inspect(e) .. "]  ", v["atoms"][1])
     end
 end
@@ -140,15 +157,6 @@ local function handle_displayinfo(msg)
             table.insert(p, v.originalName .. " : " .. v.binding)
         end
         mk_window (p)
-        --popup.create(
-        --    p,
-        --    {
-        --        line = msg.info.interactionPoint.range[1].start.line,
-        --        col = msg.info.interactionPoint.range[1].start.col,
-        --        title = "Context",
-        --        border = true,
-        --        minwidth = 20,
-        --    })
     else
         print("Don't know how to handle DisplayInfo of kind: " 
               .. msg["info"]["kind"] .. " :: " .. vim.inspect(msg))
@@ -183,8 +191,6 @@ local function get_current_goal()
     end
     for k,v in pairs(goals) do
         if cmp_lb(v.start, {l,c}) and cmp_ub({l,c}, v["end"]) then
-        --if l >= v["start"][1] and l <= v["end"][1]
-        --   and c >= v["start"][2] and c < v["end"][2] then
            return {k,v}
         end
     end
@@ -233,7 +239,7 @@ local function handle_give_XXX(msg)
     --print(vim.inspect(msg))
     local winnr = vim.fn.win_getid()
     local bufnr = vim.api.nvim_win_get_buf(winnr)
-    
+
     local n = goals[msg.interactionPoint.id]
     local sl = n.start[1]
     local sc = n.start[2]
@@ -292,18 +298,42 @@ local function handle_msg(msg)
 end
 
 
-local function on_event(job_id, data, event)
-    if event == "stdout" or event == "stderr" then
-        for _ , v in pairs(data) do
-            if (v ~= "JSON> " and v ~= "") then
-                --print("received: " .. vim.inspect(v))
-                handle_msg (vim.fn.json_decode(v))
-            end
-        end
-    end
-    -- if event == "exit" ...
+function M.getevbuf()
+    print("evbuf length is: " .. #evbuf)
 end
 
+local function on_event(job_id, data, event)
+    if event == "stdout" or event == "stderr" then
+        for _ , vv in pairs(data) do
+            local v = utf8.gsub(vv, "^JSON> ", "")
+            if v ~= "" then
+                --print("on_event: " .. counter .. ", " 
+                --      .. string.sub(v, 1, 100) .. " ... "
+                --      .. string.sub(v, -100)
+                --      .. " evbuf: '" .. string.sub(evbuf, 1, 5) .. "'")
+                -- XXX We assume that this starts the new json message,
+                -- therefore we can execute the previously accumulated buffer.
+                if prefix("{\"kind\":", v) or prefix("{\"status\":", v) then
+                    if evbuf ~= "" then
+                        handle_msg (vim.fn.json_decode(evbuf))
+                    end
+                    evbuf = v
+                else
+                    evbuf = evbuf .. v
+                end
+            end
+        end
+        -- If we have a valid json message in the evbuf, let's
+        -- execute it.  If not, we leave it for the next time this
+        -- function is called.
+        if evbuf ~= "" and pcall (vim.fn.json_decode, evbuf) then
+            handle_msg (vim.fn.json_decode(evbuf))
+            evbuf = ""
+        else
+            --print("Leaving evbuf for later")
+        end
+    end
+end
 
 function M.agda_start()
     agda_job = vim.fn.jobstart(
@@ -315,7 +345,7 @@ function M.agda_start()
             stdout_buffered = false,
             stderr_buffered = false,
         })
-    print("agda job is: ".. agda_job)
+    --print("agda job is: ".. agda_job)
 end
 
 local function agda_feed (file, cmd)
@@ -335,8 +365,7 @@ function M.agda_context(file)
     if n ~= nil then
         -- The goal content shold not matter
         --local g = get_goal_content(n)
-        local cmd = "(Cmd_context Normalised " .. n[1]
-                    .. " noRange \"\")"
+        local cmd = "(Cmd_context Normalised " .. n[1] .. " noRange \"\")"
         agda_feed(file, cmd)
     else
         warning("cannot infer goal type, the cursor is not in the goal")
