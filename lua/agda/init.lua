@@ -156,13 +156,14 @@ local function handle_interpoints(msg)
         local e = v["range"][1]["end"]
         goals[v["id"]] = {["start"] = {s["line"], s["col"]},
                           ["end"] = {e["line"], e["col"]}}
-        print("goal " .. v["id"] .. " :: " .. vim.inspect(goals[v["id"]]))
+        --print("goal " .. v["id"] .. " :: " .. vim.inspect(goals[v["id"]]))
     end
 end
 
 local function get_current_goal()
     local l = vim.fn.line(".")
-    local c = vim.fn.col(".")
+    local c = vim.fn.virtcol(".")
+    --print("cur-loc: (" .. l .. ", " .. c ..")")
     local function cmp_lb(a, b)
         if a[1] <= b[1] then return true
         elseif a[1] == b[1] then return a[2] <= b[2] end
@@ -184,8 +185,9 @@ local function get_current_goal()
     --print(l, c)
 end
 
-local function get_goal_content()
-    local n = get_current_goal()
+-- The argument is a pair obtained from the get_current_goal.
+local function get_goal_content(n)
+    --local n = get_current_goal()
     if n == nil then return nil end
 
     local sl = n[2].start[1]
@@ -197,9 +199,14 @@ local function get_goal_content()
     local bufnr = vim.api.nvim_win_get_buf(winnr)
     local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, el, true)
 
-    -- TODO check that the goal is not '?'
+    -- If the goal is "?", then it has no content.
+    if utf8.sub(content[1], sc, sc+1) == "?" then
+        return ""
+    end
+
+    -- Now we assume that the goal is "{! ... !}".
     local l = #content
-    print("goal lines " .. l)
+    --print("goal lines " .. l)
     if l == 1 then
         content[1] = utf8.sub(content[1], sc+2, ec-3)
     else
@@ -270,13 +277,12 @@ end
 function M.agda_context(file)
     local n = get_current_goal()
     if n ~= nil then
-        local g = "" --get_goal_content()
+        -- The goal content shold not matter
+        --local g = get_goal_content(n)
         local cmd = "(Cmd_context Normalised " .. n[1]
-                    .. " noRange \"" .. g .. "\")"
+                    .. " noRange \"\")"
         agda_feed(file, cmd)
     end
-    --n = n or "NOT A GOAL"
-    --print("current goal is: ".. n)
 end
 
 return M
