@@ -5,6 +5,7 @@ echom "Hello from ftplugin/agda"
 
 let LoadCmd    = luaeval("require'agda'.agda_load")
 let ContextCmd = luaeval("require'agda'.agda_context")
+let TypeContextCmd = luaeval("require'agda'.agda_type_context")
 let InferCmd   = luaeval("require'agda'.agda_infer")
 let RefineCmd  = luaeval("require'agda'.agda_refine")
 
@@ -12,6 +13,7 @@ let RefineCmd  = luaeval("require'agda'.agda_refine")
 command! AgdaStart lua require'agda'.agda_start()
 command! AgdaLoad :call LoadCmd(expand("%:p"))
 command! AgdaContext :call ContextCmd(expand("%:p"))
+command! AgdaTypeContext :call TypeContextCmd(expand("%:p"))
 command! AgdaInfer :call InferCmd(expand("%:p"))
 command! AgdaRefine :call RefineCmd(expand("%:p"))
 
@@ -24,7 +26,8 @@ command! GetEvbuf lua require'agda'.getevbuf()
 nm <buffer> <LocalLeader>l :<c-u>w<cr>:AgdaLoad<cr>
 " AgdaLoad<cr>
 nm <buffer> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
-nm <buffer> <LocalLeader>, :<c-u>AgdaContext<cr>
+nm <buffer> <LocalLeader>e :<c-u>AgdaContext<cr>
+nm <buffer> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
 nm <buffer> <LocalLeader>t :<c-u>AgdaInfer<cr>
 nm <buffer> <LocalLeader>r :<c-u>AgdaRefine<cr>
 

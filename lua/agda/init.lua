@@ -129,8 +129,8 @@ local function handle_hl(msg)
         end
     end
 
-    for k, v in pairs(msg["info"]["payload"]) do
-        local r = v["range"]
+    for k, v in pairs(msg.info.payload) do
+        local r = v.range
         -- FIXME s sometimes can be nil... Why?
         local s = find_line(r[1])
         local e = find_line(r[2])
@@ -147,19 +147,38 @@ end
 
 
 local function handle_displayinfo(msg)
-    if (msg["info"]["kind"] == "Error") then
-        vim.api.nvim_err_write("Error: " .. msg["info"]["message"])
-    elseif msg.info.kind == "Context" then
+    local delim_line = "================="
+    local inf = msg.info
+
+    if (inf.kind == "Error") then
+        vim.api.nvim_err_write("Error: " .. inf.message)
+    elseif inf.kind == "Context" then
         --print(vim.inspect(msg))
-        local p = {"Context",
-                   "================="}
-        for k,v in pairs(msg.info.context) do
+        local p = {"Context", deilim_line}
+        for k,v in pairs(inf.context) do
             table.insert(p, v.originalName .. " : " .. v.binding)
         end
-        mk_window (p)
+        mk_window(p)
+    elseif inf.kind == "GoalSpecific" then
+        local p = {}
+        local g = inf.goalInfo
+        if g.kind == "InferredType" then
+            p = {"Inferred Type: " .. g.expr, delim_line}
+        elseif g.kind == "GoalType" then
+            p = {"Goal Type: " .. g.type, delim_line}
+            for _,v in pairs(g.entries) do
+                table.insert(p, v.originalName .. " : " .. v.binding)
+            end
+        else
+            p = {"Don't know how to show " .. g.kind, delim_line}
+            for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
+                table.insert(p, v)
+            end
+        end
+        mk_window(p)
     else
         print("Don't know how to handle DisplayInfo of kind: " 
-              .. msg["info"]["kind"] .. " :: " .. vim.inspect(msg))
+              .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
 
@@ -230,7 +249,8 @@ local function get_goal_content(n)
 end
 
 function M.gc()
-    print("'" .. get_goal_content() .. "'")
+    n = get_current_goal()
+    print("'" .. get_goal_content(n) .. "'")
 end
 
 -- XXX This function works fine but it does not preserve hilighting
@@ -299,7 +319,7 @@ end
 
 
 function M.getevbuf()
-    print("evbuf length is: " .. #evbuf)
+    print("evbuf length is: " .. evbuf)
 end
 
 local function on_event(job_id, data, event)
@@ -364,8 +384,18 @@ function M.agda_context(file)
     local n = get_current_goal()
     if n ~= nil then
         -- The goal content shold not matter
-        --local g = get_goal_content(n)
         local cmd = "(Cmd_context Normalised " .. n[1] .. " noRange \"\")"
+        agda_feed(file, cmd)
+    else
+        warning("cannot infer goal type, the cursor is not in the goal")
+    end
+end
+
+function M.agda_type_context(file)
+    local n = get_current_goal()
+    if n ~= nil then
+        -- The goal content shold not matter
+        local cmd = "(Cmd_goal_type_context Normalised " .. n[1] .. " noRange \"\")"
         agda_feed(file, cmd)
     else
         warning("cannot infer goal type, the cursor is not in the goal")
@@ -384,13 +414,18 @@ function M.agda_infer(file)
         -- 1. As the goal content may span over a few lines,
         --    each \n has to be quoted;
         -- 2. It puts "" around the string.
-        local g = vim.fn.json_encode(get_goal_content(n))
-        local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    else
-        local g = vim.fn.input("Expression: ")
-        agda_infer_toplevel(file, g)
+        local content = get_goal_content(n)
+        if vim.trim(content) ~= "" then 
+           local g = vim.fn.json_encode(content)
+           local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
+           agda_feed(file, cmd)
+           return
+        end
     end
+    -- In case we are not in the goal, or the content of the goal
+    -- is empty, prompt the user for the expression.
+    local g = vim.fn.input("Expression: ")
+    agda_infer_toplevel(file, g)
 end
 
 function M.agda_refine(file)
