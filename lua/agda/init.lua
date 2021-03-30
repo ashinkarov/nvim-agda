@@ -12,6 +12,14 @@ local function error(msg)
     vim.api.nvim_err_writeln(msg)
 end
 
+local function warning(msg)
+    print("Warning: " .. msg)
+end
+
+local function prefix(p, s)
+    return p == string.sub(s, 1, #p)
+end
+
 -- Create window for messages
 local function mk_window(lines)
     if msg_buf == nil then
@@ -125,10 +133,9 @@ local function handle_displayinfo(msg)
     if (msg["info"]["kind"] == "Error") then
         vim.api.nvim_err_write("Error: " .. msg["info"]["message"])
     elseif msg.info.kind == "Context" then
-        print(vim.inspect(msg))
+        --print(vim.inspect(msg))
         local p = {"Context",
-                   "=======",
-                   ""}
+                   "================="}
         for k,v in pairs(msg.info.context) do
             table.insert(p, v.originalName .. " : " .. v.binding)
         end
@@ -220,7 +227,54 @@ function M.gc()
     print("'" .. get_goal_content() .. "'")
 end
 
--- 
+-- XXX This function works fine but it does not preserve hilighting
+-- Replace the goal with the refined result
+local function handle_give_XXX(msg)
+    --print(vim.inspect(msg))
+    local winnr = vim.fn.win_getid()
+    local bufnr = vim.api.nvim_win_get_buf(winnr)
+    
+    local n = goals[msg.interactionPoint.id]
+    local sl = n.start[1]
+    local sc = n.start[2]
+    local el = n["end"][1]
+    local ec = n["end"][2]
+
+    local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, el, true)
+
+    -- Now we assume that the goal is "{! ... !}".
+    local l = #content
+    local r = msg.giveResult.str
+    --print("goal lines " .. l)
+    local pref = utf8.sub(content[1], 1, sc-1) .. r
+    local post = utf8.sub(content[l], ec)
+    if l == 1 or post == "" then
+        vim.api.nvim_buf_set_lines(bufnr, sl-1, el, true, {pref .. post})
+    else
+        vim.api.nvim_buf_set_lines(bufnr, sl-1, el, true, {pref, post})
+    end
+end
+
+
+local function handle_give(msg)
+    local winnr = vim.fn.win_getid()
+    local bufnr = vim.api.nvim_win_get_buf(winnr)
+    local n = goals[msg.interactionPoint.id]
+    local sl = n.start[1]
+    local sc = n.start[2]
+    local el = n["end"][1]
+    local ec = n["end"][2]
+
+    -- Fucking vim apu is in bytes!
+    local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, sl, true)
+    local r = msg.giveResult.str
+    local o = utf8.offset(content[1], sc)
+    -- 1-based lines, 0-based columns!
+    vim.api.nvim_win_set_cursor(winnr, {sl, o-1})
+    vim.cmd("normal ca{" .. r)
+end
+
+--
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
     if (msg["kind"] == "HighlightingInfo") then 
@@ -229,6 +283,8 @@ local function handle_msg(msg)
         handle_displayinfo(msg)
     elseif msg["kind"] == "InteractionPoints" then
         handle_interpoints(msg)
+    elseif msg["kind"] == "GiveAction" then
+        handle_give(msg)
     else 
         print("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -282,7 +338,42 @@ function M.agda_context(file)
         local cmd = "(Cmd_context Normalised " .. n[1]
                     .. " noRange \"\")"
         agda_feed(file, cmd)
+    else
+        warning("cannot infer goal type, the cursor is not in the goal")
     end
 end
+
+local function agda_infer_toplevel(file, e)
+    local cmd = "(Cmd_infer_toplevel Normalised \"" .. e .. "\")"
+    agda_feed(file, cmd)
+end
+
+function M.agda_infer(file)
+    local n = get_current_goal()
+    if n ~= nil then
+        -- This encoding is crucial for the following reasons:
+        -- 1. As the goal content may span over a few lines,
+        --    each \n has to be quoted;
+        -- 2. It puts "" around the string.
+        local g = vim.fn.json_encode(get_goal_content(n))
+        local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    else
+        local g = vim.fn.input("Expression: ")
+        agda_infer_toplevel(file, g)
+    end
+end
+
+function M.agda_refine(file)
+    local n = get_current_goal()
+    if n ~= nil then
+        local g = vim.fn.json_encode(get_goal_content(n))
+        local cmd = "(Cmd_refine_or_intro True " .. n[1] .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    else
+        warning("cannot refine, the cursor is not in the goal")
+    end
+end
+
 
 return M
