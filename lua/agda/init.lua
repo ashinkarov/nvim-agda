@@ -19,6 +19,14 @@ local msg_win = nil
 local evbuf = ""
 
 
+--local syncg = false
+local sfunc = nil
+local sargs = nil
+
+local error_count = 0
+
+local showImplicitArgs = false
+
 
 -- Helper functions
 local function error(msg)
@@ -32,6 +40,15 @@ end
 local function prefix(p, s)
     return p == string.sub(s, 1, #p)
 end
+
+local function len(t)
+    l = 0
+    for _,_ in pairs(t) do
+        l = l + 1
+    end
+    return l
+end
+
 
 -- Create window for messages
 local function mk_window(lines)
@@ -134,7 +151,11 @@ local function handle_hl(msg)
         -- FIXME s sometimes can be nil... Why?
         local s = find_line(r[1])
         local e = find_line(r[2])
-        if #v.atoms > 0 then
+
+        if s == nil or e == nil then
+            print("handle_hl: crazy s=nil state " .. vim.inspect(msg.info.payload))
+        
+        elseif #v.atoms > 0 then
             local g = translate_hl_group(v.atoms[1])
             -- We are using the direct api call here instead of
             -- vim.highlight.range(bufnr, -1, g, s, e), as we are sure
@@ -151,6 +172,10 @@ local function handle_displayinfo(msg)
     local inf = msg.info
 
     if (inf.kind == "Error") then
+        error_count = error_count + 1
+        -- clear all the possible continuations
+        sfunc = nil
+        sargs = nil
         vim.api.nvim_err_write("Error: " .. inf.message)
     elseif inf.kind == "Context" then
         --print(vim.inspect(msg))
@@ -164,11 +189,11 @@ local function handle_displayinfo(msg)
         local g = inf.goalInfo
         if g.kind == "InferredType" then
             p = {"Inferred Type: " .. g.expr, delim_line}
-        elseif g.kind == "GoalType" then
-            p = {"Goal Type: " .. g.type, delim_line}
-            for _,v in pairs(g.entries) do
-                table.insert(p, v.originalName .. " : " .. v.binding)
-            end
+        --elseif g.kind == "GoalType" then
+        --    p = {"Goal Type: " .. g.type, delim_line}
+        --    for _,v in pairs(g.entries) do
+        --        table.insert(p, v.originalName .. " : " .. v.binding)
+        --    end
         else
             p = {"Don't know how to show " .. g.kind, delim_line}
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
@@ -176,15 +201,23 @@ local function handle_displayinfo(msg)
             end
         end
         mk_window(p)
-    else
-        print("Don't know how to handle DisplayInfo of kind: "
-              .. inf.kind .. " :: " .. vim.inspect(msg))
+    --else
+    --    print("Don't know how to handle DisplayInfo of kind: "
+    --          .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
 
 
 -- Goals
+
+local function print_goals()
+    for k,v in pairs(goals) do
+        print (k .. " : " .. vim.inspect(v.start) .. vim.inspect(v["end"]))
+    end
+end
+
 local function handle_interpoints(msg)
+    goals = {}
     for k,v in pairs(msg.interactionPoints) do
         local s = v.range[1].start
         local e = v.range[1]["end"]
@@ -192,7 +225,19 @@ local function handle_interpoints(msg)
                        ["end"]   = {e.line, e.col}}
         --print("goal " .. v["id"] .. " :: " .. vim.inspect(goals[v["id"]]))
     end
+    print("hanle interpoints, got: " .. len(goals) .. " goals")
+    --vim.cmd('w')
+    --print("new goals")
+    --print_goals()
+    if sfunc ~= nil then
+        print("resuming suspended function")
+        sfunc(unpack(sargs))
+        sfunc = nil
+        sargs = nil
+    end
+    --syncg = false
 end
+
 
 local function get_current_goal()
     local l = vim.fn.line(".")
@@ -208,6 +253,9 @@ local function get_current_goal()
         elseif a[1] == b[1] then return a[2] < b[2] end
         return false
     end
+    --print("inside get_current_goal")
+    --print_goals()
+    --print("looking for goal @ (" .. l .. ", " .. c ..")")
     for k,v in pairs(goals) do
         if cmp_lb(v.start, {l,c}) and cmp_ub({l,c}, v["end"]) then
            --print("cur-goal-found, loc=(" .. l ..  ", " .. c .. ")" 
@@ -307,6 +355,13 @@ local function handle_make_case(msg)
     local el = n["end"][1]
     vim.api.nvim_buf_set_lines(0, sl-1, el, true, msg.clauses)
 end
+
+local function handle_status(msg)
+    local a = msg.status.showImplicitArgs
+    if a ~= nil then
+        showImplicitArgs = a
+    end
+end
 --
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
@@ -320,6 +375,8 @@ local function handle_msg(msg)
         handle_give(msg)
     elseif msg.kind == "MakeCase" then
         handle_make_case(msg)
+    elseif msg.kind == "Status" then
+        handle_status(msg)
     else 
         print("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -332,7 +389,7 @@ function M.getevbuf()
 end
 
 local function on_event(job_id, data, event)
-    if event == "stdout" or event == "stderr" then
+    if event == "stdout"  then
         for _ , vv in pairs(data) do
             local v = utf8.gsub(vv, "^JSON> ", "")
             if v ~= "" then
@@ -361,6 +418,8 @@ local function on_event(job_id, data, event)
         else
             --print("Leaving evbuf for later")
         end
+    elseif event == "stderr" then
+        error("Agda interaction error: " .. table.concat(data, "\n"))
     end
 end
 
@@ -381,34 +440,73 @@ local function agda_feed (file, cmd)
     if (agda_job == nil) then
         M.agda_start()
     end
-    local msg = "IOTCM \"" .. file .. "\" NonInteractive Direct " .. cmd
+    local msg = "IOTCM \"" .. file .. "\" Interactive Direct " .. cmd
     vim.fn.jobsend(agda_job, {msg, ""})
 end
 
 function M.agda_load (file)
+    error_count = 0
     agda_feed(file, "(Cmd_load \"" .. file .. "\" [])")
 end
 
-function M.agda_context(file)
-    local n = get_current_goal()
-    if n ~= nil then
-        -- The goal content shold not matter
-        local cmd = "(Cmd_context Normalised " .. n[1] .. " noRange \"\")"
-        agda_feed(file, cmd)
+
+-- Wrap a function to run after the goals are updated.
+local function wrap_goal_action(func, file)
+    if vim.fn.getbufinfo()[1].changed == 1 or error_count > 0 then
+        if sfunc ~= nil then
+            warning("an operation on the goal in progress")
+            return
+        end
+        print("suspending agda_context till the update")
+        sfunc = func
+        sargs = {}
+        vim.cmd('w')
+        M.agda_load(file)
     else
-        warning("cannot infer goal type, the cursor is not in the goal")
+        func()
+    end
+end
+
+function M.agda_context(file)
+    wrap_goal_action(function ()
+        local n = get_current_goal()
+        if n ~= nil then
+            -- The goal content shold not matter
+            local cmd = "(Cmd_context HeadNormal " .. n[1] .. " noRange \"\")"
+            agda_feed(file, cmd)
+        else
+            warning("cannot infer goal type, the cursor is not in the goal")
+        end
+    end, file)
+end
+
+local function toggle_implicit(file, b)
+    if b then
+        agda_feed(file, "(ShowImplicitArgs True)")
+    else
+        agda_feed(file, "(ShowImplicitArgs False)")
     end
 end
 
 function M.agda_type_context(file)
-    local n = get_current_goal()
-    if n ~= nil then
-        -- The goal content shold not matter
-        local cmd = "(Cmd_goal_type_context Normalised " .. n[1] .. " noRange \"\")"
-        agda_feed(file, cmd)
-    else
-        warning("cannot infer goal type, the cursor is not in the goal")
-    end
+    wrap_goal_action(function ()
+        local n = get_current_goal()
+        if n ~= nil then
+            -- The goal content shold not matter
+            local cmd = "(Cmd_goal_type_context Normalised " .. n[1] .. " noRange \"\")"
+            -- XXX not sure whether we can avoid this, it
+            -- seems that agda_load sets the this flag to false.
+            if not showImplicitArgs then
+                toggle_implicit(file,true)
+                agda_feed(file, cmd)
+                toggle_implicit(file,false)
+            else
+                agda_feed(file, cmd)
+            end
+        else
+            warning("cannot obtain goal type and context, the cursor is not in the goal")
+        end
+    end, file)
 end
 
 local function agda_infer_toplevel(file, e)
@@ -417,51 +515,61 @@ local function agda_infer_toplevel(file, e)
 end
 
 function M.agda_infer(file)
-    local n = get_current_goal()
-    if n ~= nil then
-        -- This encoding is crucial for the following reasons:
-        -- 1. As the goal content may span over a few lines,
-        --    each \n has to be quoted;
-        -- 2. It puts "" around the string.
-        local content = get_goal_content(n)
-        if vim.trim(content) ~= "" then 
-           local g = vim.fn.json_encode(content)
-           local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
-           agda_feed(file, cmd)
-           return
+    wrap_goal_action(function ()
+        local n = get_current_goal()
+        if n ~= nil then
+            local content = get_goal_content(n)
+            if vim.trim(content) ~= "" then 
+               local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+               local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
+               agda_feed(file, cmd)
+            else
+                warning("The goal is empty")
+            end
+        else
+            -- In case we are not in the goal, or the content of the goal
+            -- is empty, prompt the user for the expression.
+            local g = vim.fn.input("Expression: ")
+            agda_infer_toplevel(file, g)
         end
-    end
-    -- In case we are not in the goal, or the content of the goal
-    -- is empty, prompt the user for the expression.
-    local g = vim.fn.input("Expression: ")
-    agda_infer_toplevel(file, g)
+    end, file)
 end
 
 function M.agda_make_case(file)
-    local n = get_current_goal()
-    if n ~= nil then
-        local content = get_goal_content(n)
-        if vim.trim(content) == "" then
-            content = vim.fn.input("Variables to split on:")
+    wrap_goal_action(function ()
+        local n = get_current_goal()
+        if n ~= nil then
+            local content = get_goal_content(n)
+            if vim.trim(content) == "" then
+                content = vim.fn.input("Variables to split on:")
+            end
+            local g = vim.fn.json_encode(content)
+            local cmd = "(Cmd_make_case " .. n[1] .. " noRange " .. g .. ")"
+            agda_feed(file, cmd)
+        else
+            warning("cannot make case, the cursor is not in the goal")
         end
-        local g = vim.fn.json_encode(content)
-        local cmd = "(Cmd_make_case " .. n[1] .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    else
-        warning("cannot infer goal type, the cursor is not in the goal")
-    end
+    end, file)
 end
 
 function M.agda_refine(file)
-    local n = get_current_goal()
-    if n ~= nil then
-        local g = vim.fn.json_encode(get_goal_content(n))
-        local cmd = "(Cmd_refine_or_intro True " .. n[1] .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    else
-        warning("cannot refine, the cursor is not in the goal")
-    end
+    wrap_goal_action(function ()
+        local n = get_current_goal()
+        if n ~= nil then
+            local g = vim.fn.json_encode(get_goal_content(n))
+            local cmd = "(Cmd_refine_or_intro True " .. n[1] .. " noRange " .. g .. ")"
+            agda_feed(file, cmd)
+        else
+            warning("cannot refine, the cursor is not in the goal")
+        end
+    end, file)
 end
 
+function M.toggle_implicit(file)
+    --agda_feed(file, "ToggleIrrelevantArgs")
+    agda_feed(file, "(ShowImplicitArgs True)")
+    --agda_feed(file, "(ShowIrrelevantArgs True)")
+    print("ArgsToggled")
+end
 
 return M

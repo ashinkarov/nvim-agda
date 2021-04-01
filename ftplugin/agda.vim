@@ -9,6 +9,7 @@ let TypeContextCmd = luaeval("require'agda'.agda_type_context")
 let InferCmd   = luaeval("require'agda'.agda_infer")
 let RefineCmd  = luaeval("require'agda'.agda_refine")
 let MakeCaseCmd  = luaeval("require'agda'.agda_make_case")
+let ToggleImplicitCmd  = luaeval("require'agda'.toggle_implicit")
 
 " Vim commands
 command! AgdaStart lua require'agda'.agda_start()
@@ -18,6 +19,7 @@ command! AgdaTypeContext :call TypeContextCmd(expand("%:p"))
 command! AgdaInfer :call InferCmd(expand("%:p"))
 command! AgdaRefine :call RefineCmd(expand("%:p"))
 command! AgdaMakeCase :call MakeCaseCmd(expand("%:p"))
+command! ToggleImplicit :call ToggleImplicitCmd(expand("%:p"))
 
 command! AgdaCloseMsg lua require'agda'.close_msg_win()
 command! GoalContent lua require'agda'.gc()
