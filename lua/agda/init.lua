@@ -16,6 +16,7 @@ local goals = {}
 -- `mk_window` to display popups.
 local msg_buf = nil
 local msg_win = nil
+local msg_min_width = 25
 
 -- Buffer for the bytes coming from the agda process.
 -- See `on_event` for the details on the usage.
@@ -38,6 +39,7 @@ local main_buf = vim.api.nvim_win_get_buf(main_win)
 -- Prompt window and buffer
 local pwin = nil
 local pbuf = nil
+local pmin_width = 25
 
 
 
@@ -66,6 +68,25 @@ end
 
 local function debug(x)
     print(vim.inspect(x))
+end
+
+local function max_width(lines)
+    local max = 0
+    for k,v in pairs(lines) do
+        local l = utf8.len(v)
+        if l > max then
+            max = l
+        end
+    end
+    return max
+end
+
+local function mk_delim(w)
+    local s = ""
+    for i = 1,w do
+        s = s .. "─"
+    end
+    return s
 end
 
 -- This one reiles on the presence of main_buf variable.
@@ -144,7 +165,7 @@ local function mk_prompt_window(file, goalid, loff)
             relative='win',
             row=goalid[2].start[1] - visl + 1,
             col=goalid[2].start[2],
-            width=20,
+            width=pmin_width,
             height=1,
             style="minimal",
             anchor="SW"
@@ -157,28 +178,11 @@ end
 -- the file where the goal is located.  If `l` and `c` are omitted
 -- the window is shown at the current position of the cursor.
 local function mk_window(lines,l,c)
-    --debug(l)
     if msg_buf == nil then
         msg_buf = vim.api.nvim_create_buf(false, true)
     end
 
-    --local closingKeys = {'<Esc>', '<CR>', '<Leader>'}
-    --for _,k in pairs(closingKeys) do
-    --    vim.api.nvim_buf_set_keymap(
-    --        msg_buf, 'n', k, ':close<CR>',
-    --        {silent=true, nowait=true, noremap=true})
-    --end
-
-    -- FIXME lift to helper function
-    local max = 0
-    for k,v in pairs(lines) do
-        local l = utf8.len(v)
-        --lines[k] = " " .. lines[k]
-        if l > max then
-            max = l
-        end
-    end
-
+    local max = max_width(lines)
     vim.api.nvim_buf_set_lines(msg_buf, 0, -1, true, lines)
 
     if msg_win ~= nil then
@@ -186,9 +190,9 @@ local function mk_window(lines,l,c)
     end
 
     state = {
-            width=max, --+2,
-            height=#lines, --+2,
-            style="minimal"
+        width=math.max(max,msg_min_width),
+        height=#lines,
+        style="minimal"
     }
     if l == nil or c == nil then
         state.relative='cursor'
@@ -201,7 +205,7 @@ local function mk_window(lines,l,c)
         state.col = c
     end
 
-    --print("mk_win: l="..(l or "nil")..", ".."c="..(c or nil).."; "..vim.inspect(state))
+    --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
 
     --FIXME figure out a good way to give a message window a better color.
@@ -280,9 +284,19 @@ end
 
 
 local function handle_displayinfo(msg)
-    local delim_line = "================="
-    local inf = msg.info
+    -- Add delimiting lines in the first position
+    -- and in the third, in case the second argument is true.
+    local function add_sep(lines,third_p)
+        m = max_width(lines)
+        l = mk_delim(math.max(msg_min_width, m))
+        table.insert(lines,1,l)
+        if third_p then
+            table.insert(lines,3,l)
+        end
+        return lines
+    end
 
+    local inf = msg.info
     if (inf.kind == "Error") then
         print(vim.inspect(msg))
         -- if the prompt window is open, the error message (most likely!)
@@ -296,33 +310,35 @@ local function handle_displayinfo(msg)
         end
         vim.api.nvim_err_writeln("Error: " .. inf.message)
     elseif inf.kind == "Context" then
-        local p = {"Context", deilim_line}
+        local p = {"Context"}
         for k,v in pairs(inf.context) do
             table.insert(p, v.originalName .. " : " .. v.binding)
         end
-        mk_window(p)
+        mk_window(add_sep(p,true))
     elseif inf.kind == "InferredType" then
-        mk_window({"Inferred Type: " .. inf.expr})
+        mk_window(add_sep({"Inferred Type: " .. inf.expr}))
     elseif inf.kind == "NormalForm" then
-        mk_window({"Normal Form: " .. inf.expr})
+        mk_window(add_sep({"Normal Form: " .. inf.expr}))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
         local ip = inf.interactionPoint
         if g.kind == "InferredType" then
-            p = {"Inferred Type: " .. g.expr, delim_line}
+            p = add_sep({"Inferred Type: " .. g.expr})
         elseif g.kind == "NormalForm" then
-            p = {"Normal Form: " .. g.expr, delim_line}
+            p = add_sep({"Normal Form: " .. g.expr})
         elseif g.kind == "GoalType" then
-            p = {"Goal Type: " .. g.type, delim_line}
+            p = {"Goal Type: " .. g.type}
             for _,v in pairs(g.entries) do
                 table.insert(p, v.originalName .. " : " .. v.binding)
             end
+            p = add_sep(p,true)
         else
-            p = {"Don't know how to show " .. g.kind, delim_line}
+            p = {"Don't know how to show " .. g.kind}
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
                 table.insert(p, v)
             end
+            p = add_sep(p,true)
             print(vim.inspect(msg))
         end
         -- We assume that GoalSpecific things always have a location
@@ -378,8 +394,6 @@ local function get_current_goal(line, col)
         elseif a[1] == b[1] then return a[2] < b[2] end
         return false
     end
-    --print("inside get_current_goal")
-    --print_goals()
     --print("looking for goal @ (" .. l .. ", " .. c ..")")
     for k,v in pairs(goals) do
         if cmp_lb(v.start, {l,c}) and cmp_ub({l,c}, v["end"]) then
@@ -393,7 +407,6 @@ end
 
 -- The argument is a goal id.
 local function get_goal_content(id)
-    --local n = get_current_goal()
     local n = goals[id]
     if n == nil then return nil end
 
@@ -403,8 +416,6 @@ local function get_goal_content(id)
     local el = n["end"][1]
     local ec = n["end"][2]
 
-    --local winnr = vim.fn.win_getid()
-    --local bufnr = vim.api.nvim_win_get_buf(winnr)
     local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, el, true)
 
     -- If the goal is "?", then it has no content.
@@ -461,9 +472,7 @@ end
 
 
 local function handle_give(msg)
-    --local winnr = vim.fn.win_getid()
-    --local bufnr = vim.api.nvim_win_get_buf(winnr)
-    debug(msg)
+    --debug(msg)
     local n = goals[msg.interactionPoint.id]
     local sl = n.start[1]
     local sc = n.start[2]
@@ -495,7 +504,7 @@ local function handle_make_case(msg)
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
 
     if pwin ~= nil then
-        print("closing window, setting buffer to nothing")
+        --print("closing window, setting buffer to nothing")
         M.close_prompt_win()
         vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
     end
@@ -724,7 +733,7 @@ function M.agda_make_case(file,id)
         end
         local content = get_trimmed_content(id)
         if content == "" then
-            content = vim.fn.input("Variables to split on:")
+            content = vim.fn.input("Variables to split on: ")
         end
         local g = vim.fn.json_encode(content)
         local cmd = "(Cmd_make_case " .. id .. " noRange " .. g .. ")"
@@ -792,7 +801,7 @@ function M.edit_goal(file)
             local visl = vim.fn.line("w0")
             mk_prompt_window(file, n, visl)
         else
-            warning("cannot refine, the cursor is not in the goal")
+            warning("cannot edit goal, the cursor is not in the goal")
         end
     end, file)
 end
