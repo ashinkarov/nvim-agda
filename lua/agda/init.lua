@@ -2,6 +2,9 @@ local utf8 = require('lua-utf8')
 
 local M = {}
 
+------ State Variable ------
+----------------------------
+
 -- Agda Process Handle.  Created by `agda_start`.
 local agda_job = nil
 
@@ -27,8 +30,20 @@ local error_count = 0
 
 local showImplicitArgs = false
 
+-- Main window handles
+-- XXX should we set them up at Agda load?
+local main_win = vim.fn.win_getid()
+local main_buf = vim.api.nvim_win_get_buf(main_win)
 
--- Helper functions
+-- Prompt window and buffer
+local pwin = nil
+local pbuf = nil
+
+
+
+------ Helper functions ------
+------------------------------
+
 local function error(msg)
     vim.api.nvim_err_writeln(msg)
 end
@@ -49,24 +64,116 @@ local function len(t)
     return l
 end
 
+local function debug(x)
+    print(vim.inspect(x))
+end
 
--- Create window for messages
-local function mk_window(lines)
+-- This one reiles on the presence of main_buf variable.
+local function main_buf_changed()
+    for _,v in pairs(vim.fn.getbufinfo()) do
+        if v.bufnr == main_buf then
+            return v.changed
+        end
+    end
+    return nil
+end
+
+-- Get the first visible line number in the main window
+local function main_win_visl()
+    local w = vim.fn.win_getid()
+    local visl = nil
+    if w ~= main_win then
+        vim.fn.win_gotoid(main_win)
+        visl = vim.fn.line("w0")
+        vim.fn.win_gotoid(w)
+    else
+        visl = vim.fn.line("w0")
+    end
+    return visl
+end
+
+
+-- Loc class
+-- FIXME move to separate file
+Loc = {}
+Loc.__index = Loc
+
+function Loc:new(l,c)
+    local loc = {}
+    setmetatable(loc,Loc)
+    loc.line = l
+    loc.col = c
+    return loc
+end
+
+
+------ Agda interaction-related functions ------
+------------------------------------------------
+
+function M.close_prompt_win()
+    if pwin ~= nil then
+        vim.api.nvim_win_close(pwin, true)
+        pwin = nil
+    end
+end
+
+local function mk_prompt_window(file, goalid, loff)
+    if pbuf == nil then
+        pbuf = vim.api.nvim_create_buf(false, true)
+    end
+
+    local status = {silent=true, nowait=true, noremap=true}
+    local function mk_mapping(key, fun, args)
+        vim.api.nvim_buf_set_keymap(
+            pbuf, 'n', key, 
+            ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
+            status)
+    end
+    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>q", "close_msg_win",     "")
+    mk_mapping("q",              "close_prompt_win",  "")
+
+    local visl = loff or 1
+    pwin = vim.api.nvim_open_win(
+        pbuf, true,
+        {
+            relative='win',
+            row=goalid[2].start[1] - visl + 1,
+            col=goalid[2].start[2],
+            width=20,
+            height=1,
+            style="minimal",
+            anchor="SW"
+        })
+
+end
+
+
+-- Show message window.  `l` and `c` are line and column in
+-- the file where the goal is located.  If `l` and `c` are omitted
+-- the window is shown at the current position of the cursor.
+local function mk_window(lines,l,c)
+    --debug(l)
     if msg_buf == nil then
         msg_buf = vim.api.nvim_create_buf(false, true)
     end
 
-    local closingKeys = {'<Esc>', '<CR>', '<Leader>'}
-    for _,k in pairs(closingKeys) do
-        vim.api.nvim_buf_set_keymap(
-            msg_buf, 'n', k, ':close<CR>',
-            {silent=true, nowait=true, noremap=true})
-    end
+    --local closingKeys = {'<Esc>', '<CR>', '<Leader>'}
+    --for _,k in pairs(closingKeys) do
+    --    vim.api.nvim_buf_set_keymap(
+    --        msg_buf, 'n', k, ':close<CR>',
+    --        {silent=true, nowait=true, noremap=true})
+    --end
 
+    -- FIXME lift to helper function
     local max = 0
     for k,v in pairs(lines) do
-        l = utf8.len(v)
-        lines[k] = " " .. lines[k]
+        local l = utf8.len(v)
+        --lines[k] = " " .. lines[k]
         if l > max then
             max = l
         end
@@ -78,18 +185,28 @@ local function mk_window(lines)
         vim.api.nvim_win_close(msg_win, true)
     end
 
-    msg_win = vim.api.nvim_open_win(
-        msg_buf, false,
-        {
-            relative='cursor',
-            row=1,
-            col=1,
-            width=max+2,
-            height=#lines+2,
+    state = {
+            width=max, --+2,
+            height=#lines, --+2,
             style="minimal"
-        })
+    }
+    if l == nil or c == nil then
+        state.relative='cursor'
+        state.row=1
+        state.col=1
+    else
+        local visl = main_win_visl()
+        state.relative = 'win'
+        state.row = l - visl + 1
+        state.col = c
+    end
 
-    --vim.api.nvim_win_set_option(msg_win, 'winhl', "Normal:ErrorFloat")
+    --print("mk_win: l="..(l or "nil")..", ".."c="..(c or nil).."; "..vim.inspect(state))
+    msg_win = vim.api.nvim_open_win(msg_buf, false, state)
+
+    --FIXME figure out a good way to give a message window a better color.
+    --vim.cmd('hi Active ctermbg=DarkYellow ctermfg=Black')
+    --vim.api.nvim_win_set_option(msg_win, 'winhl', "Normal:Active")
 end
 
 function M.close_msg_win()
@@ -101,23 +218,19 @@ end
 
 
 local function handle_hl(msg)
-    local winnr = vim.fn.win_getid()
-    local bufnr = vim.api.nvim_win_get_buf(winnr)
-
     -- Get line lengths so that we can compute offsets
     -- in the (#line, #line-offset) format.
-    local content = vim.api.nvim_buf_get_lines(bufnr, 0, -1, true)
+    local content = vim.api.nvim_buf_get_lines(main_buf, 0, -1, true)
     local lines = {}
     local total = 1
     for i = 1, #content do
         local len = utf8.len(content[i])
         lines[i] = {total, total+len}
-        --print("line-"..i..": ".. content[i], vim.inspect(lines[i]))
         total = total + len + 1
     end
 
     -- Convert an offset into a line/lineoffset format
-    -- taht is suitable for the vim highlighter.
+    -- that is suitable for the vim highlighter.
     local function find_line(offset)
         for i,v in pairs(lines) do
             if (offset >= v[1] and offset <= v[2]) then
@@ -153,8 +266,7 @@ local function handle_hl(msg)
         local e = find_line(r[2])
 
         if s == nil or e == nil then
-            print("handle_hl: crazy s=nil state " .. vim.inspect(msg.info.payload))
-        
+            print("handle_hl: crazy s=nil state " .. vim.inspect(v))
         elseif #v.atoms > 0 then
             local g = translate_hl_group(v.atoms[1])
             -- We are using the direct api call here instead of
@@ -172,50 +284,65 @@ local function handle_displayinfo(msg)
     local inf = msg.info
 
     if (inf.kind == "Error") then
-        error_count = error_count + 1
-        -- clear all the possible continuations
-        sfunc = nil
-        sargs = nil
-        vim.api.nvim_err_write("Error: " .. inf.message)
+        print(vim.inspect(msg))
+        -- if the prompt window is open, the error message (most likely!)
+        -- is coming from the incorrect info we passed.  It should not
+        -- indicate that the entire file needs loading.
+        if pwin == nil then
+            error_count = error_count + 1
+            -- clear all the possible continuations
+            sfunc = nil
+            sargs = nil
+        end
+        vim.api.nvim_err_writeln("Error: " .. inf.message)
     elseif inf.kind == "Context" then
-        --print(vim.inspect(msg))
         local p = {"Context", deilim_line}
         for k,v in pairs(inf.context) do
             table.insert(p, v.originalName .. " : " .. v.binding)
         end
         mk_window(p)
+    elseif inf.kind == "InferredType" then
+        mk_window({"Inferred Type: " .. inf.expr})
+    elseif inf.kind == "NormalForm" then
+        mk_window({"Normal Form: " .. inf.expr})
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
+        local ip = inf.interactionPoint
         if g.kind == "InferredType" then
             p = {"Inferred Type: " .. g.expr, delim_line}
-        --elseif g.kind == "GoalType" then
-        --    p = {"Goal Type: " .. g.type, delim_line}
-        --    for _,v in pairs(g.entries) do
-        --        table.insert(p, v.originalName .. " : " .. v.binding)
-        --    end
+        elseif g.kind == "NormalForm" then
+            p = {"Normal Form: " .. g.expr, delim_line}
+        elseif g.kind == "GoalType" then
+            p = {"Goal Type: " .. g.type, delim_line}
+            for _,v in pairs(g.entries) do
+                table.insert(p, v.originalName .. " : " .. v.binding)
+            end
         else
             p = {"Don't know how to show " .. g.kind, delim_line}
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
                 table.insert(p, v)
             end
+            print(vim.inspect(msg))
         end
-        mk_window(p)
-    --else
-    --    print("Don't know how to handle DisplayInfo of kind: "
-    --          .. inf.kind .. " :: " .. vim.inspect(msg))
+        -- We assume that GoalSpecific things always have a location
+        mk_window(p, ip.range[1].start.line, ip.range[1].start.col)
+    else
+        print("Don't know how to handle DisplayInfo of kind: "
+              .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
 
 
 -- Goals
-
 local function print_goals()
     for k,v in pairs(goals) do
         print (k .. " : " .. vim.inspect(v.start) .. vim.inspect(v["end"]))
     end
 end
 
+-- This function runs continuations that might have been set by
+-- goal commands in case the buffer was modified.
 local function handle_interpoints(msg)
     goals = {}
     for k,v in pairs(msg.interactionPoints) do
@@ -223,25 +350,23 @@ local function handle_interpoints(msg)
         local e = v.range[1]["end"]
         goals[v.id] = {["start"] = {s.line, s.col},
                        ["end"]   = {e.line, e.col}}
-        --print("goal " .. v["id"] .. " :: " .. vim.inspect(goals[v["id"]]))
     end
-    print("hanle interpoints, got: " .. len(goals) .. " goals")
-    --vim.cmd('w')
-    --print("new goals")
-    --print_goals()
+    --print("hanle interpoints, got: " .. len(goals) .. " goals")
     if sfunc ~= nil then
-        print("resuming suspended function")
+        --print("resuming suspended function")
+        -- Run continuation, reset sfunc and sargs.
         sfunc(unpack(sargs))
         sfunc = nil
         sargs = nil
     end
-    --syncg = false
 end
 
-
-local function get_current_goal()
-    local l = vim.fn.line(".")
-    local c = vim.fn.virtcol(".")
+-- Check the list of goals for the goal at:
+--   * (line,col)                            => in case they are set
+--   * at the current location of the cursor => otherwise
+local function get_current_goal(line, col)
+    local l = line or vim.fn.line(".")
+    local c = col or vim.fn.virtcol(".")
     --print("cur-loc: (" .. l .. ", " .. c ..")")
     local function cmp_lb(a, b)
         if a[1] < b[1] then return true
@@ -266,22 +391,25 @@ local function get_current_goal()
     return nil
 end
 
--- The argument is a pair obtained from the get_current_goal.
-local function get_goal_content(n)
+-- The argument is a goal id.
+local function get_goal_content(id)
     --local n = get_current_goal()
+    local n = goals[id]
     if n == nil then return nil end
 
-    local sl = n[2].start[1]
-    local sc = n[2].start[2]
-    local el = n[2]["end"][1]
-    local ec = n[2]["end"][2]
+    --debug(n)
+    local sl = n.start[1]
+    local sc = n.start[2]
+    local el = n["end"][1]
+    local ec = n["end"][2]
 
-    local winnr = vim.fn.win_getid()
-    local bufnr = vim.api.nvim_win_get_buf(winnr)
-    local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, el, true)
+    --local winnr = vim.fn.win_getid()
+    --local bufnr = vim.api.nvim_win_get_buf(winnr)
+    local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, el, true)
 
     -- If the goal is "?", then it has no content.
-    if utf8.sub(content[1], sc, sc+1) == "?" then
+    print("get_goal_content: " .. content[1] .. ", " ..utf8.sub(content[1], sc, sc))
+    if utf8.sub(content[1], sc, sc) == "?" then
         return ""
     end
 
@@ -297,9 +425,10 @@ local function get_goal_content(n)
     return table.concat(content, "\n")
 end
 
+-- XXX deprecated function.
 function M.gc()
     n = get_current_goal()
-    print("'" .. get_goal_content(n) .. "'")
+    print("'" .. get_goal_content(n[1]) .. "'")
 end
 
 -- XXX This function works fine but it does not preserve hilighting
@@ -332,8 +461,9 @@ end
 
 
 local function handle_give(msg)
-    local winnr = vim.fn.win_getid()
-    local bufnr = vim.api.nvim_win_get_buf(winnr)
+    --local winnr = vim.fn.win_getid()
+    --local bufnr = vim.api.nvim_win_get_buf(winnr)
+    debug(msg)
     local n = goals[msg.interactionPoint.id]
     local sl = n.start[1]
     local sc = n.start[2]
@@ -341,19 +471,34 @@ local function handle_give(msg)
     local ec = n["end"][2]
 
     -- Fucking vim api is in bytes!
-    local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, sl, true)
+    local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, sl, true)
     local r = msg.giveResult.str
     local o = utf8.offset(content[1], sc)
+    if pwin ~= nil then
+        M.close_prompt_win()
+        vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
+    end
     -- 1-based lines, 0-based columns!
-    vim.api.nvim_win_set_cursor(winnr, {sl, o-1})
-    vim.cmd("normal ca{" .. r)
+    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
+    -- if the goal is "?"
+    if utf8.sub(content[1], sc, sc) == "?" then
+        vim.cmd("normal cl" .. r)
+    else
+        vim.cmd("normal ca{" .. r)
+    end
 end
 
 local function handle_make_case(msg)
     local n = goals[msg.interactionPoint.id]
     local sl = n.start[1]
     local el = n["end"][1]
-    vim.api.nvim_buf_set_lines(0, sl-1, el, true, msg.clauses)
+    vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
+
+    if pwin ~= nil then
+        print("closing window, setting buffer to nothing")
+        M.close_prompt_win()
+        vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
+    end
 end
 
 local function handle_status(msg)
@@ -365,6 +510,7 @@ end
 --
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
+    --debug(msg)
     if (msg["kind"] == "HighlightingInfo") then 
         handle_hl(msg)
     elseif (msg["kind"] == "DisplayInfo") then
@@ -383,7 +529,7 @@ local function handle_msg(msg)
     end
 end
 
-
+-- XXX deprecated function
 function M.getevbuf()
     print("evbuf length is: " .. evbuf)
 end
@@ -423,6 +569,8 @@ local function on_event(job_id, data, event)
     end
 end
 
+-- TODO we need to define a function that terminates the process
+-- and call it at exit.
 function M.agda_start()
     agda_job = vim.fn.jobstart(
         {"agda", "--interaction-json"},
@@ -433,7 +581,6 @@ function M.agda_start()
             stdout_buffered = false,
             stderr_buffered = false,
         })
-    --print("agda job is: ".. agda_job)
 end
 
 local function agda_feed (file, cmd)
@@ -446,13 +593,19 @@ end
 
 function M.agda_load (file)
     error_count = 0
+    -- if the main buffer changed, save it before issuing agda (re)load.
+    if main_buf_changed() == 1 then
+        vim.api.nvim_buf_call(main_buf, function () vim.cmd('w') end)
+    end
     agda_feed(file, "(Cmd_load \"" .. file .. "\" [])")
 end
 
+------ Goal-specific helper functions ------
+--------------------------------------------
 
 -- Wrap a function to run after the goals are updated.
 local function wrap_goal_action(func, file)
-    if vim.fn.getbufinfo()[1].changed == 1 or error_count > 0 then
+    if main_buf_changed() == 1 or error_count > 0 then
         if sfunc ~= nil then
             warning("an operation on the goal in progress")
             return
@@ -460,11 +613,37 @@ local function wrap_goal_action(func, file)
         print("suspending agda_context till the update")
         sfunc = func
         sargs = {}
-        vim.cmd('w')
         M.agda_load(file)
     else
         func()
     end
+end
+
+local function get_current_loc()
+    return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
+end
+
+local function id_or_current_goal(id,loc)
+    if id == nil then
+        n = get_current_goal(loc.line,loc.col)
+        if n ~= nil then
+            return n[1]
+        end
+        return nil
+    end
+    return id
+end
+
+-- Get the content of the goal from the prompt buffer, or from the
+-- goal, in case the prompt is empty.
+local function get_trimmed_content(id)
+    local content = ""
+    if pbuf ~= nil then
+        content = table.concat(vim.api.nvim_buf_get_lines(pbuf, 0, -1, true), "\n")
+    else
+        content = get_goal_content(id)
+    end
+    return vim.trim(content)
 end
 
 function M.agda_context(file)
@@ -480,6 +659,7 @@ function M.agda_context(file)
     end, file)
 end
 
+-- XXX weird name of the function
 local function toggle_implicit(file, b)
     if b then
         agda_feed(file, "(ShowImplicitArgs True)")
@@ -488,23 +668,24 @@ local function toggle_implicit(file, b)
     end
 end
 
-function M.agda_type_context(file)
+function M.agda_type_context(file,id)
+    -- Get the location of the cursor at the time we called `agda_type_context`.
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        local n = get_current_goal()
-        if n ~= nil then
-            -- The goal content shold not matter
-            local cmd = "(Cmd_goal_type_context Normalised " .. n[1] .. " noRange \"\")"
-            -- XXX not sure whether we can avoid this, it
-            -- seems that agda_load sets the this flag to false.
-            if not showImplicitArgs then
-                toggle_implicit(file,true)
-                agda_feed(file, cmd)
-                toggle_implicit(file,false)
-            else
-                agda_feed(file, cmd)
-            end
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot obtain goal type and context, the cursor is not in the goal")
+        end
+
+        local cmd = "(Cmd_goal_type_context Normalised " .. id .. " noRange \"\")"
+        -- XXX not sure whether we can avoid this, it
+        -- seems that agda_load sets the this flag to false.
+        if not showImplicitArgs then
+            toggle_implicit(file,true)
+            agda_feed(file, cmd)
+            toggle_implicit(file,false)
         else
-            warning("cannot obtain goal type and context, the cursor is not in the goal")
+            agda_feed(file, cmd)
         end
     end, file)
 end
@@ -514,62 +695,114 @@ local function agda_infer_toplevel(file, e)
     agda_feed(file, cmd)
 end
 
-function M.agda_infer(file)
+function M.agda_infer(file,id)
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        local n = get_current_goal()
-        if n ~= nil then
-            local content = get_goal_content(n)
-            if vim.trim(content) ~= "" then 
-               local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
-               local cmd = "(Cmd_infer Normalised " .. n[1] .. " noRange " .. g .. ")"
-               agda_feed(file, cmd)
-            else
-                warning("The goal is empty")
-            end
-        else
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
             -- In case we are not in the goal, or the content of the goal
             -- is empty, prompt the user for the expression.
             local g = vim.fn.input("Expression: ")
-            agda_infer_toplevel(file, g)
+            return agda_infer_toplevel(file, g)
         end
+        local content = get_trimmed_content(id)
+        if content == "" then
+            return warning("The goal is empty")
+        end
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local cmd = "(Cmd_infer Normalised " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
     end, file)
 end
 
-function M.agda_make_case(file)
+function M.agda_make_case(file,id)
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        local n = get_current_goal()
-        if n ~= nil then
-            local content = get_goal_content(n)
-            if vim.trim(content) == "" then
-                content = vim.fn.input("Variables to split on:")
-            end
-            local g = vim.fn.json_encode(content)
-            local cmd = "(Cmd_make_case " .. n[1] .. " noRange " .. g .. ")"
-            agda_feed(file, cmd)
-        else
-            warning("cannot make case, the cursor is not in the goal")
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot make case, the cursor is not in the goal")
         end
+        local content = get_trimmed_content(id)
+        if content == "" then
+            content = vim.fn.input("Variables to split on:")
+        end
+        local g = vim.fn.json_encode(content)
+        local cmd = "(Cmd_make_case " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
     end, file)
 end
 
-function M.agda_refine(file)
+
+function M.agda_refine(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot refine, the cursor is not in the goal")
+        end
+
+        local content = get_trimmed_content(id)
+        if content == "" then
+            return warning("cannot refine empty goal")
+        end
+        local g = vim.fn.json_encode(content)
+        local cmd = "(Cmd_refine_or_intro True " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
+
+-- TODO ensure that we can pass the argument to Cmd_compute.  Right now
+-- we are just hard-coding DefaultCompute, but there are other values one
+-- can pass:
+--   * DefaultCompute
+--   * IgnoreAbstract
+--   * UseShowInstance
+--   * HeadCompute
+--
+local function agda_compute_toplevel(file, e)
+    local cmd = "(Cmd_compute_toplevel DefaultCompute \"" .. e .. "\")"
+    agda_feed(file, cmd)
+end
+
+function M.agda_compute(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            -- In case we are not in the goal, or the content of the goal
+            -- is empty, prompt the user for the expression.
+            local g = vim.fn.input("Expression: ")
+            return agda_compute_toplevel(file, g)
+        end
+        local content = get_trimmed_content(id)
+        if content == "" then
+            return warning("The goal is empty")
+        end
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local cmd = "(Cmd_compute DefaultCompute " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
+
+
+function M.edit_goal(file)
     wrap_goal_action(function ()
         local n = get_current_goal()
         if n ~= nil then
-            local g = vim.fn.json_encode(get_goal_content(n))
-            local cmd = "(Cmd_refine_or_intro True " .. n[1] .. " noRange " .. g .. ")"
-            agda_feed(file, cmd)
+            local visl = vim.fn.line("w0")
+            mk_prompt_window(file, n, visl)
         else
             warning("cannot refine, the cursor is not in the goal")
         end
     end, file)
 end
 
-function M.toggle_implicit(file)
-    --agda_feed(file, "ToggleIrrelevantArgs")
-    agda_feed(file, "(ShowImplicitArgs True)")
-    --agda_feed(file, "(ShowIrrelevantArgs True)")
-    print("ArgsToggled")
+function M.toggle_implicit(file, b)
+    if b then
+        agda_feed(file, "(ShowImplicitArgs True)")
+    else
+        agda_feed(file, "(ShowImplicitArgs False)")
+    end
 end
 
 return M
