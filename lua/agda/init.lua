@@ -141,6 +141,8 @@ end
 local function mk_prompt_window(file, goalid, loff)
     if pbuf == nil then
         pbuf = vim.api.nvim_create_buf(false, true)
+        -- load unicode mappings.
+        vim.api.nvim_buf_call(pbuf, function () vim.cmd("runtime agda-input.vim") end)
     end
 
     local status = {silent=true, nowait=true, noremap=true}
@@ -362,10 +364,13 @@ end
 local function handle_interpoints(msg)
     goals = {}
     for k,v in pairs(msg.interactionPoints) do
-        local s = v.range[1].start
-        local e = v.range[1]["end"]
-        goals[v.id] = {["start"] = {s.line, s.col},
-                       ["end"]   = {e.line, e.col}}
+        -- FIXME sometimes there is no range in the output... wtf...
+        if #v.range > 0 then 
+            local s = v.range[1].start
+            local e = v.range[1]["end"]
+            goals[v.id] = {["start"] = {s.line, s.col},
+                           ["end"]   = {e.line, e.col}}
+        end
     end
     --print("hanle interpoints, got: " .. len(goals) .. " goals")
     if sfunc ~= nil then
@@ -601,6 +606,8 @@ local function agda_feed (file, cmd)
 end
 
 function M.agda_load (file)
+    -- XXX should we kill evbuf in case we are stuck with an
+    -- annoying error, or should it be done by a separate command?
     error_count = 0
     -- if the main buffer changed, save it before issuing agda (re)load.
     if main_buf_changed() == 1 then
@@ -751,9 +758,10 @@ function M.agda_refine(file,id)
         end
 
         local content = get_trimmed_content(id)
-        if content == "" then
-            return warning("cannot refine empty goal")
-        end
+        -- TODO handle IntroConstructorUnknown DisplayInfo 
+        --if content == "" then
+        --    return warning("cannot refine empty goal")
+        --end
         local g = vim.fn.json_encode(content)
         local cmd = "(Cmd_refine_or_intro True " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)

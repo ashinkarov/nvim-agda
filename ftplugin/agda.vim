@@ -40,4 +40,4 @@ nm <buffer> <LocalLeader>n :<c-u>AgdaCompute<cr>
 nm <buffer> <LocalLeader>e :<c-u>MkPrompt<cr>
 
 " mappings
-noremap! <buffer> <LocalLeader>to →
+runtime agda-input.vim
