@@ -157,6 +157,7 @@ local function mk_prompt_window(file, goalid, loff)
     mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goalid[1]))
     mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goalid[1]))
     mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goalid[1]))
     mk_mapping("<LocalLeader>q", "close_msg_win",     "")
     mk_mapping("q",              "close_prompt_win",  "")
 
@@ -801,6 +802,25 @@ function M.agda_compute(file,id)
     end, file)
 end
 
+local function agda_auto_toplevel(file, e)
+    local cmd = "(Cmd_autoAll)"
+    agda_feed(file, cmd)
+end
+
+function M.agda_auto(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return agda_auto_toplevel(file, g)
+        end
+        local content = get_trimmed_content(id)
+        -- TODO Handle reply from Auto.
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
 
 function M.edit_goal(file)
     wrap_goal_action(function ()
