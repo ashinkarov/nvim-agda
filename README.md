@@ -38,7 +38,7 @@ input, and basic commands are implemented.  Goal specific information such as
 context, goal type, etc. is shown in a popup window appearing at the goal location.
 The goal content is edited in a separate window, so that it does not alter the
 state of the file.  Goal actions on a modified file reload the file and synchronise
-the goal list. Both `?`-goals and `{! !}` goals are supported, however the latters
+the goal list. Both `?` and `{! !}` goals are supported, however the latters
 is discouraged, as every edit would modify the file and trigger file reload.
 
 ### Implemented commands and shortcuts.
