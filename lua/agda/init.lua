@@ -22,8 +22,8 @@ local msg_min_width = 25
 -- See `on_event` for the details on the usage.
 local evbuf = ""
 
-
---local syncg = false
+-- Variables to set continuation to be run by handle_interpoints
+-- after updating the list of goals.
 local sfunc = nil
 local sargs = nil
 
@@ -40,6 +40,9 @@ local main_buf = vim.api.nvim_win_get_buf(main_win)
 local pwin = nil
 local pbuf = nil
 local pmin_width = 25
+
+-- Whether to print debug information
+local debug = false
 
 
 
@@ -67,7 +70,15 @@ local function len(t)
 end
 
 local function debug(x)
-    print(vim.inspect(x))
+    if debug then
+        print(vim.inspect(x))
+    end
+end
+
+local function dprint(...)
+    if debug then
+        print(...)
+    end
 end
 
 local function max_width(lines)
@@ -273,7 +284,7 @@ local function handle_hl(msg)
         local e = find_line(r[2])
 
         if s == nil or e == nil then
-            print("handle_hl: crazy s=nil state " .. vim.inspect(v))
+            dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
         elseif #v.atoms > 0 then
             local g = translate_hl_group(v.atoms[1])
             -- We are using the direct api call here instead of
@@ -301,7 +312,7 @@ local function handle_displayinfo(msg)
 
     local inf = msg.info
     if (inf.kind == "Error") then
-        print(vim.inspect(msg))
+        --print(vim.inspect(msg))
         -- if the prompt window is open, the error message (most likely!)
         -- is coming from the incorrect info we passed.  It should not
         -- indicate that the entire file needs loading.
@@ -342,13 +353,12 @@ local function handle_displayinfo(msg)
                 table.insert(p, v)
             end
             p = add_sep(p,true)
-            print(vim.inspect(msg))
         end
         -- We assume that GoalSpecific things always have a location
         mk_window(p, ip.range[1].start.line, ip.range[1].start.col)
     else
-        print("Don't know how to handle DisplayInfo of kind: "
-              .. inf.kind .. " :: " .. vim.inspect(msg))
+        dprint("Don't know how to handle DisplayInfo of kind: "
+               .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
 
@@ -425,7 +435,7 @@ local function get_goal_content(id)
     local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, el, true)
 
     -- If the goal is "?", then it has no content.
-    print("get_goal_content: " .. content[1] .. ", " ..utf8.sub(content[1], sc, sc))
+    --print("get_goal_content: " .. content[1] .. ", " ..utf8.sub(content[1], sc, sc))
     if utf8.sub(content[1], sc, sc) == "?" then
         return ""
     end
@@ -539,7 +549,7 @@ local function handle_msg(msg)
     elseif msg.kind == "Status" then
         handle_status(msg)
     else 
-        print("Don't know how to handle " .. msg["kind"]
+        dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
     end
 end
@@ -627,7 +637,7 @@ local function wrap_goal_action(func, file)
             warning("an operation on the goal in progress")
             return
         end
-        print("suspending agda_context till the update")
+        --print("suspending agda_context till the update")
         sfunc = func
         sargs = {}
         M.agda_load(file)
