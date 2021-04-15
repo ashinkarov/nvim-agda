@@ -321,7 +321,8 @@ local function handle_displayinfo(msg)
 
     local inf = msg.info
     if (inf.kind == "Error") then
-        --print(vim.inspect(msg))
+        -- Latest versions of Agda changed the interface.
+        local text = inf.message or inf["error"].message
         -- if the prompt window is open, the error message (most likely!)
         -- is coming from the incorrect info we passed.  It should not
         -- indicate that the entire file needs loading.
@@ -331,7 +332,7 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        vim.api.nvim_err_writeln("Error: " .. inf.message)
+        vim.api.nvim_err_writeln(text)
     elseif inf.kind == "Context" then
         local p = {"Context"}
         for k,v in pairs(inf.context) do
