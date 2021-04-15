@@ -45,6 +45,8 @@ local pmin_width = 25
 -- Whether to print debug information
 local debug_p = true
 
+-- Highlighting namespace.
+local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 
 
 ------ Helper functions ------
@@ -294,10 +296,9 @@ local function handle_hl(msg)
             dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
         elseif #v.atoms > 0 then
             local g = translate_hl_group(v.atoms[1])
-            -- We are using the direct api call here instead of
-            -- vim.highlight.range(bufnr, -1, g, s, e), as we are sure
-            -- that the range that Agda sends is located on the same line.
-            vim.api.nvim_buf_add_highlight(bufnr, -1, g, s[1], s[2], e[2])
+            -- We are using `highlight.range` instead of `nvim_buf_add_highlight`
+            -- as we can have multiline comments.
+            vim.highlight.range(main_buf,hl_ns,g,s,e)
         end
         --print("hl: [" .. vim.inspect(s) .. ", " .. vim.inspect(e) .. "]  ", v["atoms"][1])
     end
@@ -555,6 +556,10 @@ local function handle_msg(msg)
         handle_make_case(msg)
     elseif msg.kind == "Status" then
         handle_status(msg)
+    elseif msg.kind == "RunningInfo" then
+        print(msg.message)
+    elseif msg.kind == "ClearHighlighting" then
+        vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
     else 
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
