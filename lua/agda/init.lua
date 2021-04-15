@@ -6,6 +6,7 @@ local M = {}
 ----------------------------
 
 -- Agda Process Handle.  Created by `agda_start`.
+local agda_bin = "agda"
 local agda_job = nil
 
 -- The list of goals in the format {id = {start = {l,c}, end = {l,c}}}
@@ -141,6 +142,12 @@ end
 
 ------ Agda interaction-related functions ------
 ------------------------------------------------
+
+function M.setup(config)
+    if config and config.agda then
+        agda_bin = config.agda
+    end
+end
 
 function M.close_prompt_win()
     if pwin ~= nil then
@@ -598,7 +605,7 @@ end
 -- and call it at exit.
 function M.agda_start()
     agda_job = vim.fn.jobstart(
-        {"agda", "--interaction-json"},
+        {agda_bin, "--interaction-json"},
         {
             on_stderr = on_event,
             on_stdout = on_event,

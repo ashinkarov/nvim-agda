@@ -1,5 +1,9 @@
 
-let LoadCmd    = luaeval("require'agda'.agda_load")
+let AgdaMod = luaeval("require'agda'")
+
+call AgdaMod.setup({"agda": "/home/tema/.local/bin/agda"})
+
+"let LoadCmd    = luaeval("require'agda'.agda_load")
 let ContextCmd = luaeval("require'agda'.agda_context")
 let TypeContextCmd = luaeval("require'agda'.agda_type_context")
 let InferCmd   = luaeval("require'agda'.agda_infer")
@@ -12,7 +16,8 @@ let MkPromptCmd  = luaeval("require'agda'.edit_goal")
 
 " Vim commands
 command! AgdaStart lua require'agda'.agda_start()
-command! AgdaLoad :call LoadCmd(expand("%:p"))
+"command! AgdaLoad :call LoadCmd(expand("%:p"))
+command! AgdaLoad :call AgdaMod.agda_load(expand("%:p"))
 command! AgdaContext :call ContextCmd(expand("%:p"))
 command! AgdaTypeContext :call TypeContextCmd(expand("%:p"))
 command! AgdaInfer :call InferCmd(expand("%:p"))
