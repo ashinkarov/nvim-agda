@@ -42,7 +42,7 @@ local pbuf = nil
 local pmin_width = 25
 
 -- Whether to print debug information
-local debug = false
+local debug_p = true
 
 
 
@@ -70,13 +70,13 @@ local function len(t)
 end
 
 local function debug(x)
-    if debug then
+    if debug_p then
         print(vim.inspect(x))
     end
 end
 
 local function dprint(...)
-    if debug then
+    if debug_p then
         print(...)
     end
 end
