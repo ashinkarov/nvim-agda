@@ -278,10 +278,11 @@ local function handle_hl(msg)
         elseif (name == "inductiveconstructor") then return "Constant"
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
+        elseif (name == "hole") then return "Todo"
         -- TODO add more!
         else
             --name = name or "nil, WEIRD!!!"
-            --print("Don't know hl-group for " .. name)
+            --dprint("Don't know hl-group for " .. name)
             return "Normal"
         end
     end
