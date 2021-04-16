@@ -53,6 +53,9 @@ is discouraged, as every edit would modify the file and trigger file reload.
 | a | Automatically look for goal (or all goals in the file) |
 | q | Close the message box |
 | e | Edit the goal content |
+| ? | Show Goals |
+| f | Go to the next goal |
+| b | Go to the previous goal |
 
 
 ### Todo
@@ -69,10 +72,6 @@ is discouraged, as every edit would modify the file and trigger file reload.
       is expensive and it
       pulls `lua-utf8` as a dependency.
     - Errors are printed on stdout (not stderr)
-    - Agda doesn't seem to flush the buffer after outputting the command, so
-      buffered read does not work.  As a consequence one needs to track whether
-      we received enough bytes that can be parsed as a valid json.  Current
-      implementation is hacky.
   * If highlighting information arrives, and the file is modified --- should we
     attempt to colorise all but modified pieces?  This is a typical case whe
     happening big files.  Agda is very slow, and it is tempting to edit a few

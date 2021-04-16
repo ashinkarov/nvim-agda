@@ -1,4 +1,5 @@
 local utf8 = require('lua-utf8')
+local Loc = require('agda.loc')
 
 local M = {}
 
@@ -127,20 +128,9 @@ local function main_win_visl()
     return visl
 end
 
-
--- Loc class
--- FIXME move to separate file
-Loc = {}
-Loc.__index = Loc
-
-function Loc:new(l,c)
-    local loc = {}
-    setmetatable(loc,Loc)
-    loc.line = l
-    loc.col = c
-    return loc
+local function get_current_loc()
+    return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
 end
-
 
 ------ Agda interaction-related functions ------
 ------------------------------------------------
@@ -158,7 +148,8 @@ function M.close_prompt_win()
     end
 end
 
-local function mk_prompt_window(file, goalid, loff)
+-- goalid is a pair <id:int, loc:Loc>
+local function mk_prompt_window(file, goal, loff)
     if pbuf == nil then
         pbuf = vim.api.nvim_create_buf(false, true)
         -- load unicode mappings.
@@ -172,12 +163,12 @@ local function mk_prompt_window(file, goalid, loff)
             ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
-    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', %d", file, goalid[1]))
-    mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goalid[1]))
-    mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goalid[1]))
-    mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goalid[1]))
-    mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goalid[1]))
-    mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goalid[1]))
+    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>q", "close_msg_win",     "")
     mk_mapping("q",              "close_prompt_win",  "")
 
@@ -186,8 +177,8 @@ local function mk_prompt_window(file, goalid, loff)
         pbuf, true,
         {
             relative='win',
-            row=goalid[2].start[1] - visl + 1,
-            col=goalid[2].start[2],
+            row=goal[2].start.line - visl + 1,
+            col=goal[2].start.col,
             width=pmin_width,
             height=1,
             style="minimal",
@@ -197,10 +188,10 @@ local function mk_prompt_window(file, goalid, loff)
 end
 
 
--- Show message window.  `l` and `c` are line and column in
--- the file where the goal is located.  If `l` and `c` are omitted
--- the window is shown at the current position of the cursor.
-local function mk_window(lines,l,c)
+-- Show message window.  `loc:Loc` is the location of the goal
+-- in the file.  If `loc` is omitted, the window is shown at 
+-- the current position of the cursor.
+local function mk_window(lines,loc)
     if msg_buf == nil then
         msg_buf = vim.api.nvim_create_buf(false, true)
     end
@@ -217,15 +208,15 @@ local function mk_window(lines,l,c)
         height=#lines,
         style="minimal"
     }
-    if l == nil or c == nil then
+    if loc == nil then
         state.relative='cursor'
         state.row=1
         state.col=1
     else
         local visl = main_win_visl()
         state.relative = 'win'
-        state.row = l - visl + 1
-        state.col = c
+        state.row = loc.line - visl + 1
+        state.col = loc.col
     end
 
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
@@ -258,6 +249,7 @@ local function handle_hl(msg)
 
     -- Convert an offset into a line/lineoffset format
     -- that is suitable for the vim highlighter.
+    -- XXX we can use binsearch here if we want to
     local function find_line(offset)
         for i,v in pairs(lines) do
             if (offset >= v[1] and offset <= v[2]) then
@@ -365,7 +357,7 @@ local function handle_displayinfo(msg)
             p = add_sep(p,true)
         end
         -- We assume that GoalSpecific things always have a location
-        mk_window(p, ip.range[1].start.line, ip.range[1].start.col)
+        mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))
     else
         dprint("Don't know how to handle DisplayInfo of kind: "
                .. inf.kind .. " :: " .. vim.inspect(msg))
@@ -389,8 +381,10 @@ local function handle_interpoints(msg)
         if #v.range > 0 then 
             local s = v.range[1].start
             local e = v.range[1]["end"]
-            goals[v.id] = {["start"] = {s.line, s.col},
-                           ["end"]   = {e.line, e.col}}
+            goals[v.id] = {
+                ["start"] = Loc:new(s.line, s.col),
+                ["end"]   = Loc:new(e.line, e.col)
+            }
         end
     end
     --print("hanle interpoints, got: " .. len(goals) .. " goals")
@@ -403,28 +397,13 @@ local function handle_interpoints(msg)
     end
 end
 
--- Check the list of goals for the goal at:
---   * (line,col)                            => in case they are set
+-- Search `goals` for the goal at:
+--   * loc                                   => in case it is set
 --   * at the current location of the cursor => otherwise
-local function get_current_goal(line, col)
-    local l = line or vim.fn.line(".")
-    local c = col or vim.fn.virtcol(".")
-    --print("cur-loc: (" .. l .. ", " .. c ..")")
-    local function cmp_lb(a, b)
-        if a[1] < b[1] then return true
-        elseif a[1] == b[1] then return a[2] <= b[2] end
-        return false
-    end
-    local function cmp_ub(a, b)
-        if a[1] < b[1] then return true
-        elseif a[1] == b[1] then return a[2] < b[2] end
-        return false
-    end
-    --print("looking for goal @ (" .. l .. ", " .. c ..")")
+local function get_current_goal(loc)
+    loc = loc or get_current_loc() --Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
     for k,v in pairs(goals) do
-        if cmp_lb(v.start, {l,c}) and cmp_ub({l,c}, v["end"]) then
-           --print("cur-goal-found, loc=(" .. l ..  ", " .. c .. ")" 
-           --      .. vim.inspect(v.start) .. vim.inspect(v["end"]))
+        if loc >= v.start and loc < v["end"] then
            return {k,v}
         end
     end
@@ -437,10 +416,10 @@ local function get_goal_content(id)
     if n == nil then return nil end
 
     --debug(n)
-    local sl = n.start[1]
-    local sc = n.start[2]
-    local el = n["end"][1]
-    local ec = n["end"][2]
+    local sl = n.start.line
+    local sc = n.start.col
+    local el = n["end"].line
+    local ec = n["end"].col
 
     local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, el, true)
 
@@ -468,42 +447,14 @@ function M.gc()
     print("'" .. get_goal_content(n[1]) .. "'")
 end
 
--- XXX This function works fine but it does not preserve hilighting
--- Replace the goal with the refined result
-local function handle_give_XXX(msg)
-    --print(vim.inspect(msg))
-    local winnr = vim.fn.win_getid()
-    local bufnr = vim.api.nvim_win_get_buf(winnr)
-
-    local n = goals[msg.interactionPoint.id]
-    local sl = n.start[1]
-    local sc = n.start[2]
-    local el = n["end"][1]
-    local ec = n["end"][2]
-
-    local content = vim.api.nvim_buf_get_lines(bufnr, sl-1, el, true)
-
-    -- Now we assume that the goal is "{! ... !}".
-    local l = #content
-    local r = msg.giveResult.str
-    --print("goal lines " .. l)
-    local pref = utf8.sub(content[1], 1, sc-1) .. r
-    local post = utf8.sub(content[l], ec)
-    if l == 1 or post == "" then
-        vim.api.nvim_buf_set_lines(bufnr, sl-1, el, true, {pref .. post})
-    else
-        vim.api.nvim_buf_set_lines(bufnr, sl-1, el, true, {pref, post})
-    end
-end
-
 
 local function handle_give(msg)
     --debug(msg)
     local n = goals[msg.interactionPoint.id]
-    local sl = n.start[1]
-    local sc = n.start[2]
-    local el = n["end"][1]
-    local ec = n["end"][2]
+    local sl = n.start.line
+    local sc = n.start.col
+    local el = n["end"].line
+    local ec = n["end"].col
 
     -- Fucking vim api is in bytes!
     local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, sl, true)
@@ -525,8 +476,8 @@ end
 
 local function handle_make_case(msg)
     local n = goals[msg.interactionPoint.id]
-    local sl = n.start[1]
-    local el = n["end"][1]
+    local sl = n.start.line --[1]
+    local el = n["end"].line --[1]
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
 
     if pwin ~= nil then
@@ -660,13 +611,9 @@ local function wrap_goal_action(func, file)
     end
 end
 
-local function get_current_loc()
-    return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
-end
-
 local function id_or_current_goal(id,loc)
     if id == nil then
-        n = get_current_goal(loc.line,loc.col)
+        n = get_current_goal(loc)
         if n ~= nil then
             return n[1]
         end
@@ -698,6 +645,81 @@ function M.agda_context(file)
             warning("cannot infer goal type, the cursor is not in the goal")
         end
     end, file)
+end
+
+
+function M.agda_show_goals(file)
+    local g = ""
+    local c = 0
+    for _,v in pairs(goals) do
+        g = g .. string.format("    line %03d: ?", v.start.line)
+        c = c + 1
+    end
+    if c > 0 then
+        print(string.format("%d goal(s) in %s\n", c, file) .. g)
+    else
+        print(string.format("no goals in %s", file))
+    end
+end
+
+function M.agda_goal_next(file)
+    local loc = get_current_loc()
+    if len(goals) == 0 then
+        print(string.format("no goals in %s", file))
+    end
+    local pos = nil
+    for k,v in pairs(goals) do
+        if v.start > loc then
+            pos = v.start
+        end
+    end
+    -- if we didn't find the goal after the cursor
+    -- just return the first goal in the list
+    if pos == nil then
+        pos = goals[0].start
+    end
+
+    local content = vim.api.nvim_buf_get_lines(main_buf, pos.line-1, pos.line, true)
+    local o = utf8.offset(content[1], pos.col)
+    -- 1-based lines, 0-based columns!
+    vim.api.nvim_win_set_cursor(main_win, {pos.line, o-1})
+end
+
+
+function M.agda_goal_prev(file)
+    local loc = get_current_loc()
+    if len(goals) == 0 then
+        print(string.format("no goals in %s", file))
+    end
+
+    -- We have a 0-indexed table of goals which is not
+    -- canonical in lua.  Therefore we have to take an extra
+    -- step to traverse it in reverse.
+    local ix = {}
+    for k,_ in pairs(goals) do
+        table.insert(ix,k)
+    end
+    -- Fuck you LUA, fucking piece of shit!
+    -- As 0 is a non-canonical index, it is inserted at the end
+    -- of the table.  What a nonsense!
+    table.sort(ix)
+
+    local pos = nil
+    for i = #ix,1,-1 do
+        if goals[ix[i]].start < loc then
+            pos = goals[ix[i]].start
+        end
+    end
+    -- if we didn't find the goal before the cursor,
+    -- return the last goal in the list
+    if pos == nil then
+        pos = goals[ix[#ix]].start
+    end
+
+    local content = vim.api.nvim_buf_get_lines(main_buf, pos.line-1, pos.line, true)
+    local o = utf8.offset(content[1], pos.col)
+    -- 1-based lines, 0-based columns!
+    vim.api.nvim_win_set_cursor(main_win, {pos.line, o-1})
 end
 
 -- XXX weird name of the function
