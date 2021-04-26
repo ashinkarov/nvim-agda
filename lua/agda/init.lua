@@ -105,6 +105,9 @@ local function mk_delim(w)
 end
 
 -- This one reiles on the presence of main_buf variable.
+-- TODO we also need to consider the case when the file
+--      has been changed externally.  Otherwise locations
+--      and definitions wouldn't match-up.
 local function main_buf_changed()
     for _,v in pairs(vim.fn.getbufinfo()) do
         if v.bufnr == main_buf then
@@ -169,6 +172,7 @@ local function mk_prompt_window(file, goal, loff)
     mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>h", "agda_helper_fun",   string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>q", "close_msg_win",     "")
     mk_mapping("q",              "close_prompt_win",  "")
 
@@ -349,6 +353,11 @@ local function handle_displayinfo(msg)
                 table.insert(p, v.originalName .. " : " .. v.binding)
             end
             p = add_sep(p,true)
+        elseif g.kind == "HelperFunction" then
+            p = {"Helper Function (copied to the \" register)",
+                 g.signature}
+            p = add_sep(p,true)
+            vim.fn.setreg('"', g.signature)
         else
             p = {"Don't know how to show " .. g.kind}
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
@@ -847,6 +856,24 @@ function M.agda_compute(file,id)
         agda_feed(file, cmd)
     end, file)
 end
+
+function M.agda_helper_fun(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot create helper function, the cursor is not in the goal")
+        end
+        local content = get_trimmed_content(id)
+        if content == "" then
+            content = vim.fn.input("Expression: ")
+        end
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local cmd = "(Cmd_helper_function AsIs " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
+
 
 local function agda_auto_toplevel(file, e)
     local cmd = "(Cmd_autoAll)"

@@ -51,6 +51,7 @@ is discouraged, as every edit would modify the file and trigger file reload.
 | c | Case split on a variable(s) |
 | n | Compute the goal content or toplevel expression |
 | a | Automatically look for goal (or all goals in the file) |
+| h | Helper function for the goal |
 | q | Close the message box |
 | e | Edit the goal content |
 | ? | Show Goals |
