@@ -4,6 +4,10 @@
 
 # Installation
 
+This plugin requires [Neovim (0.5)](https://github.com/neovim/neovim/releases/tag/nightly)
+to work.  One could probably force earlier versions to work as well, but
+this is non-trivial.
+
 1. Install [lua-utf8](https://github.com/starwing/luautf8) library on your system.
 
 2. Use a plugin manager such as [paq](https://github.com/savq/paq-nvim)
@@ -16,6 +20,20 @@
    $ mkdir -p ~/.local/share/nvim/site/pack/git-plugins/start
    $ git clone https://github.com/ashinkarov/nvim-agda.git --depth=1 ~/.local/share/nvim/site/pack/git-plugins/start/nvim-agda
    ```
+
+## Configuration
+
+The plugin can be configured by defining a global variable named
+`g:nvim_agda_settings` of type dictionary.  So far the only supported key in the
+dictionary is the location of Agda binary:
+```
+{
+  "agda" : "/usr/local/bin/agda"
+}
+```
+All the fields of the dictionary may be omitted, as well as the
+definition of `g:nvim_agda_settings`.  In this case hard-coded
+defaults would be used.
 
 # Details
 
@@ -38,7 +56,7 @@ input, and basic commands are implemented.  Goal specific information such as
 context, goal type, etc. is shown in a popup window appearing at the goal location.
 The goal content is edited in a separate window, so that it does not alter the
 state of the file.  Goal actions on a modified file reload the file and synchronise
-the goal list. Both `?` and `{! !}` goals are supported, however the latters
+the goal list. Both `?` and `{! !}` goals are supported, however the latter
 is discouraged, as every edit would modify the file and trigger file reload.
 
 ### Implemented commands and shortcuts.
@@ -67,7 +85,7 @@ is discouraged, as every edit would modify the file and trigger file reload.
     action via continuation.  Ensure that this is "thread safe" (does not
     have race conditions).
   * Asynchronous communication quirks:
-    - Hilighting information uses offsets (number of characters from the
+    - Highlighting information uses offsets (number of characters from the
       beginning of file), whereas nvim interface expects line and byte-offset
       in that line to set the hilighting.  This is important as this conversion
       is expensive and it

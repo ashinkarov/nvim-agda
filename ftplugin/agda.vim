@@ -1,7 +1,16 @@
 
 let AgdaMod = luaeval("require'agda'")
 
-call AgdaMod.setup({"agda": "/home/tema/.local/bin/agda"})
+if !exists("g:nvim_agda_settings")
+    let g:nvim_agda_settings = {}
+endif 
+
+" The setting is a dictionary, so far the only key in the
+" dictionary is the location of the Agda binary, e.g.
+" { "agda": "/usr/local/bin/agda" }
+" Any key in the dictionary can be omitted, in which case,
+" we are going to use hard-coded defaults.
+call AgdaMod.setup(g:nvim_agda_settings) 
 
 
 " Vim commands
