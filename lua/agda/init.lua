@@ -85,13 +85,15 @@ local function dprint(...)
     end
 end
 
-local function max_width(lines)
+-- Either a list of lines (key=nil), or the list of objects
+-- and we are interested in the field "key".
+local function max_width(lines,key)
     local max = 0
     for k,v in pairs(lines) do
-        local l = utf8.len(v)
-        if l > max then
-            max = l
-        end
+	if key ~= nil then
+	    v = v[key]
+	end
+	max = math.max(max, utf8.len(v))
     end
     return max
 end
@@ -318,16 +320,49 @@ end
 
 
 local function handle_displayinfo(msg)
-    -- Add delimiting lines in the first position
-    -- and in the third, in case the second argument is true.
-    local function add_sep(lines,third_p)
+    -- Adds the header and delimiter(s) to the list of lines.
+    -- If `lines` is a singleton, and `sep` is not nil, 
+    -- we prepend `header` to the line, and only the top delimiter:
+    --      ------------------------
+    --	    `header` `sep` `line[1]`
+    --
+    -- Otherwise, we add two delimiters around `header` like this:
+    --	    ------------------------
+    --	    `header`
+    --	    ------------------------
+    --	    `lines`
+    --
+    local function add_sep(lines,header,sep)
         m = max_width(lines)
         l = mk_delim(math.max(msg_min_width, m))
-        table.insert(lines,1,l)
-        if third_p then
-            table.insert(lines,3,l)
+	if #lines == 1 and sep ~= nil then
+	    lines[1] = header .. sep .. lines[1]
+	else
+	    table.insert(lines,1,header)
+            table.insert(lines,2,l)
         end
+        table.insert(lines,1,l)
         return lines
+    end
+
+    local function mk_decl(name,lines,sep)
+	p = {}
+	local spc = string.rep(" ", utf8.len(sep))
+	for k,v in ipairs(lines) do
+	    if k == 1 then
+		table.insert(p, name .. sep .. v)
+		name = string.rep(" ", utf8.len(name))
+	    else
+		table.insert(p, name .. spc .. v)
+	    end
+	end
+	return p
+    end
+
+    local function table_append(p,q)
+	for _,v in ipairs(q) do
+	    table.insert(p,v)
+	end
     end
 
     local inf = msg.info
@@ -346,64 +381,56 @@ local function handle_displayinfo(msg)
         end
         vim.api.nvim_err_writeln(text)
     elseif inf.kind == "Context" then
-        local p = {"Context"}
-        for k,v in pairs(inf.context) do
-            table.insert(p, v.originalName .. " : " .. v.binding)
+        local p = {}
+	local max_name_len = max_width(inf.context, "originalName")
+        for _,v in ipairs(inf.context) do
+	    local name = v.originalName
+	    name = name .. string.rep(" ", max_name_len - utf8.len(name))
+	    table_append(p, mk_decl(name, split_lines(v.binding), " : "))
         end
-        mk_window(add_sep(p,true))
+        mk_window(add_sep(p,"Context"))
     elseif inf.kind == "InferredType" then
-        mk_window(add_sep({"Inferred Type: " .. inf.expr}))
+        mk_window(add_sep(split_lines(inf.expr), "Inferred Type", " : "))
     elseif inf.kind == "NormalForm" then
-        local p = split_lines(inf.expr)
-        if #p == 1 then 
-            p[1] = "Normal Form: " .. p[1]
-        else
-            table.insert(p,1,"Normal Form")
-        end
-        mk_window(add_sep(p))
+	mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
     elseif inf.kind == "ModuleContents" then
         local indent = "   "
-        local p = {"Module Content"}
+        local p = {}
         for _,v in ipairs(inf.contents) do
             table.insert(p, indent .. v.name)
-            for k,v in ipairs(split_lines(v.term)) do
-                local l = indent .. indent .. "  " .. v
-                if k == 1 then
-                    l = indent .. indent .. ": " .. v
-                end
-                table.insert(p, l)
-            end
+	    table_append(p, mk_decl(indent .. indent, split_lines(v.term), " : "))
         end
-        mk_window(add_sep(p, true))
+        mk_window(add_sep(p, "Module Content"))
     elseif inf.kind == "WhyInScope" then
-        local p = split_lines(inf.message)
-        table.insert(p, 1, "Why `" .. inf.thing .. "' is in scope")
-        mk_window(add_sep(p, true))
+        mk_window(add_sep(split_lines(inf.message),
+	                  "Why `" .. inf.thing .. "' is in scope"))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
         local ip = inf.interactionPoint
         if g.kind == "InferredType" then
-            p = add_sep({"Inferred Type: " .. g.expr})
+	    p = add_sep(split_lines(g.expr), "Inferred Type", " : ")
         elseif g.kind == "NormalForm" then
-            p = add_sep({"Normal Form: " .. g.expr})
+            p = add_sep(split_lines(g.expr), "Normal Form", " : ")
         elseif g.kind == "GoalType" then
-            p = {"Goal Type: " .. g.type}
-            for _,v in pairs(g.entries) do
-                table.insert(p, v.originalName .. " : " .. v.binding)
+            p = {}
+	    local max_name_len = max_width(g.entries, "originalName")
+            for _,v in ipairs(g.entries) do
+	        local name = v.originalName
+	        name = name .. string.rep(" ", max_name_len - utf8.len(name))
+	        table_append(p, mk_decl(name, split_lines(v.binding), " : "))
             end
-            p = add_sep(p,true)
+	    -- XXX could it be that g.type containts "\n"s?
+	    p = add_sep(p, "Goal Type : " .. g.type)
         elseif g.kind == "HelperFunction" then
-            p = {"Helper Function (copied to the \" register)",
-                 g.signature}
-            p = add_sep(p,true)
+            p = add_sep(split_lines(g.signature), 
+	                "Helper Function (copied to the \" register)")
             vim.fn.setreg('"', g.signature)
         else
-            p = {"Don't know how to show " .. g.kind}
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
                 table.insert(p, v)
             end
-            p = add_sep(p,true)
+            p = add_sep(p,"Don't know how to show " .. g.kind)
         end
         -- We assume that GoalSpecific things always have a location
         mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))

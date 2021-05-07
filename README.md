@@ -60,7 +60,10 @@ the goal list. Both `?` and `{! !}` goals are supported, however the latter
 is discouraged, as every edit would modify the file and trigger file reload.
 
 ### Implemented commands and shortcuts.
-| `<LocalLeader>` Key      |  Command       |
+Mostly we implement the same commands as agda-mode in emacs.  Several new
+commands have to do with management of the popups and goal editing.
+
+| `<LocalLeader>` Key      |  Agda mode Command       |
 |:--------:| -------------- |
 | l | Load file |
 | , | Show type and context |
@@ -70,18 +73,27 @@ is discouraged, as every edit would modify the file and trigger file reload.
 | n | Compute the goal content or toplevel expression |
 | a | Automatically look for goal (or all goals in the file) |
 | h | Helper function for the goal |
-| q | Close the message box |
-| e | Edit the goal content |
+| o | Show the content of the module |
+| w | Explain why the name (under cursor) is in scope |
 | ? | Show Goals |
 | f | Go to the next goal |
 | b | Go to the previous goal |
+
+
+| `<LocalLeader>` Key      |  Agda mode Command       |
+|:--------:| -------------- |
+| q | Close the message box |
+| e | Edit the goal content |
+
+Within the goal-edit window, `q` is mapped to close the window.
+The regular `:q` command would work as well.
 
 
 ### Todo
   * Implement remaining commands from the original `agda-mode`
   * Support working with multiple files.  Currently we assume a single
     file per vim instance.
-  * Goal actions on a modified buffer reload the file and pospone the
+  * Goal actions on a modified buffer reload the file and postpone the
     action via continuation.  Ensure that this is "thread safe" (does not
     have race conditions).
   * Asynchronous communication quirks:
@@ -90,7 +102,7 @@ is discouraged, as every edit would modify the file and trigger file reload.
       in that line to set the hilighting.  This is important as this conversion
       is expensive and it
       pulls `lua-utf8` as a dependency.
-    - Errors are printed on stdout (not stderr)
+    - Errors are printed on `stdout` (not `stderr`)
   * If highlighting information arrives, and the file is modified --- should we
     attempt to colorise all but modified pieces?  This is a typical case whe
     happening big files.  Agda is very slow, and it is tempting to edit a few
