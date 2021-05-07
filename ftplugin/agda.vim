@@ -24,6 +24,8 @@ command! AgdaRefine :call AgdaMod.agda_refine(expand("%:p"))
 command! AgdaAuto :call AgdaMod.agda_auto(expand("%:p"))
 command! AgdaMakeCase :call AgdaMod.agda_make_case(expand("%:p"))
 command! AgdaHelperFun :call AgdaMod.agda_helper_fun(expand("%:p"))
+command! AgdaModuleContents :call AgdaMod.agda_module_contents(expand("%:p"))
+command! AgdaWhyInscope :call AgdaMod.agda_why_inscope(expand("%:p"))
 command! ToggleImplicit :call AgdaMod.toggle_implicit(expand("%:p"))
 command! MkPrompt :call AgdaMod.edit_goal(expand("%:p"))
 command! PrintGoals :call AgdaMod.agda_show_goals(expand("%:p"))
@@ -45,10 +47,13 @@ nm <buffer> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
 nm <buffer> <LocalLeader>n :<c-u>AgdaCompute<cr>
 nm <buffer> <LocalLeader>a :<c-u>AgdaAuto<cr>
 nm <buffer> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
+nm <buffer> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
+nm <buffer> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
 nm <buffer> <LocalLeader>e :<c-u>MkPrompt<cr>
 nm <buffer> <LocalLeader>? :<c-u>PrintGoals<cr>
 nm <buffer> <LocalLeader>f :<c-u>GoalNext<cr>
 nm <buffer> <LocalLeader>b :<c-u>GoalPrev<cr>
+
 
 " mappings
 runtime agda-input.vim

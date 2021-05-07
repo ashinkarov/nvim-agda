@@ -104,6 +104,14 @@ local function mk_delim(w)
     return s
 end
 
+local function split_lines(s)
+    local ls = {}
+    for l in string.gmatch(s, "[^\n]+") do
+        table.insert(ls, l) 
+    end
+    return ls
+end
+
 -- This one reiles on the presence of main_buf variable.
 -- TODO we also need to consider the case when the file
 --      has been changed externally.  Otherwise locations
@@ -223,6 +231,13 @@ local function mk_window(lines,loc)
         state.col = loc.col
     end
 
+    -- We need to register autocommand that sets `msg_win` to nil
+    -- when leaving window with :q.
+    vim.api.nvim_buf_call(msg_buf, function ()
+        vim.cmd("au WinClosed * lua require('agda').close_msg_win()")
+    end)
+
+
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
 
@@ -316,6 +331,7 @@ local function handle_displayinfo(msg)
     end
 
     local inf = msg.info
+    --debug(inf)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
@@ -338,7 +354,31 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "InferredType" then
         mk_window(add_sep({"Inferred Type: " .. inf.expr}))
     elseif inf.kind == "NormalForm" then
-        mk_window(add_sep({"Normal Form: " .. inf.expr}))
+        local p = split_lines(inf.expr)
+        if #p == 1 then 
+            p[1] = "Normal Form: " .. p[1]
+        else
+            table.insert(p,1,"Normal Form")
+        end
+        mk_window(add_sep(p))
+    elseif inf.kind == "ModuleContents" then
+        local indent = "   "
+        local p = {"Module Content"}
+        for _,v in ipairs(inf.contents) do
+            table.insert(p, indent .. v.name)
+            for k,v in ipairs(split_lines(v.term)) do
+                local l = indent .. indent .. "  " .. v
+                if k == 1 then
+                    l = indent .. indent .. ": " .. v
+                end
+                table.insert(p, l)
+            end
+        end
+        mk_window(add_sep(p, true))
+    elseif inf.kind == "WhyInScope" then
+        local p = split_lines(inf.message)
+        table.insert(p, 1, "Why `" .. inf.thing .. "' is in scope")
+        mk_window(add_sep(p, true))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -763,7 +803,8 @@ function M.agda_type_context(file,id)
 end
 
 local function agda_infer_toplevel(file, e)
-    local cmd = "(Cmd_infer_toplevel Normalised \"" .. e .. "\")"
+    local e = vim.fn.json_encode(e)
+    local cmd = "(Cmd_infer_toplevel Normalised " .. e .. ")"
     agda_feed(file, cmd)
 end
 
@@ -833,7 +874,8 @@ end
 --   * HeadCompute
 --
 local function agda_compute_toplevel(file, e)
-    local cmd = "(Cmd_compute_toplevel DefaultCompute \"" .. e .. "\")"
+    local e = vim.fn.json_encode(e)
+    local cmd = "(Cmd_compute_toplevel DefaultCompute " .. e .. ")"
     agda_feed(file, cmd)
 end
 
@@ -893,6 +935,20 @@ function M.agda_auto(file,id)
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
+end
+
+function M.agda_module_contents(file)
+    local content = vim.fn.input("Module Name: ")
+    local e = vim.fn.json_encode(content)
+    local cmd = "(Cmd_show_module_contents_toplevel Simplified" .. e .. ")"
+    agda_feed(file,cmd)
+end
+
+function M.agda_why_inscope(file)
+    local content = vim.fn.expand("<cWORD>")
+    local e = vim.fn.json_encode(content)
+    local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"
+    agda_feed(file,cmd)
 end
 
 function M.edit_goal(file)
