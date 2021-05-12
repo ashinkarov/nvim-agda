@@ -107,11 +107,12 @@ local function mk_delim(w)
 end
 
 local function split_lines(s)
-    local ls = {}
-    for l in string.gmatch(s, "[^\n]+") do
-        table.insert(ls, l) 
-    end
-    return ls
+    return vim.split(s, "\n")
+    -- local ls = {}
+    -- for l in string.gmatch(s, "[^\n]+") do
+    --     table.insert(ls, l) 
+    -- end
+    -- return ls
 end
 
 -- This one reiles on the presence of main_buf variable.
@@ -239,6 +240,15 @@ local function mk_window(lines,loc)
         vim.cmd("au WinClosed * lua require('agda').close_msg_win()")
     end)
 
+    local status = {silent=true, nowait=true, noremap=true}
+    local function mk_mapping(key, fun, args)
+        vim.api.nvim_buf_set_keymap(
+            msg_buf, 'n', key, 
+            ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
+            status)
+    end
+    mk_mapping("<LocalLeader>q", "close_msg_win",  "")
+    mk_mapping("q",              "close_msg_win",  "")
 
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
@@ -285,6 +295,7 @@ local function handle_hl(msg)
         if     (name == "keyword")  then return "Keyword"
         elseif (name == "symbol")   then return "Normal"
         elseif (name == "datatype") then return "Type"
+        -- XXX we can give a distinct color to primitive types if we want to
         elseif (name == "primitivetype") then return "Type"
         elseif (name == "function") then return "Operator"
         elseif (name == "bound") then return "Identifier"
@@ -292,6 +303,16 @@ local function handle_hl(msg)
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
         elseif (name == "hole") then return "Todo"
+        elseif (name == "unsolvedmeta") then return "Todo"
+        elseif (name == "string") then return "String"
+        elseif (name == "catchallclause") then return "Folded"
+        -- XXX I am not sure what's the purpose of highlighting
+        --     areas that have been typechecked with a different color...
+        elseif (name == "typechecks") then return "Normal"
+        elseif (name == "module") then return "Structure"
+        elseif (name == "postulate") then return "PreProc"
+        elseif (name == "primitive") then return "PreProc"
+        elseif (name == "error") then return "Error"
         -- TODO add more!
         else
             --name = name or "nil, WEIRD!!!"
@@ -324,29 +345,33 @@ local function handle_displayinfo(msg)
     -- If `lines` is a singleton, and `sep` is not nil, 
     -- we prepend `header` to the line, and only the top delimiter:
     --      ------------------------
-    --	    `header` `sep` `line[1]`
+    --      `header` `sep` `line[1]`
     --
     -- Otherwise, we add two delimiters around `header` like this:
-    --	    ------------------------
-    --	    `header`
-    --	    ------------------------
-    --	    `lines`
+    --      ------------------------
+    --      `header`
+    --      ------------------------
+    --      `lines`
     --
     local function add_sep(lines,header,sep)
-        m = max_width(lines)
-        l = mk_delim(math.max(msg_min_width, m))
-	if #lines == 1 and sep ~= nil then
-	    lines[1] = header .. sep .. lines[1]
-	else
-	    table.insert(lines,1,header)
-            table.insert(lines,2,l)
+        -- Single-line output.
+        if #lines == 1 and sep ~= nil then
+            lines[1] = header .. sep .. lines[1]
+            table.insert(lines, 1, mk_delim(utf8.len(lines[1])))
+            return lines
         end
+
+        -- Multiline ouput with header.
+        local m = max_width(lines)
+        local l = mk_delim(math.max(msg_min_width, m))
+        table.insert(lines,1,header)
+        table.insert(lines,2,l)
         table.insert(lines,1,l)
         return lines
     end
 
     local function mk_decl(name,lines,sep)
-	p = {}
+	local p = {}
 	local spc = string.rep(" ", utf8.len(sep))
 	for k,v in ipairs(lines) do
 	    if k == 1 then
@@ -404,6 +429,34 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "WhyInScope" then
         mk_window(add_sep(split_lines(inf.message),
 	                  "Why `" .. inf.thing .. "' is in scope"))
+    elseif inf.kind == "AllGoalsWarnings" then
+        local m = {}
+        local indent = "    "
+        if inf.errors ~= "" then
+            table.insert(m, "Errors")
+            for _,v in ipairs(vim.split(inf.errors, "\n")) do
+                table.insert(m, indent .. v)
+            end
+        end
+        if inf.warnings ~= "" then
+            table.insert(m, "Warnings")
+            for _,v in ipairs(vim.split(inf.warnings, "\n")) do
+                table.insert(m, indent .. v)
+            end
+        end
+        if #inf.invisibleGoals > 0 then
+            table.insert(m, "Invisible Goals")
+            for _,v in ipairs(inf.invisibleGoals) do
+                table.insert(m, string.format("%s%s %s %s", indent, v.constraintObj, v.kind, v.type))
+            end
+        end
+        if #inf.visibleGoals > 0 then
+            table.insert(m, "Visible Goals")
+            for _,v in ipairs(inf.visibleGoals) do
+                table.insert(m, string.format("%s%s %s %s", indent, v.constraintObj, v.kind, v.type))
+            end
+        end
+        print(table.concat(m, "\n"))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -944,7 +997,7 @@ function M.agda_helper_fun(file,id)
 end
 
 
-local function agda_auto_toplevel(file, e)
+local function agda_auto_toplevel(file)
     local cmd = "(Cmd_autoAll)"
     agda_feed(file, cmd)
 end
@@ -954,7 +1007,7 @@ function M.agda_auto(file,id)
     wrap_goal_action(function ()
         local id = id_or_current_goal(id, loc)
         if id == nil then
-            return agda_auto_toplevel(file, g)
+            return agda_auto_toplevel(file)
         end
         local content = get_trimmed_content(id)
         -- TODO Handle reply from Auto.
@@ -965,17 +1018,21 @@ function M.agda_auto(file,id)
 end
 
 function M.agda_module_contents(file)
-    local content = vim.fn.input("Module Name: ")
-    local e = vim.fn.json_encode(content)
-    local cmd = "(Cmd_show_module_contents_toplevel Simplified" .. e .. ")"
-    agda_feed(file,cmd)
+    wrap_goal_action(function ()
+        local content = vim.fn.input("Module Name: ")
+        local e = vim.fn.json_encode(content)
+        local cmd = "(Cmd_show_module_contents_toplevel Simplified" .. e .. ")"
+        agda_feed(file,cmd)
+    end, file)
 end
 
 function M.agda_why_inscope(file)
-    local content = vim.fn.expand("<cWORD>")
-    local e = vim.fn.json_encode(content)
-    local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"
-    agda_feed(file,cmd)
+    wrap_goal_action(function ()
+        local content = vim.fn.expand("<cWORD>")
+        local e = vim.fn.json_encode(content)
+        local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"
+        agda_feed(file,cmd)
+    end, file)
 end
 
 function M.edit_goal(file)
