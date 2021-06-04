@@ -177,7 +177,7 @@ local function mk_prompt_window(file, goal, loff)
             ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
-    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', nil, %d", file, goal[1]))
     mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
@@ -237,18 +237,18 @@ local function mk_window(lines,loc)
     -- We need to register autocommand that sets `msg_win` to nil
     -- when leaving window with :q.
     vim.api.nvim_buf_call(msg_buf, function ()
-        vim.cmd("au WinClosed * lua require('agda').close_msg_win()")
+        vim.cmd("au WinClosed <buffer=" .. msg_buf .. "> lua require('agda').close_msg_win()")
     end)
 
     local status = {silent=true, nowait=true, noremap=true}
-    local function mk_mapping(key, fun, args)
+    local function mk_mappingx(key, fun, args)
         vim.api.nvim_buf_set_keymap(
             msg_buf, 'n', key, 
             ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
-    mk_mapping("<LocalLeader>q", "close_msg_win",  "")
-    mk_mapping("q",              "close_msg_win",  "")
+    mk_mappingx("<LocalLeader>q", "close_msg_win",  "")
+    mk_mappingx("q",              "close_msg_win",  "")
 
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
@@ -357,7 +357,7 @@ local function handle_displayinfo(msg)
         -- Single-line output.
         if #lines == 1 and sep ~= nil then
             lines[1] = header .. sep .. lines[1]
-            table.insert(lines, 1, mk_delim(utf8.len(lines[1])))
+            table.insert(lines, 1, mk_delim(math.max(msg_min_width, utf8.len(lines[1]))))
             return lines
         end
 
@@ -466,15 +466,38 @@ local function handle_displayinfo(msg)
         elseif g.kind == "NormalForm" then
             p = add_sep(split_lines(g.expr), "Normal Form", " : ")
         elseif g.kind == "GoalType" then
-            p = {}
+            --p = {}
 	    local max_name_len = max_width(g.entries, "originalName")
             for _,v in ipairs(g.entries) do
 	        local name = v.originalName
 	        name = name .. string.rep(" ", max_name_len - utf8.len(name))
 	        table_append(p, mk_decl(name, split_lines(v.binding), " : "))
             end
-	    -- XXX could it be that g.type containts "\n"s?
-	    p = add_sep(p, "Goal Type : " .. g.type)
+            local ty = split_lines(g.type)
+            local gt = "Goal Type : "
+
+            if #ty == 0 then
+	        p = add_sep(p, gt .. g.type)
+            else
+                -- XXX we can lift this into the add_sep, if this is a common case.
+                for k,_ in ipairs(ty) do
+                    if k == 1 then
+                        ty[k] = gt .. ty[k]
+                    else
+                        ty[k] = string.rep(" ", utf8.len(gt)) .. ty[k]
+                    end
+                end
+                local m = max_width(p)
+                m = math.max(max_width(ty),m)
+                m = math.max(msg_min_width, m)
+                local l = mk_delim(m)
+                table.insert(p,1,l)
+                table.insert(ty,1,l)
+                for _,v in ipairs(p) do
+                    table.insert(ty,v)
+                end
+                p = ty
+            end
         elseif g.kind == "HelperFunction" then
             p = add_sep(split_lines(g.signature), 
 	                "Helper Function (copied to the \" register)")
@@ -597,6 +620,7 @@ local function handle_give(msg)
     vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
     -- if the goal is "?"
     if utf8.sub(content[1], sc, sc) == "?" then
+        -- FIXME does not work if `r` contains unicode, what the fuck..
         vim.cmd("normal cl" .. r)
     else
         vim.cmd("normal ca{" .. r)
@@ -666,6 +690,9 @@ local function on_event(job_id, data, event)
                 -- therefore we can execute the previously accumulated buffer.
                 if prefix("{\"kind\":", v) or prefix("{\"status\":", v) then
                     if evbuf ~= "" then
+                        -- TODO do `pcall` and recover from the failure
+                        -- by killing the `evbuf`, as otherwise we could
+                        -- be stuck with a broken buffer.
                         handle_msg (vim.fn.json_decode(evbuf))
                     end
                     evbuf = v
@@ -781,7 +808,7 @@ function M.agda_show_goals(file)
     local g = ""
     local c = 0
     for _,v in pairs(goals) do
-        g = g .. string.format("    line %03d: ?", v.start.line)
+        g = g .. string.format("    line %03d: ?\n", v.start.line)
         c = c + 1
     end
     if c > 0 then
@@ -800,6 +827,7 @@ function M.agda_goal_next(file)
     for k,v in pairs(goals) do
         if v.start > loc then
             pos = v.start
+            break
         end
     end
     -- if we didn't find the goal after the cursor
@@ -837,6 +865,7 @@ function M.agda_goal_prev(file)
     for i = #ix,1,-1 do
         if goals[ix[i]].start < loc then
             pos = goals[ix[i]].start
+            break
         end
     end
     -- if we didn't find the goal before the cursor,
@@ -860,7 +889,7 @@ local function toggle_implicit(file, b)
     end
 end
 
-function M.agda_type_context(file,id)
+function M.agda_type_context(file,prec,id)
     -- Get the location of the cursor at the time we called `agda_type_context`.
     local loc = get_current_loc()
     wrap_goal_action(function ()
@@ -869,16 +898,21 @@ function M.agda_type_context(file,id)
             return warning("cannot obtain goal type and context, the cursor is not in the goal")
         end
 
-        local cmd = "(Cmd_goal_type_context Normalised " .. id .. " noRange \"\")"
+        if prec == nil then
+            prec = "Simplified"
+        end
+
+        local cmd = "(Cmd_goal_type_context " .. prec .. " " .. id .. " noRange \"\")"
         -- XXX not sure whether we can avoid this, it
         -- seems that agda_load sets the this flag to false.
-        if not showImplicitArgs then
-            toggle_implicit(file,true)
-            agda_feed(file, cmd)
-            toggle_implicit(file,false)
-        else
-            agda_feed(file, cmd)
-        end
+        -- if not showImplicitArgs then
+        --     toggle_implicit(file,true)
+        --     agda_feed(file, cmd)
+        --     toggle_implicit(file,false)
+        -- else
+        --     agda_feed(file, cmd)
+        -- end
+        agda_feed(file, cmd)
     end, file)
 end
 
@@ -1028,6 +1062,11 @@ end
 
 function M.agda_why_inscope(file)
     wrap_goal_action(function ()
+        -- FIXME this is a bug when we have something like
+        --       (F.blah + ...)
+        --           ^
+        --           |
+        -- cWORD is returning `(F.blah`, what a nonsense...
         local content = vim.fn.expand("<cWORD>")
         local e = vim.fn.json_encode(content)
         local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"

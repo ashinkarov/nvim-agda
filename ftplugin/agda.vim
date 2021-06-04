@@ -1,6 +1,9 @@
 
 let AgdaMod = luaeval("require'agda'")
 
+hi Todo ctermbg=DarkGray ctermfg=Black
+
+
 if !exists("g:nvim_agda_settings")
     let g:nvim_agda_settings = {}
 endif 
@@ -18,6 +21,7 @@ command! AgdaStart :call AgdaMod.agda_start()
 command! AgdaLoad :call AgdaMod.agda_load(expand("%:p"))
 command! AgdaContext :call AgdaMod.agda_context(expand("%:p"))
 command! AgdaTypeContext :call AgdaMod.agda_type_context(expand("%:p"))
+command! AgdaTypeContextNorm :call AgdaMod.agda_type_context(expand("%:p"),"Normalised")
 command! AgdaInfer :call AgdaMod.agda_infer(expand("%:p"))
 command! AgdaCompute :call AgdaMod.agda_compute(expand("%:p"))
 command! AgdaRefine :call AgdaMod.agda_refine(expand("%:p"))
@@ -41,6 +45,7 @@ command! GetEvbuf :call AgdaMod.getevbuf()
 nm <buffer> <LocalLeader>l :<c-u>AgdaLoad<cr>
 nm <buffer> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
 nm <buffer> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
+nm <buffer> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
 nm <buffer> <LocalLeader>d :<c-u>AgdaInfer<cr>
 nm <buffer> <LocalLeader>r :<c-u>AgdaRefine<cr>
 nm <buffer> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
