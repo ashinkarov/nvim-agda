@@ -1,6 +1,7 @@
 " Mapping unicode symbols.
 noremap! <buffer> <LocalLeader>to   →
 noremap! <buffer> <LocalLeader>-    →
+noremap! <buffer> <LocalLeader><-   ←
 noremap! <buffer> <LocalLeader>and  ∧
 noremap! <buffer> <LocalLeader>or   ∨
 noremap! <buffer> <LocalLeader>qed  ∎
@@ -13,9 +14,13 @@ noremap! <buffer> <LocalLeader>==n  ≢
 noremap! <buffer> <LocalLeader>::   ∷
 noremap! <buffer> <LocalLeader>all  ∀
 noremap! <buffer> <LocalLeader>ex   ∃
-
-
-
+noremap! <buffer> <LocalLeader>le   ≤
+noremap! <buffer> <LocalLeader>'    ′
+noremap! <buffer> <LocalLeader>top  ⊤
+noremap! <buffer> <LocalLeader>?=   ≟
+noremap! <buffer> <LocalLeader>o*   ⊛
+noremap! <buffer> <LocalLeader>x    ×
+noremap! <buffer> <LocalLeader>o+   ⊕
 
 noremap! <buffer> <LocalLeader>bN   ℕ
 

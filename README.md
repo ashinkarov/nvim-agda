@@ -24,11 +24,12 @@ this is non-trivial.
 ## Configuration
 
 The plugin can be configured by defining a global variable named
-`g:nvim_agda_settings` of type dictionary.  So far the only supported key in the
-dictionary is the location of Agda binary:
+`g:nvim_agda_settings` of type dictionary.  So far the only supported keys in the
+dictionary are the location of Agda binary and the arguments to that binary:
 ```
 {
-  "agda" : "/usr/local/bin/agda"
+  "agda" : "/usr/local/bin/agda",
+  "agda_args" : [ "--arg1", "--arg2"  ]
 }
 ```
 All the fields of the dictionary may be omitted, as well as the

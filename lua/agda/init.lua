@@ -8,6 +8,8 @@ local M = {}
 
 -- Agda Process Handle.  Created by `agda_start`.
 local agda_bin = "agda"
+local agda_args = {}
+
 local agda_job = nil
 
 -- The list of goals in the format {id = {start = {l,c}, end = {l,c}}}
@@ -90,10 +92,10 @@ end
 local function max_width(lines,key)
     local max = 0
     for k,v in pairs(lines) do
-	if key ~= nil then
-	    v = v[key]
-	end
-	max = math.max(max, utf8.len(v))
+        if key ~= nil then
+            v = v[key]
+        end
+        max = math.max(max, utf8.len(v))
     end
     return max
 end
@@ -150,9 +152,11 @@ end
 ------------------------------------------------
 
 function M.setup(config)
-    if config and config.agda then
-        agda_bin = config.agda
+    if not config then
+        return
     end
+    if config.agda then   agda_bin = config.agda  end
+    if config.agda_args then agda_args = config.agda_args end
 end
 
 function M.close_prompt_win()
@@ -321,6 +325,7 @@ local function handle_hl(msg)
         end
     end
 
+    -- FIXME just seen the case when `info` field is nil!  Weird...
     for k, v in pairs(msg.info.payload) do
         local r = v.range
         -- FIXME s sometimes can be nil... Why?
@@ -354,6 +359,9 @@ local function handle_displayinfo(msg)
     --      `lines`
     --
     local function add_sep(lines,header,sep)
+        -- FIXME we also need to consider `max_width`, as we can only have the window
+        -- as large as the buffer/window width.
+        --
         -- Single-line output.
         if #lines == 1 and sep ~= nil then
             lines[1] = header .. sep .. lines[1]
@@ -371,23 +379,23 @@ local function handle_displayinfo(msg)
     end
 
     local function mk_decl(name,lines,sep)
-	local p = {}
-	local spc = string.rep(" ", utf8.len(sep))
-	for k,v in ipairs(lines) do
-	    if k == 1 then
-		table.insert(p, name .. sep .. v)
-		name = string.rep(" ", utf8.len(name))
-	    else
-		table.insert(p, name .. spc .. v)
-	    end
-	end
-	return p
+        local p = {}
+        local spc = string.rep(" ", utf8.len(sep))
+        for k,v in ipairs(lines) do
+            if k == 1 then
+                table.insert(p, name .. sep .. v)
+                name = string.rep(" ", utf8.len(name))
+            else
+                table.insert(p, name .. spc .. v)
+            end
+        end
+        return p
     end
 
     local function table_append(p,q)
-	for _,v in ipairs(q) do
-	    table.insert(p,v)
-	end
+        for _,v in ipairs(q) do
+            table.insert(p,v)
+        end
     end
 
     local inf = msg.info
@@ -407,53 +415,78 @@ local function handle_displayinfo(msg)
         vim.api.nvim_err_writeln(text)
     elseif inf.kind == "Context" then
         local p = {}
-	local max_name_len = max_width(inf.context, "originalName")
+        local max_name_len = max_width(inf.context, "originalName")
         for _,v in ipairs(inf.context) do
-	    local name = v.originalName
-	    name = name .. string.rep(" ", max_name_len - utf8.len(name))
-	    table_append(p, mk_decl(name, split_lines(v.binding), " : "))
+            -- FIXME we want reifiedName here, as it may differ.
+            local name = v.originalName
+            name = name .. string.rep(" ", max_name_len - utf8.len(name))
+            table_append(p, mk_decl(name, split_lines(v.binding), " : "))
         end
         mk_window(add_sep(p,"Context"))
     elseif inf.kind == "InferredType" then
         mk_window(add_sep(split_lines(inf.expr), "Inferred Type", " : "))
     elseif inf.kind == "NormalForm" then
-	mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
+        mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
     elseif inf.kind == "ModuleContents" then
         local indent = "   "
         local p = {}
         for _,v in ipairs(inf.contents) do
             table.insert(p, indent .. v.name)
-	    table_append(p, mk_decl(indent .. indent, split_lines(v.term), " : "))
+            table_append(p, mk_decl(indent .. indent, split_lines(v.term), " : "))
         end
         mk_window(add_sep(p, "Module Content"))
     elseif inf.kind == "WhyInScope" then
         mk_window(add_sep(split_lines(inf.message),
-	                  "Why `" .. inf.thing .. "' is in scope"))
+                      "Why `" .. inf.thing .. "' is in scope"))
     elseif inf.kind == "AllGoalsWarnings" then
         local m = {}
         local indent = "    "
-        if inf.errors ~= "" then
+        -- At some point the json API changed, and erros are put into the table instead of string.
+        if type(inf.errors) == "string" and inf.errors ~= "" then
+                table.insert(m, "Errors")
+                for _,v in ipairs(vim.split(inf.errors, "\n")) do
+                    table.insert(m, indent .. v)
+                end
+        end
+        if type(inf.errors) == "table" and #inf.errors > 0 then
             table.insert(m, "Errors")
-            for _,v in ipairs(vim.split(inf.errors, "\n")) do
-                table.insert(m, indent .. v)
+            for _,v in ipairs(inf.errors) do
+                for k,w in ipairs(vim.split(v.message, "\n")) do
+                    table.insert(m, string.format("%s%s", indent, w))
+                end
             end
         end
-        if inf.warnings ~= "" then
+
+        -- Same as above, in 2.6.2 json API changed.
+        if type(inf.warnings) == "string" and inf.warnings ~= "" then
             table.insert(m, "Warnings")
             for _,v in ipairs(vim.split(inf.warnings, "\n")) do
                 table.insert(m, indent .. v)
             end
         end
+        if type(inf.warnings) == "table" and #inf.warnings > 0 then
+            table.insert(m, "Warnings")
+            for _,v in ipairs(inf.warnings) do
+                for k,w in ipairs(vim.split(v.message, "\n")) do
+                    table.insert(m, string.format("%s%s", indent, w))
+                end
+            end
+        end
+
         if #inf.invisibleGoals > 0 then
             table.insert(m, "Invisible Goals")
             for _,v in ipairs(inf.invisibleGoals) do
-                table.insert(m, string.format("%s%s %s %s", indent, v.constraintObj, v.kind, v.type))
+        local o = v.constraintObj
+        if type(o) == "table" then o = o.name end
+                table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
             end
         end
         if #inf.visibleGoals > 0 then
             table.insert(m, "Visible Goals")
             for _,v in ipairs(inf.visibleGoals) do
-                table.insert(m, string.format("%s%s %s %s", indent, v.constraintObj, v.kind, v.type))
+        local o = v.constraintObj
+        if type(o) == "table" then o = o.id end
+                table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
             end
         end
         print(table.concat(m, "\n"))
@@ -462,22 +495,22 @@ local function handle_displayinfo(msg)
         local g = inf.goalInfo
         local ip = inf.interactionPoint
         if g.kind == "InferredType" then
-	    p = add_sep(split_lines(g.expr), "Inferred Type", " : ")
+            p = add_sep(split_lines(g.expr), "Inferred Type", " : ")
         elseif g.kind == "NormalForm" then
             p = add_sep(split_lines(g.expr), "Normal Form", " : ")
         elseif g.kind == "GoalType" then
             --p = {}
-	    local max_name_len = max_width(g.entries, "originalName")
+        local max_name_len = max_width(g.entries, "originalName")
             for _,v in ipairs(g.entries) do
-	        local name = v.originalName
-	        name = name .. string.rep(" ", max_name_len - utf8.len(name))
-	        table_append(p, mk_decl(name, split_lines(v.binding), " : "))
+                local name = v.originalName
+                name = name .. string.rep(" ", max_name_len - utf8.len(name))
+                table_append(p, mk_decl(name, split_lines(v.binding), " : "))
             end
             local ty = split_lines(g.type)
             local gt = "Goal Type : "
 
             if #ty == 0 then
-	        p = add_sep(p, gt .. g.type)
+                p = add_sep(p, gt .. g.type)
             else
                 -- XXX we can lift this into the add_sep, if this is a common case.
                 for k,_ in ipairs(ty) do
@@ -500,13 +533,13 @@ local function handle_displayinfo(msg)
             end
         elseif g.kind == "HelperFunction" then
             p = add_sep(split_lines(g.signature), 
-	                "Helper Function (copied to the \" register)")
+                        "Helper Function (copied to the \" register)")
             vim.fn.setreg('"', g.signature)
         else
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
                 table.insert(p, v)
             end
-            p = add_sep(p,"Don't know how to show " .. g.kind)
+            p = add_sep(p, "Don't know how to show " .. g.kind)
         end
         -- We assume that GoalSpecific things always have a location
         mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))
@@ -679,36 +712,42 @@ end
 
 local function on_event(job_id, data, event)
     if event == "stdout"  then
-        for _ , vv in pairs(data) do
+        -- We assume here that we can never receive mroe than one 
+        -- json message in one go.  We can receive less than one,
+        -- but never more.  If this assumption fails, we'd have to
+        -- adjust the code below.
+        for k , vv in pairs(data) do
             local v = utf8.gsub(vv, "^JSON> ", "")
+            --print("on_event: " .. k .. ", v = " .. v , "\n" ..
+            --      "on_event: " .. k .. ", e = ", evbuf)
             if v ~= "" then
-                --print("on_event: " .. counter .. ", " 
-                --      .. string.sub(v, 1, 100) .. " ... "
-                --      .. string.sub(v, -100)
-                --      .. " evbuf: '" .. string.sub(evbuf, 1, 5) .. "'")
-                -- XXX We assume that this starts the new json message,
-                -- therefore we can execute the previously accumulated buffer.
-                if prefix("{\"kind\":", v) or prefix("{\"status\":", v) then
-                    if evbuf ~= "" then
-                        -- TODO do `pcall` and recover from the failure
-                        -- by killing the `evbuf`, as otherwise we could
-                        -- be stuck with a broken buffer.
-                        handle_msg (vim.fn.json_decode(evbuf))
+                if evbuf == "" then
+                    local status, parsed_v = pcall(vim.fn.json_decode, v)
+                    if status then
+                        handle_msg (parsed_v)
+                    else
+                        evbuf = v
                     end
-                    evbuf = v
                 else
-                    evbuf = evbuf .. v
+                    local status, parsed_evbuf = pcall(vim.fn.json_decode, evbuf)
+                    if status then
+                        handle_msg (parsed_evbuf)
+                        evbuf = v
+                    else
+                        evbuf = evbuf .. v
+                    end
                 end
             end
         end
         -- If we have a valid json message in the evbuf, let's
         -- execute it.  If not, we leave it for the next time this
         -- function is called.
-        if evbuf ~= "" and pcall (vim.fn.json_decode, evbuf) then
-            handle_msg (vim.fn.json_decode(evbuf))
-            evbuf = ""
-        else
-            --print("Leaving evbuf for later")
+        if evbuf ~= "" then
+            local status, parsed_evbuf = pcall(vim.fn.json_decode, evbuf)
+            if status then
+                handle_msg(parsed_evbuf)
+                evbuf = ""
+            end
         end
     elseif event == "stderr" then
         error("Agda interaction error: " .. table.concat(data, "\n"))
@@ -718,8 +757,13 @@ end
 -- TODO we need to define a function that terminates the process
 -- and call it at exit.
 function M.agda_start()
+    local t = {agda_bin}
+    for _,v in ipairs(agda_args) do
+        table.insert(t, v)
+    end
+    table.insert(t, "--interaction-json")
     agda_job = vim.fn.jobstart(
-        {agda_bin, "--interaction-json"},
+        t,
         {
             on_stderr = on_event,
             on_stdout = on_event,
@@ -871,6 +915,8 @@ function M.agda_goal_prev(file)
     -- if we didn't find the goal before the cursor,
     -- return the last goal in the list
     if pos == nil then
+        -- FIXME this indexing `.start` may result in nil
+        --       not sure why.
         pos = goals[ix[#ix]].start
     end
 
