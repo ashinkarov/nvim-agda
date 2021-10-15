@@ -29,8 +29,8 @@ noremap! <buffer> <LocalLeader>{{   ⦃
 noremap! <buffer> <LocalLeader>}}   ⦄
 
 noremap! <buffer> <LocalLeader>bN   ℕ
-
-
+noremap! <buffer> <LocalLeader>=>   ⇒
+noremap! <buffer> <LocalLeader>in   ∈
 
 
 " Lower numbers.  Note, no '_' in the mapping.
