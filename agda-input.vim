@@ -15,12 +15,18 @@ noremap! <buffer> <LocalLeader>::   ∷
 noremap! <buffer> <LocalLeader>all  ∀
 noremap! <buffer> <LocalLeader>ex   ∃
 noremap! <buffer> <LocalLeader>le   ≤
+noremap! <buffer> <LocalLeader>ge   ≥
 noremap! <buffer> <LocalLeader>'    ′
 noremap! <buffer> <LocalLeader>top  ⊤
+noremap! <buffer> <LocalLeader>bot  ⊥
 noremap! <buffer> <LocalLeader>?=   ≟
 noremap! <buffer> <LocalLeader>o*   ⊛
 noremap! <buffer> <LocalLeader>x    ×
 noremap! <buffer> <LocalLeader>o+   ⊕
+noremap! <buffer> <LocalLeader>t>   ▹
+noremap! <buffer> <LocalLeader>.-   ∸
+noremap! <buffer> <LocalLeader>{{   ⦃
+noremap! <buffer> <LocalLeader>}}   ⦄
 
 noremap! <buffer> <LocalLeader>bN   ℕ
 
@@ -38,7 +44,8 @@ noremap! <buffer> <LocalLeader>6 ₆
 noremap! <buffer> <LocalLeader>7 ₇
 noremap! <buffer> <LocalLeader>8 ₈
 noremap! <buffer> <LocalLeader>9 ₉
-
+" Lower letters
+noremap! <buffer> <LocalLeader>t ₜ
 
 " Greek Letters.
 noremap! <buffer> <LocalLeader>Ga  α
