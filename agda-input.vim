@@ -31,6 +31,8 @@ noremap! <buffer> <LocalLeader>}}   ⦄
 noremap! <buffer> <LocalLeader>bN   ℕ
 noremap! <buffer> <LocalLeader>=>   ⇒
 noremap! <buffer> <LocalLeader>in   ∈
+noremap! <buffer> <LocalLeader>ni   ∋
+noremap! <buffer> <LocalLeader>neg  ¬
 
 
 " Lower numbers.  Note, no '_' in the mapping.

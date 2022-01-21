@@ -2,7 +2,16 @@
 let AgdaMod = luaeval("require'agda'")
 
 hi Todo ctermbg=DarkGray ctermfg=Black
+" hi NonTerminating ctermbg=Red
+hi NonTerminating ctermbg=LightRed ctermfg=Black
+hi NoDefinition ctermbg=Brown
+"ctermbg=LightBlue ctermfg=Black
 
+
+"  \ "agda_args" : [ "--library-file=/home/tema/.agda/libraries" ],
+let g:nvim_agda_settings = { 
+  \ "agda" : "/home/tema/.cabal/bin/agda"
+  \ }
 
 if !exists("g:nvim_agda_settings")
     let g:nvim_agda_settings = {}

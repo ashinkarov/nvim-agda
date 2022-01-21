@@ -317,6 +317,9 @@ local function handle_hl(msg)
         elseif (name == "postulate") then return "PreProc"
         elseif (name == "primitive") then return "PreProc"
         elseif (name == "error") then return "Error"
+        elseif (name == "terminationproblem") then return "NonTerminating"
+        elseif (name == "missingdefinition") then return "NoDefinition"
+
         -- TODO add more!
         else
             --name = name or "nil, WEIRD!!!"
