@@ -1114,7 +1114,7 @@ local function agda_auto_toplevel(file)
 end
 
 local function agda_solve_toplevel(file)
-    local cmd = "(Cmd_solveAll)"
+    local cmd = "(Cmd_solveAll Simplified)"
     agda_feed(file, cmd)
 end
 
@@ -1144,7 +1144,6 @@ function M.agda_solve(file,id)
         -- TODO Handle reply from Auto.
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_solveOne Simplified " .. id .. " noRange " .. g .. ")"
-        dprint(cmd)
         agda_feed(file, cmd)
     end, file)
 end
