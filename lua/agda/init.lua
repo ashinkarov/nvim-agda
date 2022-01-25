@@ -112,7 +112,7 @@ local function split_lines(s)
     return vim.split(s, "\n")
     -- local ls = {}
     -- for l in string.gmatch(s, "[^\n]+") do
-    --     table.insert(ls, l) 
+    --     table.insert(ls, l)
     -- end
     -- return ls
 end
@@ -177,7 +177,7 @@ local function mk_prompt_window(file, goal, loff)
     local status = {silent=true, nowait=true, noremap=true}
     local function mk_mapping(key, fun, args)
         vim.api.nvim_buf_set_keymap(
-            pbuf, 'n', key, 
+            pbuf, 'n', key,
             ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
@@ -187,6 +187,7 @@ local function mk_prompt_window(file, goal, loff)
     mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>s", "agda_solve",        string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>h", "agda_helper_fun",   string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>q", "close_msg_win",     "")
     mk_mapping("q",              "close_prompt_win",  "")
@@ -208,7 +209,7 @@ end
 
 
 -- Show message window.  `loc:Loc` is the location of the goal
--- in the file.  If `loc` is omitted, the window is shown at 
+-- in the file.  If `loc` is omitted, the window is shown at
 -- the current position of the cursor.
 local function mk_window(lines,loc)
     if msg_buf == nil then
@@ -247,7 +248,7 @@ local function mk_window(lines,loc)
     local status = {silent=true, nowait=true, noremap=true}
     local function mk_mappingx(key, fun, args)
         vim.api.nvim_buf_set_keymap(
-            msg_buf, 'n', key, 
+            msg_buf, 'n', key,
             ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
@@ -347,7 +348,7 @@ end
 
 local function handle_displayinfo(msg)
     -- Adds the header and delimiter(s) to the list of lines.
-    -- If `lines` is a singleton, and `sep` is not nil, 
+    -- If `lines` is a singleton, and `sep` is not nil,
     -- we prepend `header` to the line, and only the top delimiter:
     --      ------------------------
     --      `header` `sep` `line[1]`
@@ -532,7 +533,7 @@ local function handle_displayinfo(msg)
                 p = ty
             end
         elseif g.kind == "HelperFunction" then
-            p = add_sep(split_lines(g.signature), 
+            p = add_sep(split_lines(g.signature),
                         "Helper Function (copied to the \" register)")
             vim.fn.setreg('"', g.signature)
         else
@@ -563,7 +564,7 @@ local function handle_interpoints(msg)
     goals = {}
     for k,v in pairs(msg.interactionPoints) do
         -- FIXME sometimes there is no range in the output... wtf...
-        if #v.range > 0 then 
+        if #v.range > 0 then
             local s = v.range[1].start
             local e = v.range[1]["end"]
             goals[v.id] = {
@@ -632,6 +633,32 @@ function M.gc()
     print("'" .. get_goal_content(n[1]) .. "'")
 end
 
+local function handle_solve(soln)
+    -- debug(msg)
+    local n = goals[soln.interactionPoint]
+    local sl = n.start.line
+    local sc = n.start.col
+    local el = n["end"].line
+    local ec = n["end"].col
+
+    -- Fucking vim api is in bytes!
+    local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, sl, true)
+    local r = soln.expression
+    local o = utf8.offset(content[1], sc)
+    if pwin ~= nil then
+        M.close_prompt_win()
+        vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
+    end
+    -- 1-based lines, 0-based columns!
+    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
+    -- if the goal is "?"
+    if utf8.sub(content[1], sc, sc) == "?" then
+        -- FIXME does not work if `r` contains unicode, what the fuck..
+        vim.cmd("normal cl(" .. r .. ")")
+    else
+        vim.cmd("normal ca{(" .. r .. ")")
+    end
+end
 
 local function handle_give(msg)
     --debug(msg)
@@ -683,7 +710,7 @@ end
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
     --debug(msg)
-    if (msg["kind"] == "HighlightingInfo") then 
+    if (msg["kind"] == "HighlightingInfo") then
         handle_hl(msg)
     elseif (msg["kind"] == "DisplayInfo") then
         handle_displayinfo(msg)
@@ -691,6 +718,10 @@ local function handle_msg(msg)
         handle_interpoints(msg)
     elseif msg["kind"] == "GiveAction" then
         handle_give(msg)
+    elseif msg["kind"] == "SolveAll" then
+        for _,soln in ipairs(msg.solutions) do
+          handle_solve(soln)
+        end
     elseif msg.kind == "MakeCase" then
         handle_make_case(msg)
     elseif msg.kind == "Status" then
@@ -699,7 +730,7 @@ local function handle_msg(msg)
         print(msg.message)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
-    else 
+    else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
     end
@@ -712,7 +743,7 @@ end
 
 local function on_event(job_id, data, event)
     if event == "stdout"  then
-        -- We assume here that we can never receive mroe than one 
+        -- We assume here that we can never receive mroe than one
         -- json message in one go.  We can receive less than one,
         -- but never more.  If this assumption fails, we'd have to
         -- adjust the code below.
@@ -1015,7 +1046,7 @@ function M.agda_refine(file,id)
         end
 
         local content = get_trimmed_content(id)
-        -- TODO handle IntroConstructorUnknown DisplayInfo 
+        -- TODO handle IntroConstructorUnknown DisplayInfo
         --if content == "" then
         --    return warning("cannot refine empty goal")
         --end
@@ -1082,6 +1113,11 @@ local function agda_auto_toplevel(file)
     agda_feed(file, cmd)
 end
 
+local function agda_solve_toplevel(file)
+    local cmd = "(Cmd_solveAll)"
+    agda_feed(file, cmd)
+end
+
 function M.agda_auto(file,id)
     local loc = get_current_loc()
     wrap_goal_action(function ()
@@ -1093,6 +1129,22 @@ function M.agda_auto(file,id)
         -- TODO Handle reply from Auto.
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
+
+function M.agda_solve(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return agda_solve_toplevel(file)
+        end
+        local content = get_trimmed_content(id)
+        -- TODO Handle reply from Auto.
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local cmd = "(Cmd_solveOne Simplified " .. id .. " noRange " .. g .. ")"
+        dprint(cmd)
         agda_feed(file, cmd)
     end, file)
 end
