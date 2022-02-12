@@ -869,6 +869,7 @@ function M.agda_goal_next(file)
     local loc = get_current_loc()
     if len(goals) == 0 then
         print(string.format("no goals in %s", file))
+        return
     end
     local pos = nil
     for k,v in pairs(goals) do
@@ -894,6 +895,7 @@ function M.agda_goal_prev(file)
     local loc = get_current_loc()
     if len(goals) == 0 then
         print(string.format("no goals in %s", file))
+        return
     end
 
     -- We have a 0-indexed table of goals which is not
@@ -918,8 +920,7 @@ function M.agda_goal_prev(file)
     -- if we didn't find the goal before the cursor,
     -- return the last goal in the list
     if pos == nil then
-        -- FIXME this indexing `.start` may result in nil
-        --       not sure why.
+        -- We do have at least one goal
         pos = goals[ix[#ix]].start
     end
 
