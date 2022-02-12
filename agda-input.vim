@@ -33,6 +33,25 @@ noremap! <buffer> <LocalLeader>=>   ⇒
 noremap! <buffer> <LocalLeader>in   ∈
 noremap! <buffer> <LocalLeader>ni   ∋
 noremap! <buffer> <LocalLeader>neg  ¬
+noremap! <buffer> <LocalLeader>...  ⋯
+
+noremap! <buffer> <LocalLeader>u+   ⊎
+noremap! <buffer> <LocalLeader>[[   ⟦
+noremap! <buffer> <LocalLeader>]]   ⟧
+noremap! <buffer> <LocalLeader>ell  ℓ
+
+
+noremap! <buffer> <LocalLeader>cul  ⌜
+noremap! <buffer> <LocalLeader>cuL  ⌈
+noremap! <buffer> <LocalLeader>cur  ⌝
+noremap! <buffer> <LocalLeader>cuR  ⌉
+noremap! <buffer> <LocalLeader>cll  ⌞
+noremap! <buffer> <LocalLeader>clL  ⌊
+noremap! <buffer> <LocalLeader>clr  ⌟
+noremap! <buffer> <LocalLeader>clR  ⌋
+
+
+noremap! <buffer> <LocalLeader>tr   ▹
 
 
 " Lower numbers.  Note, no '_' in the mapping.
