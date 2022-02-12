@@ -672,7 +672,6 @@ local function handle_solve(soln)
     vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
     -- if the goal is "?"
     if utf8.sub(content[1], sc, sc) == "?" then
-        -- FIXME does not work if `r` contains unicode, what the fuck..
         vim.cmd("normal cl(" .. r .. ")")
     else
         vim.cmd("normal ca{(" .. r .. ")")
@@ -1146,7 +1145,6 @@ function M.agda_auto(file,id)
             return agda_auto_toplevel(file)
         end
         local content = get_trimmed_content(id)
-        -- TODO Handle reply from Auto.
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
@@ -1161,7 +1159,6 @@ function M.agda_solve(file,id)
             return agda_solve_toplevel(file)
         end
         local content = get_trimmed_content(id)
-        -- TODO Handle reply from Auto.
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_solveOne Simplified " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)

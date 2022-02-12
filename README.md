@@ -72,7 +72,8 @@ commands have to do with management of the popups and goal editing.
 | r | Refine the goal |
 | c | Case split on a variable(s) |
 | n | Compute the goal content or toplevel expression |
-| a | Automatically look for goal (or all goals in the file) |
+| a | Automatically solve a goal (or all goals in the file) |
+| s | Automatically solve constraints in a goal (or in all goals in the file) |
 | h | Helper function for the goal |
 | o | Show the content of the module |
 | w | Explain why the name (under cursor) is in scope |
