@@ -479,9 +479,13 @@ local function handle_displayinfo(msg)
         if #inf.invisibleGoals > 0 then
             table.insert(m, "Invisible Goals")
             for _,v in ipairs(inf.invisibleGoals) do
-        local o = v.constraintObj
-        if type(o) == "table" then o = o.name end
-                table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
+                local o = v.constraintObj
+                if type(o) == "table" then o = o.name end
+                if v.type ~= nil then
+                    table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
+                else
+                    table.insert(m, string.format("%s%s %s", indent, o, v.kind))
+                end
             end
         end
         if #inf.visibleGoals > 0 then
@@ -502,8 +506,20 @@ local function handle_displayinfo(msg)
         elseif g.kind == "NormalForm" then
             p = add_sep(split_lines(g.expr), "Normal Form", " : ")
         elseif g.kind == "GoalType" then
-            --p = {}
-        local max_name_len = max_width(g.entries, "originalName")
+            -- FIXME(artem) This is a quick hack to display boundary
+            -- when using cubical agda.  Adjust the overall width 
+            -- considering boundaries as well as type/context info.
+            local max_b_len = 0
+            if #g["boundary"] > 0 then
+                table_append(p, { "Boundary: " })
+                for _,v in pairs(g.boundary) do
+                    local vs = split_lines(v)
+                    max_b_len = math.max(max_b_len, max_width(vs))
+                    table_append(p, vs)
+                end
+                table_append(p, { mk_delim(max_b_len) })
+            end
+            local max_name_len = max_width(g.entries, "originalName")
             for _,v in ipairs(g.entries) do
                 local name = v.originalName
                 name = name .. string.rep(" ", max_name_len - utf8.len(name))
@@ -1123,6 +1139,10 @@ function M.agda_why_inscope(file)
         agda_feed(file,cmd)
     end, file)
 end
+
+-- TODO add show-constraints
+-- NonInteractive Indirect ( Cmd_constraints ) function
+-- Should be rather straight-forward
 
 function M.edit_goal(file)
     wrap_goal_action(function ()
