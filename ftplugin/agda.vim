@@ -9,14 +9,14 @@ hi NoDefinition ctermbg=Brown
 
 if !exists("g:nvim_agda_settings")
     let g:nvim_agda_settings = {}
-endif 
+endif
 
 " The setting is a dictionary, so far the only key in the
 " dictionary is the location of the Agda binary, e.g.
 " { "agda": "/usr/local/bin/agda" }
 " Any key in the dictionary can be omitted, in which case,
 " we are going to use hard-coded defaults.
-call AgdaMod.setup(g:nvim_agda_settings) 
+call AgdaMod.setup(g:nvim_agda_settings)
 
 
 " Vim commands
@@ -29,6 +29,7 @@ command! AgdaInfer :call AgdaMod.agda_infer(expand("%:p"))
 command! AgdaCompute :call AgdaMod.agda_compute(expand("%:p"))
 command! AgdaRefine :call AgdaMod.agda_refine(expand("%:p"))
 command! AgdaAuto :call AgdaMod.agda_auto(expand("%:p"))
+command! AgdaSolve :call AgdaMod.agda_solve(expand("%:p"))
 command! AgdaMakeCase :call AgdaMod.agda_make_case(expand("%:p"))
 command! AgdaHelperFun :call AgdaMod.agda_helper_fun(expand("%:p"))
 command! AgdaModuleContents :call AgdaMod.agda_module_contents(expand("%:p"))
