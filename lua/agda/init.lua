@@ -1227,6 +1227,13 @@ end
 -- NonInteractive Indirect ( Cmd_constraints ) function
 -- Should be rather straight-forward
 
+function M.agda_show_constraints(file)
+    wrap_goal_action(function ()
+        local cmd = "(Cmd_constraints )"
+        agda_feed(file,cmd)
+    end, file)
+end
+
 function M.edit_goal(file)
     wrap_goal_action(function ()
         local n = get_current_goal()
