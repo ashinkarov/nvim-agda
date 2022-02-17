@@ -431,6 +431,8 @@ local function handle_displayinfo(msg)
         mk_window(add_sep(split_lines(inf.expr), "Inferred Type", " : "))
     elseif inf.kind == "NormalForm" then
         mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
+    elseif inf.kind == "Auto" then
+        print(string.format("Auto: %s", inf.info))
     elseif inf.kind == "ModuleContents" then
         local indent = "   "
         local p = {}
@@ -696,13 +698,46 @@ local function handle_give(msg)
     end
     -- 1-based lines, 0-based columns!
     vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
-    -- if the goal is "?"
-    if utf8.sub(content[1], sc, sc) == "?" then
-        -- FIXME does not work if `r` contains unicode, what the fuck..
-        vim.cmd("normal cl" .. r)
-    else
-        vim.cmd("normal ca{" .. r)
+ 
+    -- FIXME lift actions below into a function.
+
+    -- Here we are abusing the block paste feature
+    -- of vim, that is very convenient to position
+    -- the content of the goal.  However, it takes
+    -- a bit of scaffolding to ensure that we have
+    -- space to paste the text correctly.
+
+    -- If the goal is {! !}, replace it with ?
+    if utf8.sub(content[1], sc, sc) == "{" then
+        vim.cmd('normal "_c%?')
     end
+
+    local rr = split_lines(r)
+    -- construct  #rr + 1 empty lines and store
+    -- it in nn.
+    local nn = {}
+    for _,v in pairs(rr) do
+        table.insert(nn, "")
+    end
+    -- Insert nn as characters, so that the 
+    -- content of the line after `?` moves nn+1
+    -- lines down.
+    table.insert(nn, "")
+    vim.api.nvim_put(nn, "c", true, true)
+    -- Go back to the place where '?' was
+    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
+
+    -- Insert rr as block (note we use P) as we
+    -- deleted `?`
+    vim.api.nvim_put(rr, "b", true, true)
+    -- Join the next line (we inserted one extra line
+    -- to accomodate for the block paste).
+    vim.cmd("normal J")
+    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
+
+    -- Remove the ?
+    vim.cmd('normal "_x')
+    --debug(rr)
 end
 
 local function handle_make_case(msg)
