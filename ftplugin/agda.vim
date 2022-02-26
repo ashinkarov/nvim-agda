@@ -3,6 +3,9 @@
 " Lua does this automatically, but we want a newly loaded
 " module per every buffer.
 lua package.loaded.agda = nil
+
+" The name of this variable should not be changed, as it is
+" hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
 hi Todo ctermbg=DarkGray ctermfg=Black

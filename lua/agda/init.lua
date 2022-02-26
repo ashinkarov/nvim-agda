@@ -178,10 +178,10 @@ local function mk_prompt_window(file, goal, loff)
     local function mk_mapping(key, fun, args)
         vim.api.nvim_buf_set_keymap(
             pbuf, 'n', key,
-            ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
+            ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
-    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', nil, %d", file, goal[1]))
+    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', 'Simplified', %d", file, goal[1]))
     mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
@@ -197,6 +197,7 @@ local function mk_prompt_window(file, goal, loff)
         pbuf, true,
         {
             relative='win',
+            win=main_win,
             row=goal[2].start.line - visl + 1,
             col=goal[2].start.col,
             width=pmin_width,
@@ -235,6 +236,7 @@ local function mk_window(lines,loc)
     else
         local visl = main_win_visl()
         state.relative = 'win'
+        state.win = main_win
         state.row = loc.line - visl + 1
         state.col = loc.col
     end
@@ -242,14 +244,15 @@ local function mk_window(lines,loc)
     -- We need to register autocommand that sets `msg_win` to nil
     -- when leaving window with :q.
     vim.api.nvim_buf_call(msg_buf, function ()
-        vim.cmd("au WinClosed <buffer=" .. msg_buf .. "> lua require('agda').close_msg_win()")
+        vim.cmd("au WinClosed <buffer=" .. msg_buf .. "> call getbufvar(" .. main_buf .. ", 'AgdaMod').close_msg_win()")
+
     end)
 
     local status = {silent=true, nowait=true, noremap=true}
     local function mk_mappingx(key, fun, args)
         vim.api.nvim_buf_set_keymap(
             msg_buf, 'n', key,
-            ":lua require'agda'." .. fun .. "(" .. args .. ")<cr>",
+            ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
     mk_mappingx("<LocalLeader>q", "close_msg_win",  "")
