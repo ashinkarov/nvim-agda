@@ -1,5 +1,9 @@
 
-let AgdaMod = luaeval("require'agda'")
+" Kill the cache of previously loaded "agda" module.
+" Lua does this automatically, but we want a newly loaded
+" module per every buffer.
+lua package.loaded.agda = nil
+let b:AgdaMod = luaeval("require'agda'")
 
 hi Todo ctermbg=DarkGray ctermfg=Black
 " hi NonTerminating ctermbg=Red
@@ -16,34 +20,34 @@ endif
 " { "agda": "/usr/local/bin/agda" }
 " Any key in the dictionary can be omitted, in which case,
 " we are going to use hard-coded defaults.
-call AgdaMod.setup(g:nvim_agda_settings)
+call b:AgdaMod.setup(g:nvim_agda_settings)
 
 
 " Vim commands
-command! AgdaStart :call AgdaMod.agda_start()
-command! AgdaLoad :call AgdaMod.agda_load(expand("%:p"))
-command! AgdaContext :call AgdaMod.agda_context(expand("%:p"))
-command! AgdaTypeContext :call AgdaMod.agda_type_context(expand("%:p"))
-command! AgdaTypeContextNorm :call AgdaMod.agda_type_context(expand("%:p"),"Normalised")
-command! AgdaInfer :call AgdaMod.agda_infer(expand("%:p"))
-command! AgdaCompute :call AgdaMod.agda_compute(expand("%:p"))
-command! AgdaRefine :call AgdaMod.agda_refine(expand("%:p"))
-command! AgdaAuto :call AgdaMod.agda_auto(expand("%:p"))
-command! AgdaSolve :call AgdaMod.agda_solve(expand("%:p"))
-command! AgdaMakeCase :call AgdaMod.agda_make_case(expand("%:p"))
-command! AgdaHelperFun :call AgdaMod.agda_helper_fun(expand("%:p"))
-command! AgdaModuleContents :call AgdaMod.agda_module_contents(expand("%:p"))
-command! AgdaWhyInscope :call AgdaMod.agda_why_inscope(expand("%:p"))
-command! AgdaShowConstraints :call AgdaMod.agda_show_constraints(expand("%:p"))
-command! ToggleImplicit :call AgdaMod.toggle_implicit(expand("%:p"))
-command! MkPrompt :call AgdaMod.edit_goal(expand("%:p"))
-command! PrintGoals :call AgdaMod.agda_show_goals(expand("%:p"))
-command! GoalNext :call AgdaMod.agda_goal_next(expand("%:p"))
-command! GoalPrev :call AgdaMod.agda_goal_prev(expand("%:p"))
+command! AgdaStart :call b:AgdaMod.agda_start()
+command! AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
+command! AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
+command! AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
+command! AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
+command! AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
+command! AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
+command! AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
+command! AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
+command! AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
+command! AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
+command! AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
+command! AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
+command! AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
+command! AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
+command! ToggleImplicit :call b:AgdaMod.toggle_implicit(expand("%:p"))
+command! MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
+command! PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
+command! GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
+command! GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
 
-command! AgdaCloseMsg :call AgdaMod.close_msg_win()
-command! GoalContent :call AgdaMod.gc()
-command! GetEvbuf :call AgdaMod.getevbuf()
+command! AgdaCloseMsg :call b:AgdaMod.close_msg_win()
+command! GoalContent :call b:AgdaMod.gc()
+command! GetEvbuf :call b:AgdaMod.getevbuf()
 
 
 " Key mappings
