@@ -93,8 +93,6 @@ The regular `:q` command would work as well.
 
 ### Todo
   * Implement remaining commands from the original `agda-mode`
-  * Support working with multiple files.  Currently we assume a single
-    file per vim instance.
   * Goal actions on a modified buffer reload the file and postpone the
     action via continuation.  Ensure that this is "thread safe" (does not
     have race conditions).
@@ -113,6 +111,11 @@ The regular `:q` command would work as well.
     is no visual response when one is typing things like `\alpha`.  Should
     we implement a [which-key](https://github.com/liuchengxu/vim-which-key)
     for the insert mode?
+
+### Done
+  * Support working with multiple files.  Currently we assume a single
+    file per vim instance.  See #1 for more details.
+
 
 # Credit
   * https://github.com/coot/vim-agda-integration
