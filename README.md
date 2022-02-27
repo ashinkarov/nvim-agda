@@ -114,7 +114,7 @@ The regular `:q` command would work as well.
 
 ### Done
   * Support working with multiple files.  Currently we assume a single
-    file per vim instance.  See #1 for more details.
+    file per vim instance.  See issue [#1](https://github.com/ashinkarov/nvim-agda/issues/1) for more details.
 
 
 # Credit
