@@ -1249,12 +1249,12 @@ function M.edit_goal(file)
     end, file)
 end
 
-function M.toggle_implicit(file, b)
-    if b then
+function M.show_implicit(file)
         agda_feed(file, "(ShowImplicitArgs True)")
-    else
+end
+
+function M.hide_implicit(file)
         agda_feed(file, "(ShowImplicitArgs False)")
-    end
 end
 
 return M

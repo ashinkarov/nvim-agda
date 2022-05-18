@@ -42,7 +42,10 @@ command! AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
 command! AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
 command! AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
 command! AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
-command! ToggleImplicit :call b:AgdaMod.toggle_implicit(expand("%:p"))
+
+command! ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
+command! HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
+
 command! MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
 command! PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
 command! GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
