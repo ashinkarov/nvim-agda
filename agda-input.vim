@@ -114,6 +114,21 @@ noremap! <buffer> <LocalLeader>clL  ⌊
 noremap! <buffer> <LocalLeader>clr  ⌟
 noremap! <buffer> <LocalLeader>clR  ⌋
 
+"ci 	●○◎◌◯◍◐◑◒◓◔◕◖◗◠◡◴◵◶◷⚆⚇⚈⚉
+noremap! <buffer> <LocalLeader>cib 	●
+noremap! <buffer> <LocalLeader>ciw 	○
+noremap! <buffer> <LocalLeader>ci. 	◎
+noremap! <buffer> <LocalLeader>ci.. 	◌
+noremap! <buffer> <LocalLeader>ciO 	◯
+
+noremap! <buffer> <LocalLeader>. 	∙
+noremap! <buffer> <LocalLeader>* 	⋆
+noremap! <buffer> <LocalLeader>.+ 	∔
+noremap! <buffer> <LocalLeader>.- 	∸
+noremap! <buffer> <LocalLeader>: 	∶
+noremap! <buffer> <LocalLeader>:: 	∷
+noremap! <buffer> <LocalLeader>::- 	∺
+
 
 "noremap! <buffer> <LocalLeader>tr   ▹
 "noremap! <buffer> <LocalLeader>t>   ▹
