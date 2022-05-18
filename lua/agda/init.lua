@@ -40,6 +40,11 @@ local showImplicitArgs = false
 local main_win = vim.fn.win_getid()
 local main_buf = vim.api.nvim_win_get_buf(main_win)
 
+-- Content and line-offset structure for handling
+-- highlighting.
+local main_content = ""
+local main_lines = {}
+
 -- Prompt window and buffer
 local pwin = nil
 local pbuf = nil
@@ -275,21 +280,10 @@ end
 
 
 local function handle_hl(msg)
-    -- Get line lengths so that we can compute offsets
-    -- in the (#line, #line-offset) format.
-    local content = vim.api.nvim_buf_get_lines(main_buf, 0, -1, true)
-    local lines = {}
-    local total = 1
-    for i = 1, #content do
-        local len = utf8.len(content[i])
-        lines[i] = {total, total+len}
-        total = total + len + 1
-    end
-
     -- Convert an offset into a line/lineoffset format
     -- that is suitable for the vim highlighter.
     -- XXX we can use binsearch here if we want to
-    local function find_line(offset)
+    local function find_line(offset, lines, content)
         for i,v in pairs(lines) do
             if (offset >= v[1] and offset <= v[2]) then
                 return {i-1, utf8.offset(content[i], offset-v[1]+1)-1}
@@ -323,7 +317,6 @@ local function handle_hl(msg)
         elseif (name == "error") then return "Error"
         elseif (name == "terminationproblem") then return "NonTerminating"
         elseif (name == "missingdefinition") then return "NoDefinition"
-
         -- TODO add more!
         else
             --name = name or "nil, WEIRD!!!"
@@ -332,12 +325,14 @@ local function handle_hl(msg)
         end
     end
 
+
     -- FIXME just seen the case when `info` field is nil!  Weird...
+    if msg.info then
     for k, v in pairs(msg.info.payload) do
         local r = v.range
         -- FIXME s sometimes can be nil... Why?
-        local s = find_line(r[1])
-        local e = find_line(r[2])
+        local s = find_line(r[1], main_lines, main_content)
+        local e = find_line(r[2], main_lines, main_content)
 
         if s == nil or e == nil then
             dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
@@ -345,9 +340,12 @@ local function handle_hl(msg)
             local g = translate_hl_group(v.atoms[1])
             -- We are using `highlight.range` instead of `nvim_buf_add_highlight`
             -- as we can have multiline comments.
-            vim.highlight.range(main_buf,hl_ns,g,s,e)
+            if g ~= "Normal" then
+                vim.highlight.range(main_buf,hl_ns,g,s,e)
+            end
         end
         --print("hl: [" .. vim.inspect(s) .. ", " .. vim.inspect(e) .. "]  ", v["atoms"][1])
+    end
     end
 end
 
@@ -419,7 +417,7 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        vim.api.nvim_err_writeln(text)
+        error(text)
     elseif inf.kind == "Context" then
         local p = {}
         local max_name_len = max_width(inf.context, "originalName")
@@ -876,6 +874,19 @@ function M.agda_load (file)
     if main_buf_changed() == 1 then
         vim.api.nvim_buf_call(main_buf, function () vim.cmd('w') end)
     end
+    -- Update the variable holding the content of the buffer
+    main_content = vim.api.nvim_buf_get_lines(main_buf, 0, -1, true)
+
+    -- Precompute offset positions for the beginning and end of
+    -- each line.  This will be used in the highlighting procedures.
+    main_lines = {}
+    local total = 1
+    for i = 1, #main_content do
+        local len = utf8.len(main_content[i])
+        main_lines[i] = {total, total+len}
+        total = total + len + 1
+    end
+
     agda_feed(file, "(Cmd_load \"" .. file .. "\" [])")
 end
 
