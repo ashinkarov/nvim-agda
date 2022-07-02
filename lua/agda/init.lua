@@ -784,6 +784,9 @@ local function handle_msg(msg)
         print(msg.message)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
+    elseif msg.kind == "JumpToError" then
+        -- vim.api.nvim_win_set_cursor(main_win, {vim.api.nvim_eval("byte2line(" .. msg.position .. ")") ,0})
+        byte2line1(msg.position)
     else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -1267,5 +1270,16 @@ end
 function M.hide_implicit(file)
         agda_feed(file, "(ShowImplicitArgs False)")
 end
+
+function byte2line1(offset)
+    local i = 0
+    local line = 1
+    while ( i <= offset  ) do
+       i = i + string.len(vim.fn.getline(line))
+       line = line + 1
+    end
+    vim.api.nvim_win_set_cursor(main_win, {line  , 0})
+end
+
 
 return M
