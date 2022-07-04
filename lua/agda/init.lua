@@ -56,6 +56,7 @@ local debug_p = true
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 
+local errline,errcol,errcend 
 
 ------ Helper functions ------
 ------------------------------
@@ -305,7 +306,7 @@ local function handle_hl(msg)
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
         elseif (name == "hole") then return "Todo"
-        elseif (name == "unsolvedmeta") then return "Todo"
+        elseif (name == "unsolvedmeta") then return "Debug"
         elseif (name == "string") then return "String"
         elseif (name == "catchallclause") then return "Folded"
         -- XXX I am not sure what's the purpose of highlighting
@@ -403,6 +404,28 @@ local function handle_displayinfo(msg)
         end
     end
 
+        -- "/Users/kono/src/ZF/src/zorn.agda:688,14-14\n/
+    local function find_pos_from_error(msg)
+       local j = 0
+       local colon = 0
+       local nl = string.byte("\n")
+       local cl = string.byte(":")
+       -- find last ':' before \n
+       for i=0,string.len(msg) do
+          if (msg:byte(i) == cl) then colon = i end
+          if (msg:byte(i) == nl) then 
+              j = i 
+              break 
+          end
+       end
+       local p = string.sub(msg,colon,j)
+       local t = {}
+       p:gsub("%d+", function(n) t[#t+1]= tonumber(n) end)
+       errline = t[1]
+       errcol = t[2]
+       errcend  = t[3]
+    end
+
     local inf = msg.info
     --debug(inf)
     if (inf.kind == "Error") then
@@ -418,6 +441,7 @@ local function handle_displayinfo(msg)
             sargs = nil
         end
         error(text)
+        find_pos_from_error(text)
     elseif inf.kind == "Context" then
         local p = {}
         local max_name_len = max_width(inf.context, "originalName")
@@ -785,8 +809,7 @@ local function handle_msg(msg)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
     elseif msg.kind == "JumpToError" then
-        -- vim.api.nvim_win_set_cursor(main_win, {vim.api.nvim_eval("byte2line(" .. msg.position .. ")") ,0})
-        byte2line1(msg.position)
+        vim.api.nvim_win_set_cursor(main_win, {errline  , errcol})
     else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -1153,7 +1176,9 @@ function M.agda_compute(file,id)
         end
         local content = get_trimmed_content(id)
         if content == "" then
-            return warning("The goal is empty")
+            local g = vim.fn.input("Expression: ")
+            return agda_compute_toplevel(file, g)
+            -- return warning("The goal is empty")
         end
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_compute DefaultCompute " .. id .. " noRange " .. g .. ")"
