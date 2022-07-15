@@ -950,7 +950,7 @@ function M.agda_show_goals(file)
     local g = ""
     local c = 0
     for _,v in pairs(goals) do
-        g = g .. string.format("    line %03d: ?\n", v.start.line)
+        g = g .. string.format("#%02d    line %03d: ?\n", c, v.start.line)
         c = c + 1
     end
     if c > 0 then
