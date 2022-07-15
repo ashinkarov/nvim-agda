@@ -766,11 +766,16 @@ local function handle_give(msg)
 end
 
 local function handle_make_case(msg)
+    local _,spc = string.gsub(vim.api.nvim_get_current_line(),"%s","")
+    local spaces = string.rep(" ",spc-4) -- ...| ?
+    for i = 1, #msg.clauses do
+        msg.clauses[i] = spaces .. msg.clauses[i] 
+    end
+    -- debug(spaces)
     local n = goals[msg.interactionPoint.id]
     local sl = n.start.line --[1]
     local el = n["end"].line --[1]
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
-
     if pwin ~= nil then
         --print("closing window, setting buffer to nothing")
         M.close_prompt_win()
