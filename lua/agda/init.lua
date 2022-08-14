@@ -57,6 +57,7 @@ local debug_p = true
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 
 local errline,errcol,errcend 
+local errtty = nil
 
 ------ Helper functions ------
 ------------------------------
@@ -152,6 +153,66 @@ end
 
 local function get_current_loc()
     return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
+end
+
+function _G.put(...)
+    local objects = {}
+    for i = 1, select('#', ...) do
+      local v = select(i, ...)
+      table.insert(objects, vim.inspect(v))
+    end
+
+    if errtty then
+       errtty:print(table.concat(objects, '\n'))
+    else
+       print(table.concat(objects, '\n'))
+    end
+    return ...
+end
+
+local function ldump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. ldump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+local function check_errtty()
+    if vim.g.agda_err_tty then
+       local gerrtty = vim.g.agda_err_tty    -- let g:agda_err_tty = "/dev/tty03"
+       errtty = io.open(gerrtty,"w")   -- if open failed it is nil anyway 
+    end 
+end
+
+local function dump(info)
+--    if errtty then
+    if false then
+        -- print(type(info))
+        errtty:write(info.kind)
+        errtty:write(" ==> ")
+        errtty:write(ldump(info))
+        errtty:write("\n")
+        errtty:write("----\n")
+        errtty:flush()
+    end
+end
+
+local function eprint(info)
+    if errtty then
+        errtty:write(info)
+        errtty:write("\n")
+        errtty:write("----\n")
+        errtty:flush()
+    else
+        vim.api.nvim_call_function("LogAgda",{"agda-error",info,""})
+        -- print(info)
+    end
 end
 
 ------ Agda interaction-related functions ------
@@ -427,7 +488,8 @@ local function handle_displayinfo(msg)
     end
 
     local inf = msg.info
-    --debug(inf)
+    -- debug(inf)
+    dump(inf)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
@@ -524,7 +586,7 @@ local function handle_displayinfo(msg)
                 table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
             end
         end
-        print(table.concat(m, "\n"))
+        eprint(table.concat(m, "\n"))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -901,6 +963,7 @@ function M.agda_load (file)
     -- XXX should we kill evbuf in case we are stuck with an
     -- annoying error, or should it be done by a separate command?
     error_count = 0
+    check_errtty()
     -- if the main buffer changed, save it before issuing agda (re)load.
     if main_buf_changed() == 1 then
         vim.api.nvim_buf_call(main_buf, function () vim.cmd('w') end)
