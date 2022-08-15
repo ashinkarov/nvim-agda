@@ -307,3 +307,90 @@ noremap! <buffer> <LocalLeader>pi       π
 noremap! <buffer> <LocalLeader>Omicron  Ο
 noremap! <buffer> <LocalLeader>Pi       Π
 
+" Arrows
+" l 	←⇐⇚⇇⇆↤⇦↞↼↽⇠⇺↜⇽⟵⟸↚⇍⇷ ↹     ↢↩↫⇋⇜⇤⟻⟽⤆↶↺⟲
+" r 	→⇒⇛⇉⇄↦⇨↠⇀⇁⇢⇻↝⇾⟶⟹↛⇏⇸⇶ ↴    ↣↪↬⇌⇝⇥⟼⟾⤇↷↻⟳⇰⇴⟴⟿ ➵➸➙➔➛➜➝➞➟➠➡➢➣➤➧➨➩➪➫➬➭➮➯➱➲➳➺➻➼➽➾⊸
+" u 	↑⇑⟰⇈⇅↥⇧↟↿↾⇡⇞          ↰↱➦ ⇪⇫⇬⇭⇮⇯
+" d 	↓⇓⟱⇊⇵↧⇩↡⇃⇂⇣⇟         ↵↲↳➥ ↯
+" ud 	↕⇕   ↨⇳
+" lr 	↔⇔         ⇼↭⇿⟷⟺↮⇎⇹
+" ul 	↖⇖                        ⇱↸
+" ur 	↗⇗                                         ➶➹➚
+" dr 	↘⇘                        ⇲                ➴➷➘
+" dl 	↙⇙
+noremap! <buffer> <LocalLeader>l- 	←
+noremap! <buffer> <LocalLeader><- 	←
+noremap! <buffer> <LocalLeader>l= 	⇐
+noremap! <buffer> <LocalLeader>r- 	→
+noremap! <buffer> <LocalLeader>-> 	→
+noremap! <buffer> <LocalLeader>r= 	⇒
+noremap! <buffer> <LocalLeader>=> 	⇒
+noremap! <buffer> <LocalLeader>u- 	↑
+noremap! <buffer> <LocalLeader>u= 	⇑
+noremap! <buffer> <LocalLeader>d- 	↓
+noremap! <buffer> <LocalLeader>d= 	⇓
+noremap! <buffer> <LocalLeader>ud- 	↕
+noremap! <buffer> <LocalLeader>ud= 	⇕
+noremap! <buffer> <LocalLeader>lr- 	↔
+noremap! <buffer> <LocalLeader><-> 	↔
+noremap! <buffer> <LocalLeader>lr= 	⇔
+noremap! <buffer> <LocalLeader><=> 	⇔
+noremap! <buffer> <LocalLeader>ul- 	↖
+noremap! <buffer> <LocalLeader>ul= 	⇖
+noremap! <buffer> <LocalLeader>ur- 	↗
+noremap! <buffer> <LocalLeader>ur= 	⇗
+noremap! <buffer> <LocalLeader>dr- 	↘
+noremap! <buffer> <LocalLeader>dr= 	⇘
+noremap! <buffer> <LocalLeader>dl- 	↙
+noremap! <buffer> <LocalLeader>dl= 	⇙
+noremap! <buffer> <LocalLeader>l== 	⇚
+noremap! <buffer> <LocalLeader>l-2 	⇇
+noremap! <buffer> <LocalLeader>l-r- 	⇆
+noremap! <buffer> <LocalLeader>r== 	⇛
+noremap! <buffer> <LocalLeader>r-2 	⇉
+noremap! <buffer> <LocalLeader>r-3 	⇶
+noremap! <buffer> <LocalLeader>r-l- 	⇄
+noremap! <buffer> <LocalLeader>u== 	⟰
+noremap! <buffer> <LocalLeader>u-2 	⇈
+noremap! <buffer> <LocalLeader>u-d- 	⇅
+noremap! <buffer> <LocalLeader>d== 	⟱
+noremap! <buffer> <LocalLeader>d-2 	⇊
+noremap! <buffer> <LocalLeader>d-u- 	⇵
+noremap! <buffer> <LocalLeader>l-- 	⟵
+noremap! <buffer> <LocalLeader><-- 	⟵
+"noremap! <buffer> <LocalLeader>l~ 	↜⇜
+noremap! <buffer> <LocalLeader>r-- 	⟶
+noremap! <buffer> <LocalLeader>--> 	⟶
+"noremap! <buffer> <LocalLeader>r~ 	↝⇝⟿
+noremap! <buffer> <LocalLeader>lr-- 	⟷
+noremap! <buffer> <LocalLeader><--> 	⟷
+noremap! <buffer> <LocalLeader>lr~ 	↭
+noremap! <buffer> <LocalLeader>l-n 	↚
+noremap! <buffer> <LocalLeader><-n 	↚
+noremap! <buffer> <LocalLeader>l=n 	⇍
+noremap! <buffer> <LocalLeader>r-n 	↛
+noremap! <buffer> <LocalLeader>->n 	↛
+noremap! <buffer> <LocalLeader>r=n 	⇏
+noremap! <buffer> <LocalLeader>=>n 	⇏
+noremap! <buffer> <LocalLeader>lr-n 	↮
+noremap! <buffer> <LocalLeader><->n 	↮
+noremap! <buffer> <LocalLeader>lr=n 	⇎
+noremap! <buffer> <LocalLeader><=>n 	⇎
+noremap! <buffer> <LocalLeader>l-\| 	↤
+noremap! <buffer> <LocalLeader>ll- 	↞
+noremap! <buffer> <LocalLeader>r-\| 	↦
+noremap! <buffer> <LocalLeader>rr- 	↠
+noremap! <buffer> <LocalLeader>u-\| 	↥
+noremap! <buffer> <LocalLeader>uu- 	↟
+noremap! <buffer> <LocalLeader>d-\| 	↧
+noremap! <buffer> <LocalLeader>dd- 	↡
+noremap! <buffer> <LocalLeader>ud-\| 	↨
+noremap! <buffer> <LocalLeader>l-> 	↢
+noremap! <buffer> <LocalLeader>r-> 	↣
+noremap! <buffer> <LocalLeader>r-o 	⊸
+noremap! <buffer> <LocalLeader>-o 	⊸
+noremap! <buffer> <LocalLeader>dz 	↯
+ 
+ 
+ 
+ 
