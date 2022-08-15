@@ -506,7 +506,7 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        error(text)
+        eprint(text)
         find_pos_from_error(text)
     elseif inf.kind == "Context" then
         local p = {}
@@ -657,7 +657,7 @@ local function handle_displayinfo(msg)
         -- We assume that GoalSpecific things always have a location
         mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))
     else
-        dprint("Don't know how to handle DisplayInfo of kind: "
+        eprint("Don't know how to handle DisplayInfo of kind: "
                .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
