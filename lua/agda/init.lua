@@ -191,11 +191,12 @@ local function check_errtty()
 end
 
 local function dump(info)
---    if errtty then
-    if false then
+    if errtty then
         -- print(type(info))
-        errtty:write(info.kind)
-        errtty:write(" ==> ")
+        if (info.kind) then
+           errtty:write(info.kind)
+           errtty:write(" ==> ")
+        end 
         errtty:write(ldump(info))
         errtty:write("\n")
         errtty:write("----\n")
@@ -203,6 +204,9 @@ local function dump(info)
     end
 end
 
+--
+-- errors in other buffer
+--
 local function eprint(info)
     if errtty then
         errtty:write(info)
@@ -210,6 +214,7 @@ local function eprint(info)
         errtty:write("----\n")
         errtty:flush()
     else
+        --  buffer name, text, append flag
         vim.api.nvim_call_function("LogAgda",{"agda-error",info,""})
         -- print(info)
     end
@@ -488,8 +493,7 @@ local function handle_displayinfo(msg)
     end
 
     local inf = msg.info
-    -- debug(inf)
-    dump(inf)
+    -- dump(inf)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
@@ -827,13 +831,27 @@ local function handle_give(msg)
     --debug(rr)
 end
 
+local function mc_indent(lineno)
+    local line = vim.api.nvim_buf_get_lines(0,lineno,lineno+1,true)
+    -- dump(line)
+    line = line[1]
+    -- count preceding spaces
+    local spc = 0
+    local spch = string.byte(" ")
+    for i = 1, #line do
+        if (line:byte(i) ~= spch ) then break end
+        spc = spc + 1
+    end
+    local spaces = string.rep(" ",spc) 
+    return spaces
+end
+
 local function handle_make_case(msg)
-    local _,spc = string.gsub(vim.api.nvim_get_current_line(),"%s","")
-    local spaces = string.rep(" ",spc-4) -- ...| ?
+    -- dump(msg)
+    local spaces = mc_indent(msg.interactionPoint.range[1].start.line-1)
     for i = 1, #msg.clauses do
         msg.clauses[i] = spaces .. msg.clauses[i] 
     end
-    -- debug(spaces)
     local n = goals[msg.interactionPoint.id]
     local sl = n.start.line --[1]
     local el = n["end"].line --[1]
