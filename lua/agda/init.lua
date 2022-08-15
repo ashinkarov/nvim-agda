@@ -188,6 +188,7 @@ local function check_errtty()
        local gerrtty = vim.g.agda_err_tty    -- let g:agda_err_tty = "/dev/tty03"
        errtty = io.open(gerrtty,"w")   -- if open failed it is nil anyway 
     end 
+    vim.api.nvim_call_function("LogAgda",{"agda-error","",""})
 end
 
 local function dump(info)
