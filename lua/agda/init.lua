@@ -909,12 +909,13 @@ end
 
 local function on_event(job_id, data, event)
     if event == "stdout"  then
-        -- We assume here that we can never receive mroe than one
+        -- We assume here that we can never receive more than one
         -- json message in one go.  We can receive less than one,
         -- but never more.  If this assumption fails, we'd have to
         -- adjust the code below.
         for k , vv in pairs(data) do
-            local v = utf8.gsub(vv, "^JSON> ", "")
+            -- local v =  utf8.gsub(vv, "^JSON> ", "")   sometimes panic with invalid utf-8, use  -V99log.txt to find this
+            local v =  string.gsub(vv, "^JSON> ", "") 
             --print("on_event: " .. k .. ", v = " .. v , "\n" ..
             --      "on_event: " .. k .. ", e = ", evbuf)
             if v ~= "" then
