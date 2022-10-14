@@ -390,7 +390,49 @@ noremap! <buffer> <LocalLeader>r-> 	↣
 noremap! <buffer> <LocalLeader>r-o 	⊸
 noremap! <buffer> <LocalLeader>-o 	⊸
 noremap! <buffer> <LocalLeader>dz 	↯
- 
- 
- 
- 
+
+noremap! <buffer> <LocalLeader>_a        ₐ
+noremap! <buffer> <LocalLeader>_e        ₑ
+noremap! <buffer> <LocalLeader>_h        ₕ
+noremap! <buffer> <LocalLeader>_i        ᵢ
+noremap! <buffer> <LocalLeader>_j        ⱼ
+noremap! <buffer> <LocalLeader>_k        ₖ
+noremap! <buffer> <LocalLeader>_l        ₗ
+noremap! <buffer> <LocalLeader>_m        ₘ
+noremap! <buffer> <LocalLeader>_n        ₙ
+noremap! <buffer> <LocalLeader>_o        ₒ
+noremap! <buffer> <LocalLeader>_p        ₚ
+noremap! <buffer> <LocalLeader>_r        ᵣ
+noremap! <buffer> <LocalLeader>_s        ₛ
+noremap! <buffer> <LocalLeader>_t        ₜ
+noremap! <buffer> <LocalLeader>_u        ᵤ
+noremap! <buffer> <LocalLeader>_v        ᵥ
+noremap! <buffer> <LocalLeader>_x        ₓ
+
+noremap! <buffer> <LocalLeader>^a       ᵃ
+noremap! <buffer> <LocalLeader>^b       ᵇ
+noremap! <buffer> <LocalLeader>^c       ᶜ
+noremap! <buffer> <LocalLeader>^d       ᵈ
+noremap! <buffer> <LocalLeader>^e       ᵉ
+noremap! <buffer> <LocalLeader>^f       ᶠ
+noremap! <buffer> <LocalLeader>^g       ᵍ
+noremap! <buffer> <LocalLeader>^h       ʰ
+noremap! <buffer> <LocalLeader>^i       ⁱ
+noremap! <buffer> <LocalLeader>^j       ʲ
+noremap! <buffer> <LocalLeader>^k       ᵏ
+noremap! <buffer> <LocalLeader>^l       ˡ
+noremap! <buffer> <LocalLeader>^m       ᵐ
+noremap! <buffer> <LocalLeader>^n       ⁿ
+noremap! <buffer> <LocalLeader>^o       ᵒ
+noremap! <buffer> <LocalLeader>^p       ᵖ
+noremap! <buffer> <LocalLeader>^r       ʳ
+noremap! <buffer> <LocalLeader>^s       ˢ
+noremap! <buffer> <LocalLeader>^t       ᵗ
+noremap! <buffer> <LocalLeader>^u       ᵘ
+noremap! <buffer> <LocalLeader>^v       ᵛ
+noremap! <buffer> <LocalLeader>^w       ʷ
+noremap! <buffer> <LocalLeader>^x       ˣ
+noremap! <buffer> <LocalLeader>^y       ʸ
+noremap! <buffer> <LocalLeader>^z       ᶻ
+
+
