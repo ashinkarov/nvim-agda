@@ -8,10 +8,10 @@ lua package.loaded.agda = nil
 " hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
-hi Todo ctermbg=DarkGray ctermfg=Black
+" hi Todo ctermbg=DarkGray ctermfg=Black
 " hi NonTerminating ctermbg=Red
-hi NonTerminating ctermbg=LightRed ctermfg=Black
-hi NoDefinition ctermbg=Brown
+" hi NonTerminating ctermbg=LightRed ctermfg=Black
+" hi NoDefinition ctermbg=Brown
 "ctermbg=LightBlue ctermfg=Black
 
 if !exists("g:nvim_agda_settings")
@@ -24,6 +24,65 @@ endif
 " Any key in the dictionary can be omitted, in which case,
 " we are going to use hard-coded defaults.
 call b:AgdaMod.setup(g:nvim_agda_settings)
+
+function! LogAgda(name, text, append)
+    let agdawinnr = bufwinnr('__Agda__')
+    let prevwinnr = winnr()
+    if agdawinnr == -1
+        let eventignore_save = &eventignore
+        set eventignore=all
+
+        silent keepalt botright 8split __Agda__
+
+        let &eventignore = eventignore_save
+        setlocal noreadonly
+        setlocal buftype=nofile
+        setlocal bufhidden=hide
+        setlocal noswapfile
+        setlocal nobuflisted
+        setlocal nolist
+        setlocal nonumber
+        setlocal nowrap
+        setlocal textwidth=0
+        setlocal nocursorline
+        setlocal nocursorcolumn
+
+        if exists('+relativenumber')
+            setlocal norelativenumber
+        endif
+    else
+        let eventignore_save = &eventignore
+        set eventignore=BufEnter
+
+        execute agdawinnr . 'wincmd w'
+        let &eventignore = eventignore_save
+    endif
+
+    let lazyredraw_save = &lazyredraw
+    set lazyredraw
+    let eventignore_save = &eventignore
+    set eventignore=all
+
+    let &l:statusline = a:name
+    if a:append == 'True'
+        silent put =a:text
+    else
+        silent %delete _
+        silent 0put =a:text
+    endif
+
+    0
+
+    let &lazyredraw = lazyredraw_save
+    let &eventignore = eventignore_save
+
+    let eventignore_save = &eventignore
+    set eventignore=BufEnter
+
+    execute prevwinnr . 'wincmd w'
+    let &eventignore = eventignore_save
+endfunction
+
 
 
 " Vim commands

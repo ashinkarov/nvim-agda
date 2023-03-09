@@ -56,6 +56,8 @@ local debug_p = true
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 
+local errline,errcol,errcend 
+local errtty = nil
 
 ------ Helper functions ------
 ------------------------------
@@ -151,6 +153,72 @@ end
 
 local function get_current_loc()
     return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
+end
+
+function _G.put(...)
+    local objects = {}
+    for i = 1, select('#', ...) do
+      local v = select(i, ...)
+      table.insert(objects, vim.inspect(v))
+    end
+
+    if errtty then
+       errtty:print(table.concat(objects, '\n'))
+    else
+       print(table.concat(objects, '\n'))
+    end
+    return ...
+end
+
+local function ldump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. ldump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+local function check_errtty()
+    if vim.g.agda_err_tty then
+       local gerrtty = vim.g.agda_err_tty    -- let g:agda_err_tty = "/dev/tty03"
+       errtty = io.open(gerrtty,"w")   -- if open failed it is nil anyway 
+    end 
+    vim.api.nvim_call_function("LogAgda",{"agda-error","",""})
+end
+
+local function dump(info)
+    if errtty then
+        -- print(type(info))
+        if (info.kind) then
+           errtty:write(info.kind)
+           errtty:write(" ==> ")
+        end 
+        errtty:write(ldump(info))
+        errtty:write("\n")
+        errtty:write("----\n")
+        errtty:flush()
+    end
+end
+
+--
+-- errors in other buffer
+--
+local function eprint(info)
+    if errtty then
+        errtty:write(info)
+        errtty:write("\n")
+        errtty:write("----\n")
+        errtty:flush()
+    else
+        --  buffer name, text, append flag
+        vim.api.nvim_call_function("LogAgda",{"agda-error",info,""})
+        -- print(info)
+    end
 end
 
 ------ Agda interaction-related functions ------
@@ -305,7 +373,7 @@ local function handle_hl(msg)
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
         elseif (name == "hole") then return "Todo"
-        elseif (name == "unsolvedmeta") then return "Todo"
+        elseif (name == "unsolvedmeta") then return "Debug"
         elseif (name == "string") then return "String"
         elseif (name == "catchallclause") then return "Folded"
         -- XXX I am not sure what's the purpose of highlighting
@@ -403,8 +471,30 @@ local function handle_displayinfo(msg)
         end
     end
 
+        -- "/Users/kono/src/ZF/src/zorn.agda:688,14-14\n/
+    local function find_pos_from_error(msg)
+       local j = 0
+       local colon = 0
+       local nl = string.byte("\n")
+       local cl = string.byte(":")
+       -- find last ':' before \n
+       for i=0,string.len(msg) do
+          if (msg:byte(i) == cl) then colon = i end
+          if (msg:byte(i) == nl) then 
+              j = i 
+              break 
+          end
+       end
+       local p = string.sub(msg,colon,j)
+       local t = {}
+       p:gsub("%d+", function(n) t[#t+1]= tonumber(n) end)
+       errline = t[1]
+       errcol = t[2]
+       errcend  = t[3]
+    end
+
     local inf = msg.info
-    --debug(inf)
+    -- dump(inf)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
@@ -417,7 +507,8 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        error(text)
+        eprint(text)
+        find_pos_from_error(text)
     elseif inf.kind == "Context" then
         local p = {}
         local max_name_len = max_width(inf.context, "originalName")
@@ -500,7 +591,7 @@ local function handle_displayinfo(msg)
                 table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
             end
         end
-        print(table.concat(m, "\n"))
+        eprint(table.concat(m, "\n"))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -567,7 +658,7 @@ local function handle_displayinfo(msg)
         -- We assume that GoalSpecific things always have a location
         mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))
     else
-        dprint("Don't know how to handle DisplayInfo of kind: "
+        eprint("Don't know how to handle DisplayInfo of kind: "
                .. inf.kind .. " :: " .. vim.inspect(msg))
     end
 end
@@ -741,12 +832,31 @@ local function handle_give(msg)
     --debug(rr)
 end
 
+local function mc_indent(lineno)
+    local line = vim.api.nvim_buf_get_lines(0,lineno,lineno+1,true)
+    -- dump(line)
+    line = line[1]
+    -- count preceding spaces
+    local spc = 0
+    local spch = string.byte(" ")
+    for i = 1, #line do
+        if (line:byte(i) ~= spch ) then break end
+        spc = spc + 1
+    end
+    local spaces = string.rep(" ",spc) 
+    return spaces
+end
+
 local function handle_make_case(msg)
+    -- dump(msg)
+    local spaces = mc_indent(msg.interactionPoint.range[1].start.line-1)
+    for i = 1, #msg.clauses do
+        msg.clauses[i] = spaces .. msg.clauses[i] 
+    end
     local n = goals[msg.interactionPoint.id]
     local sl = n.start.line --[1]
     local el = n["end"].line --[1]
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
-
     if pwin ~= nil then
         --print("closing window, setting buffer to nothing")
         M.close_prompt_win()
@@ -784,6 +894,8 @@ local function handle_msg(msg)
         print(msg.message)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
+    elseif msg.kind == "JumpToError" then
+        vim.api.nvim_win_set_cursor(main_win, {errline  , errcol})
     else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
@@ -797,12 +909,13 @@ end
 
 local function on_event(job_id, data, event)
     if event == "stdout"  then
-        -- We assume here that we can never receive mroe than one
+        -- We assume here that we can never receive more than one
         -- json message in one go.  We can receive less than one,
         -- but never more.  If this assumption fails, we'd have to
         -- adjust the code below.
         for k , vv in pairs(data) do
-            local v = utf8.gsub(vv, "^JSON> ", "")
+            -- local v =  utf8.gsub(vv, "^JSON> ", "")   sometimes panic with invalid utf-8, use  -V99log.txt to find this
+            local v =  string.gsub(vv, "^JSON> ", "") 
             --print("on_event: " .. k .. ", v = " .. v , "\n" ..
             --      "on_event: " .. k .. ", e = ", evbuf)
             if v ~= "" then
@@ -870,6 +983,7 @@ function M.agda_load (file)
     -- XXX should we kill evbuf in case we are stuck with an
     -- annoying error, or should it be done by a separate command?
     error_count = 0
+    check_errtty()
     -- if the main buffer changed, save it before issuing agda (re)load.
     if main_buf_changed() == 1 then
         vim.api.nvim_buf_call(main_buf, function () vim.cmd('w') end)
@@ -1150,7 +1264,9 @@ function M.agda_compute(file,id)
         end
         local content = get_trimmed_content(id)
         if content == "" then
-            return warning("The goal is empty")
+            local g = vim.fn.input("Expression: ")
+            return agda_compute_toplevel(file, g)
+            -- return warning("The goal is empty")
         end
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_compute DefaultCompute " .. id .. " noRange " .. g .. ")"
@@ -1267,5 +1383,16 @@ end
 function M.hide_implicit(file)
         agda_feed(file, "(ShowImplicitArgs False)")
 end
+
+function byte2line1(offset)
+    local i = 0
+    local line = 1
+    while ( i <= offset  ) do
+       i = i + string.len(vim.fn.getline(line))
+       line = line + 1
+    end
+    vim.api.nvim_win_set_cursor(main_win, {line  , 0})
+end
+
 
 return M
