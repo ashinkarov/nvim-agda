@@ -51,7 +51,7 @@ local pbuf = nil
 local pmin_width = 25
 
 -- Whether to print debug information
-local debug_p = true
+local debug_p = false
 
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
