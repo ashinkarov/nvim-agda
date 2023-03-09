@@ -162,6 +162,7 @@ function M.setup(config)
     end
     if config.agda then   agda_bin = config.agda  end
     if config.agda_args then agda_args = config.agda_args end
+    if config.debug_p then debug_p = config.debug_p end
 end
 
 function M.close_prompt_win()
