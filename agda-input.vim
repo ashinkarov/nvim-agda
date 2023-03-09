@@ -29,6 +29,7 @@ noremap! <buffer> <LocalLeader>.-   ∸
 
 "noremap! <buffer> <LocalLeader>bN   ℕ
 noremap! <buffer> <LocalLeader>=>   ⇒
+noremap! <buffer> <LocalLeader>nin  ∉ 
 noremap! <buffer> <LocalLeader>in   ∈
 noremap! <buffer> <LocalLeader>ni   ∋
 noremap! <buffer> <LocalLeader>neg  ¬
