@@ -51,7 +51,7 @@ local pbuf = nil
 local pmin_width = 25
 
 -- Whether to print debug information
-local debug_p = true
+local debug_p = false
 
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
@@ -230,6 +230,7 @@ function M.setup(config)
     end
     if config.agda then   agda_bin = config.agda  end
     if config.agda_args then agda_args = config.agda_args end
+    if config.debug_p then debug_p = config.debug_p end
 end
 
 function M.close_prompt_win()

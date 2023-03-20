@@ -8,10 +8,10 @@ lua package.loaded.agda = nil
 " hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
-" hi Todo ctermbg=DarkGray ctermfg=Black
+hi Todo ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
 " hi NonTerminating ctermbg=Red
-" hi NonTerminating ctermbg=LightRed ctermfg=Black
-" hi NoDefinition ctermbg=Brown
+hi NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
+hi NoDefinition ctermbg=Brown gui=NONE guibg=#354657
 "ctermbg=LightBlue ctermfg=Black
 
 if !exists("g:nvim_agda_settings")

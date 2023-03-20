@@ -32,12 +32,13 @@ sudo rsync -av ~/.luarocks/lib/lua/5.1 /usr/local/lib/lua
 ## Configuration
 
 The plugin can be configured by defining a global variable named
-`g:nvim_agda_settings` of type dictionary.  So far the only supported keys in the
-dictionary are the location of Agda binary and the arguments to that binary:
-```
+`g:nvim_agda_settings` of type dictionary.  So far the following options
+are supported (I use lua syntax, but you can define this in vimscript too).
+```lua
 {
-  "agda" : "/usr/local/bin/agda",
-  "agda_args" : [ "--arg1", "--arg2"  ]
+  agda : "/usr/local/bin/agda",            -- Location of Agda binary
+  agda_args : { "--arg1", "--arg2"  },     -- Default arguments to Agda binary
+  debug_p : true                           -- Turn debug prints on or off
 }
 ```
 All the fields of the dictionary may be omitted, as well as the
