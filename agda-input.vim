@@ -44,10 +44,12 @@ noremap! <buffer> <LocalLeader>ell  ℓ
 " https://people.inf.elte.hu/divip/AgdaTutorial/Symbols.html
 
 " Equality and similar symbols
+" somehow we cannot map ~ in neovim (why? )
 noremap! <buffer> <LocalLeader>=n 	≠
 noremap! <buffer> <LocalLeader>~ 	∼
 noremap! <buffer> <LocalLeader>~n 	≁
 noremap! <buffer> <LocalLeader>~~ 	≈
+noremap! <buffer> <LocalLeader>## 	≈
 noremap! <buffer> <LocalLeader>~~n 	≉
 noremap! <buffer> <LocalLeader>~ 	≋
 noremap! <buffer> <LocalLeader>:~ 	∻
@@ -253,6 +255,21 @@ noremap! <buffer> <LocalLeader>6 ₆
 noremap! <buffer> <LocalLeader>7 ₇
 noremap! <buffer> <LocalLeader>8 ₈
 noremap! <buffer> <LocalLeader>9 ₉
+noremap! <buffer> <LocalLeader>#- ⁻¹
+noremap! <buffer> <LocalLeader>#0 ⁰
+noremap! <buffer> <LocalLeader>#1 ¹
+noremap! <buffer> <LocalLeader>#2 ²
+noremap! <buffer> <LocalLeader>#3 ³
+noremap! <buffer> <LocalLeader>#4 ⁴
+noremap! <buffer> <LocalLeader>#5 ⁵
+noremap! <buffer> <LocalLeader>#6 ⁶
+noremap! <buffer> <LocalLeader>#7 ⁷
+noremap! <buffer> <LocalLeader>#8 ⁸
+noremap! <buffer> <LocalLeader>#9 ⁹
+noremap! <buffer> <LocalLeader>#+ ⁺
+noremap! <buffer> <LocalLeader>#= ⁼
+noremap! <buffer> <LocalLeader>#( ⁽
+noremap! <buffer> <LocalLeader>#) ⁾
 " Lower letters
 noremap! <buffer> <LocalLeader>t ₜ
 

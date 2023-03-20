@@ -8,7 +8,7 @@ local M = {}
 
 -- Agda Process Handle.  Created by `agda_start`.
 local agda_bin = "agda"
-local agda_args = {}
+local agda_args = {"+RTS", "-M16G","-RTS" }
 
 local agda_job = nil
 
