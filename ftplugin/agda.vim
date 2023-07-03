@@ -137,3 +137,4 @@ nm <buffer> <LocalLeader>b :<c-u>GoalPrev<cr>
 
 " mappings
 runtime agda-input.vim
+runtime agda-input-x11.vim
