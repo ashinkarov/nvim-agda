@@ -10,6 +10,14 @@ this is non-trivial.
 
 1. Install [lua-utf8](https://github.com/starwing/luautf8) library on your system.
 
+for macOS, 
+
+```
+brew install lua@5.1 
+luarocks install  --lua-version 5.1  luautf8
+sudo rsync -av ~/.luarocks/lib/lua/5.1 /usr/local/lib/lua
+```
+
 2. Use a plugin manager such as [paq](https://github.com/savq/paq-nvim)
    and pass the name of this repository:
    ```lua
