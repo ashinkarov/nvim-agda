@@ -12,6 +12,11 @@ local agda_args = {}
 
 local agda_job = nil
 
+-- Agda version
+local agda_major = 0
+local agda_minor = 0
+local agda_patch = 0
+
 -- The list of goals in the format {id = {start = {l,c}, end = {l,c}}}
 -- l and c are 1-based line and column as it is given by agda.
 local goals = {}
@@ -848,6 +853,30 @@ end
 -- and call it at exit.
 function M.agda_start()
     local t = {agda_bin}
+    -- Before we start we need to figure out which version
+    -- agda is running, as there are some changes in command interfaces
+    -- starting from version 2.7.0
+    -- TODO: put this into a function?
+    local p = io.popen(agda_bin .. " --version")
+    if p == nil then 
+      error("Cannot obtain agda version, running `" .. agda_bin .. " --version` failed")
+      -- XXX: should we exit here?
+    end
+    local v = ""
+    for l in p:lines() do v = v .. l end
+    p:close()
+    local major, minor, patch = string.match(v, "Agda version (%d+)%.(%d+)%.(%d+)")
+    if major == nil or minor == nil or patch == nil then
+      error("Cannot parse Agda version `" .. v .. "`")
+      -- XXX: should we exit here?
+    else
+      agda_major = tonumber(major) or 0
+      agda_minor = tonumber(minor) or 0
+      agda_patch = tonumber(patch) or 0
+      --print("version: " .. agda_major .. "."  .. agda_minor .. "." .. agda_patch)
+    end
+
+
     for _,v in ipairs(agda_args) do
         table.insert(t, v)
     end
@@ -1183,6 +1212,11 @@ end
 
 local function agda_auto_toplevel(file)
     local cmd = "(Cmd_autoAll)"
+    -- Agda changed interface after 2.7.0
+    -- TODO: introduce proper lexicographic version comparison
+    if agda_major >= 2 and agda_minor >= 7 then
+      cmd = "(Cmd_autoAll AsIs)"
+    end
     agda_feed(file, cmd)
 end
 
@@ -1201,6 +1235,10 @@ function M.agda_auto(file,id)
         local content = get_trimmed_content(id)
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
+        -- Agda changed interface after 2.7.0
+        if agda_major >= 2 and agda_minor >= 7 then
+          cmd = "(Cmd_autoOne AsIs " .. id .. " noRange " .. g .. ")"
+        end
         agda_feed(file, cmd)
     end, file)
 end
