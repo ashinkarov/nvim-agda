@@ -807,7 +807,11 @@ local function on_event(job_id, data, event)
             --print("on_event: " .. k .. ", v = " .. v , "\n" ..
             --      "on_event: " .. k .. ", e = ", evbuf)
             if v ~= "" then
-                if evbuf == "" then
+                -- By some fucked up reason Agda prints failures to parse
+                -- commands into stdout not stderr!
+                if utf8.match(v, "^cannot read:") or utf8.match(v, "^not consumed:") then
+                  error("Agda interaction error: " .. v)
+                elseif evbuf == "" then
                     local status, parsed_v = pcall(vim.fn.json_decode, v)
                     if status then
                         handle_msg (parsed_v)
