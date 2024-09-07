@@ -507,6 +507,9 @@ local function handle_displayinfo(msg)
             end
         end
         print(table.concat(m, "\n"))
+        -- This is a way to see all the info at the same time, but this
+        -- gets too noisy when we are in the middle of development.
+        --vim.api.nvim_echo({ { table.concat(m, "\n") } }, true, {})
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
