@@ -924,6 +924,19 @@ function M.agda_load (file)
         total = total + len + 1
     end
 
+
+    -- TODO(artem) this is not triggered when we run `:split`,
+    -- and I don't know what event will trigger that.  WinEnter is
+    -- too aggressive because it will trigger entering floating
+    -- windows as well.
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      buffer = main_buf,
+      callback = function ()
+        local w = vim.fn.win_getid()
+        main_win = w
+      end
+    })
+
     agda_feed(file, "(Cmd_load \"" .. file .. "\" [])")
 end
 
