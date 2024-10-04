@@ -204,13 +204,17 @@ local function mk_prompt_window(file, goal, loff)
     mk_mapping("q",              "close_prompt_win",  "")
 
     local visl = loff or 1
+    -- We need to add this because things like numbers may
+    -- take some additional space (and it changes when the overall
+    -- number of lines increases).
+    local offset = vim.fn.getwininfo(main_win)[1].textoff
     pwin = vim.api.nvim_open_win(
         pbuf, true,
         {
             relative='win',
             win=main_win,
             row=goal[2].start.line - visl + 1,
-            col=goal[2].start.col,
+            col=goal[2].start.col + offset - 1,
             width=pmin_width,
             height=1,
             style="minimal",
@@ -235,7 +239,7 @@ local function mk_window(lines,loc)
         vim.api.nvim_win_close(msg_win, true)
     end
 
-    state = {
+    local state = {
         width=math.max(max,msg_min_width),
         height=#lines,
         style="minimal"
@@ -245,11 +249,12 @@ local function mk_window(lines,loc)
         state.row=1
         state.col=1
     else
-        local visl = main_win_visl()
         state.relative = 'win'
         state.win = main_win
-        state.row = loc.line - visl + 1
-        state.col = loc.col
+        -- We know that goal defines a position that has to
+        -- exist in the buffer, therefore we can use it to
+        -- position the window.
+        state.bufpos = {loc.line-1, loc.col-1}
     end
 
     -- We need to register autocommand that sets `msg_win` to nil
