@@ -816,13 +816,13 @@ local function on_event(job_id, data, event)
         -- but never more.  If this assumption fails, we'd have to
         -- adjust the code below.
         for k , vv in pairs(data) do
-            local v = utf8.gsub(vv, "^JSON> ", "")
+            local v = string.gsub(vv, "^JSON> ", "")
             --print("on_event: " .. k .. ", v = " .. v , "\n" ..
             --      "on_event: " .. k .. ", e = ", evbuf)
             if v ~= "" then
                 -- By some fucked up reason Agda prints failures to parse
                 -- commands into stdout not stderr!
-                if utf8.match(v, "^cannot read:") or utf8.match(v, "^not consumed:") then
+                if string.match(v, "^cannot read:") or string.match(v, "^not consumed:") then
                   error("Agda interaction error: " .. v)
                 elseif evbuf == "" then
                     local status, parsed_v = pcall(vim.fn.json_decode, v)
