@@ -555,15 +555,6 @@ local function handle_displayinfo(msg)
                 have_ty = split_lines(g.typeAux.expr)
             end
 
-            -- XXX(artem) This is never true!
-            --if #ty == 0 then
-            --    debug("HERE")
-            --    p = add_sep(p, gt .. g.type)
-            --    if have_ty ~= "" then
-            --      debug("Have Type: " .. have_ty)
-            --      table.insert(p,2,"Have Type : " .. have_ty )
-            --    end
-            --else
             -- XXX we can lift this into the add_sep, if this is a common case.
             for k,_ in ipairs(ty) do
                 if k == 1 then
@@ -630,7 +621,7 @@ end
 -- goal commands in case the buffer was modified.
 local function handle_interpoints(msg)
     goals = {}
-    for k,v in pairs(msg.interactionPoints) do
+    for _,v in pairs(msg.interactionPoints) do
         -- FIXME sometimes there is no range in the output... wtf...
         if #v.range > 0 then
             local s = v.range[1].start
@@ -697,8 +688,12 @@ end
 
 -- XXX deprecated function.
 function M.gc()
-    n = get_current_goal()
-    print("'" .. get_goal_content(n[1]) .. "'")
+    local n = get_current_goal()
+    if n ~= nil then
+      print("'" .. get_goal_content(n[1]) .. "'")
+    else
+      print("<empty-goal>")
+    end
 end
 
 local function handle_solve(soln)
@@ -745,7 +740,7 @@ local function handle_give(msg)
     end
     -- 1-based lines, 0-based columns!
     vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
- 
+
     -- FIXME lift actions below into a function.
 
     -- Here we are abusing the block paste feature
@@ -763,7 +758,7 @@ local function handle_give(msg)
     -- construct  #rr + 1 empty lines and store
     -- it in nn.
     local nn = {}
-    for _,v in pairs(rr) do
+    for _,_ in pairs(rr) do
         table.insert(nn, "")
     end
     -- Insert nn as characters, so that the 
@@ -847,7 +842,7 @@ local function on_event(job_id, data, event)
         -- json message in one go.  We can receive less than one,
         -- but never more.  If this assumption fails, we'd have to
         -- adjust the code below.
-        for k , vv in pairs(data) do
+        for _ , vv in pairs(data) do
             local v = string.gsub(vv, "^JSON> ", "")
             --print("on_event: " .. k .. ", v = " .. v , "\n" ..
             --      "on_event: " .. k .. ", e = ", evbuf)
@@ -898,7 +893,7 @@ function M.agda_start()
     -- starting from version 2.7.0
     -- TODO: put this into a function?
     local p = io.popen(agda_bin .. " --version")
-    if p == nil then 
+    if p == nil then
       error("Cannot obtain agda version, running `" .. agda_bin .. " --version` failed")
       -- XXX: should we exit here?
     end
@@ -917,8 +912,8 @@ function M.agda_start()
     end
 
 
-    for _,v in ipairs(agda_args) do
-        table.insert(t, v)
+    for _,arg in ipairs(agda_args) do
+        table.insert(t, arg)
     end
     table.insert(t, "--interaction-json")
     agda_job = vim.fn.jobstart(
@@ -998,7 +993,7 @@ end
 
 local function id_or_current_goal(id,loc)
     if id == nil then
-        n = get_current_goal(loc)
+        local n = get_current_goal(loc)
         if n ~= nil then
             return n[1]
         end
@@ -1060,7 +1055,7 @@ function M.agda_goal_next(file)
         return
     end
     local pos = nil
-    for k,v in pairs(goals) do
+    for _,v in pairs(goals) do
         if v.start > loc then
             pos = v.start
             break
