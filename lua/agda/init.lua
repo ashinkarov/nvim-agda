@@ -78,7 +78,7 @@ local function prefix(p, s)
 end
 
 local function len(t)
-    l = 0
+    local l = 0
     for _,_ in pairs(t) do
         l = l + 1
     end
@@ -101,7 +101,7 @@ end
 -- and we are interested in the field "key".
 local function max_width(lines,key)
     local max = 0
-    for k,v in pairs(lines) do
+    for _,v in pairs(lines) do
         if key ~= nil then
             v = v[key]
         end
@@ -112,7 +112,7 @@ end
 
 local function mk_delim(w)
     local s = ""
-    for i = 1,w do
+    for _ = 1,w do
         s = s .. "─"
     end
     return s
@@ -339,7 +339,7 @@ local function handle_hl(msg)
 
     -- FIXME just seen the case when `info` field is nil!  Weird...
     if msg.info then
-    for k, v in pairs(msg.info.payload) do
+    for _, v in pairs(msg.info.payload) do
         local r = v.range
         -- FIXME s sometimes can be nil... Why?
         local s = find_line(r[1], main_lines, main_content)
