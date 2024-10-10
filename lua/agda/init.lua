@@ -192,16 +192,17 @@ local function mk_prompt_window(file, goal, loff)
             ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
             status)
     end
-    mk_mapping("<LocalLeader>,", "agda_type_context", string.format("'%s', 'Simplified', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>d", "agda_infer",        string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>c", "agda_make_case",    string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>r", "agda_refine",       string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>n", "agda_compute",      string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>a", "agda_auto",         string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>s", "agda_solve",        string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>h", "agda_helper_fun",   string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>q", "close_msg_win",     "")
-    mk_mapping("q",              "close_prompt_win",  "")
+    mk_mapping("<LocalLeader>,", "agda_type_context",       string.format("'%s', 'Simplified', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>.", "agda_type_context_infer", string.format("'%s', 'Simplified', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>d", "agda_infer",              string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>c", "agda_make_case",          string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>r", "agda_refine",             string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>n", "agda_compute",            string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>a", "agda_auto",               string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>s", "agda_solve",              string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>h", "agda_helper_fun",         string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>q", "close_msg_win",           "")
+    mk_mapping("q",              "close_prompt_win",        "")
 
     local visl = loff or 1
     -- We need to add this because things like numbers may
@@ -538,6 +539,7 @@ local function handle_displayinfo(msg)
                 table_append(p, { mk_delim(max_b_len) })
             end
             local max_name_len = max_width(g.entries, "reifiedName")
+
             for _,v in ipairs(g.entries) do
                 local name = v.reifiedName
                 name = name .. string.rep(" ", max_name_len - utf8.len(name))
@@ -545,29 +547,59 @@ local function handle_displayinfo(msg)
             end
             local ty = split_lines(g.type)
             local gt = "Goal Type : "
+            local ht = "Have Type : "
 
-            if #ty == 0 then
-                p = add_sep(p, gt .. g.type)
-            else
-                -- XXX we can lift this into the add_sep, if this is a common case.
-                for k,_ in ipairs(ty) do
-                    if k == 1 then
-                        ty[k] = gt .. ty[k]
-                    else
-                        ty[k] = string.rep(" ", utf8.len(gt)) .. ty[k]
-                    end
-                end
-                local m = max_width(p)
-                m = math.max(max_width(ty),m)
-                m = math.max(msg_min_width, m)
-                local l = mk_delim(m)
-                table.insert(p,1,l)
-                table.insert(ty,1,l)
-                for _,v in ipairs(p) do
-                    table.insert(ty,v)
-                end
-                p = ty
+            -- If there is inferred type we want to show this as well
+            local have_ty = {}
+            if g.typeAux.kind == "GoalAndHave" then
+                have_ty = split_lines(g.typeAux.expr)
             end
+
+            -- XXX(artem) This is never true!
+            --if #ty == 0 then
+            --    debug("HERE")
+            --    p = add_sep(p, gt .. g.type)
+            --    if have_ty ~= "" then
+            --      debug("Have Type: " .. have_ty)
+            --      table.insert(p,2,"Have Type : " .. have_ty )
+            --    end
+            --else
+            -- XXX we can lift this into the add_sep, if this is a common case.
+            for k,_ in ipairs(ty) do
+                if k == 1 then
+                    ty[k] = gt .. ty[k]
+                else
+                    ty[k] = string.rep(" ", utf8.len(gt)) .. ty[k]
+                end
+            end
+            -- In case we have inferred type
+            for k,_ in ipairs(have_ty) do
+                if k == 1 then
+                    have_ty[k] = ht .. have_ty[k]
+                else
+                    have_ty[k] = string.rep(" ", utf8.len(ht)) .. have_ty[k]
+                end
+            end
+
+            local m = max_width(p)
+            m = math.max(max_width(ty),m)
+            m = math.max(max_width(have_ty),m)
+            m = math.max(msg_min_width, m)
+            local l = mk_delim(m)
+            -- Insert line at the top of context
+            table.insert(p,1,l)
+            -- Insert line at the top of goal type
+            table.insert(ty,1,l)
+            -- Add inferred type to goal type (no delimiter)
+            for _,v in ipairs(have_ty) do
+                table.insert(ty,v)
+            end
+            -- Add context to `ty`
+            for _,v in ipairs(p) do
+                table.insert(ty,v)
+            end
+            p = ty
+            --end
         elseif g.kind == "HelperFunction" then
             p = add_sep(split_lines(g.signature),
                         "Helper Function (copied to the \" register)")
@@ -979,12 +1011,18 @@ end
 -- goal, in case the prompt is empty.
 local function get_trimmed_content(id)
     local content = ""
+    -- Try getting content from the prompt window
     if pbuf ~= nil then
         content = table.concat(vim.api.nvim_buf_get_lines(pbuf, 0, -1, true), "\n")
-    else
-        content = get_goal_content(id)
+        content = vim.trim(content)
     end
-    return vim.trim(content)
+
+    -- If prompt window doesn't exist or is empty, try
+    -- looking inside the goal.
+    if content == "" then
+        content = vim.trim(get_goal_content(id))
+    end
+    return content
 end
 
 function M.agda_context(file)
@@ -1115,6 +1153,29 @@ function M.agda_type_context(file,prec,id)
         agda_feed(file, cmd)
     end, file)
 end
+
+function M.agda_type_context_infer(file,prec,id)
+    -- Get the location of the cursor at the time we called `agda_type_context`.
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot obtain goal type and context, the cursor is not in the goal")
+        end
+
+        if prec == nil then
+            prec = "Simplified"
+        end
+
+        local content = get_trimmed_content(id)
+        debug("Goal content: " .. content)
+        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+
+        local cmd = "(Cmd_goal_type_context_infer " .. prec .. " " .. id .. " noRange " .. g .. ")"
+        agda_feed(file, cmd)
+    end, file)
+end
+
 
 local function agda_infer_toplevel(file, e)
     local e = vim.fn.json_encode(e)

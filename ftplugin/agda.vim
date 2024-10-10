@@ -32,6 +32,7 @@ command! AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
 command! AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
 command! AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
 command! AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
+command! AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(expand("%:p"))
 command! AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
 command! AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
 command! AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
@@ -60,6 +61,7 @@ command! GetEvbuf :call b:AgdaMod.getevbuf()
 nm <buffer> <LocalLeader>l :<c-u>AgdaLoad<cr>
 nm <buffer> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
 nm <buffer> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
+nm <buffer> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
 nm <buffer> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
 nm <buffer> <LocalLeader>d :<c-u>AgdaInfer<cr>
 nm <buffer> <LocalLeader>r :<c-u>AgdaRefine<cr>
