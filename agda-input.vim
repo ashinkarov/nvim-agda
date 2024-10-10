@@ -230,6 +230,64 @@ noremap! <buffer> <LocalLeader>bc 	ℂ
 noremap! <buffer> <LocalLeader>bp 	ℙ
 noremap! <buffer> <LocalLeader>bb 	𝔹
 noremap! <buffer> <LocalLeader>bsum 	⅀
+
+
+" This comes from https://handwiki.org/wiki/Blackboard_bold
+noremap! <buffer> <LocalLeader>bA  𝔸
+noremap! <buffer> <LocalLeader>ba  𝕒
+noremap! <buffer> <LocalLeader>bB  𝔹
+noremap! <buffer> <LocalLeader>bb  𝕓
+noremap! <buffer> <LocalLeader>bC  ℂ
+noremap! <buffer> <LocalLeader>bc  𝕔
+noremap! <buffer> <LocalLeader>bD  𝔻
+noremap! <buffer> <LocalLeader>bd  𝕕
+noremap! <buffer> <LocalLeader>bE  𝔼
+noremap! <buffer> <LocalLeader>be  𝕖
+noremap! <buffer> <LocalLeader>bF  𝔽
+noremap! <buffer> <LocalLeader>bf  𝕗
+noremap! <buffer> <LocalLeader>bG  𝔾
+noremap! <buffer> <LocalLeader>bg  𝕘
+noremap! <buffer> <LocalLeader>bH  ℍ
+noremap! <buffer> <LocalLeader>bh  𝕙
+noremap! <buffer> <LocalLeader>bI  𝕀
+noremap! <buffer> <LocalLeader>bi  𝕚
+noremap! <buffer> <LocalLeader>bJ  𝕁
+noremap! <buffer> <LocalLeader>bj  𝕛
+noremap! <buffer> <LocalLeader>bK  𝕂
+noremap! <buffer> <LocalLeader>bk  𝕜
+noremap! <buffer> <LocalLeader>bL  𝕃
+noremap! <buffer> <LocalLeader>bl  𝕝
+noremap! <buffer> <LocalLeader>bM  𝕄
+noremap! <buffer> <LocalLeader>bm  𝕞
+noremap! <buffer> <LocalLeader>bN  ℕ
+noremap! <buffer> <LocalLeader>bn  𝕟
+noremap! <buffer> <LocalLeader>bO  𝕆
+noremap! <buffer> <LocalLeader>bo  𝕠
+noremap! <buffer> <LocalLeader>bP  ℙ
+noremap! <buffer> <LocalLeader>bp  𝕡
+noremap! <buffer> <LocalLeader>bQ  ℚ
+noremap! <buffer> <LocalLeader>bq  𝕢
+noremap! <buffer> <LocalLeader>bR  ℝ
+noremap! <buffer> <LocalLeader>br  𝕣
+noremap! <buffer> <LocalLeader>bS  𝕊
+noremap! <buffer> <LocalLeader>bs  𝕤
+noremap! <buffer> <LocalLeader>bT  𝕋
+noremap! <buffer> <LocalLeader>bt  𝕥
+noremap! <buffer> <LocalLeader>bU  𝕌
+noremap! <buffer> <LocalLeader>bu  𝕦
+noremap! <buffer> <LocalLeader>bV  𝕍
+noremap! <buffer> <LocalLeader>bv  𝕧
+noremap! <buffer> <LocalLeader>bW  𝕎
+noremap! <buffer> <LocalLeader>bw  𝕨
+noremap! <buffer> <LocalLeader>bX  𝕏
+noremap! <buffer> <LocalLeader>bx  𝕩
+noremap! <buffer> <LocalLeader>bY  𝕐
+noremap! <buffer> <LocalLeader>by  𝕪
+noremap! <buffer> <LocalLeader>bZ  ℤ
+noremap! <buffer> <LocalLeader>bz  𝕫
+
+
+
 " Blackboard bold numbers
 noremap! <buffer> <LocalLeader>b0 	𝟘
 noremap! <buffer> <LocalLeader>b1 	𝟙
@@ -437,3 +495,6 @@ noremap! <buffer> <LocalLeader>^y       ʸ
 noremap! <buffer> <LocalLeader>^z       ᶻ
 
 
+
+noremap! <buffer> <LocalLeader>fl       ♭
+noremap! <buffer> <LocalLeader>sh       ♯
