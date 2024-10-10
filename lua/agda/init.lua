@@ -537,9 +537,9 @@ local function handle_displayinfo(msg)
                 end
                 table_append(p, { mk_delim(max_b_len) })
             end
-            local max_name_len = max_width(g.entries, "originalName")
+            local max_name_len = max_width(g.entries, "reifiedName")
             for _,v in ipairs(g.entries) do
-                local name = v.originalName
+                local name = v.reifiedName
                 name = name .. string.rep(" ", max_name_len - utf8.len(name))
                 table_append(p, mk_decl(name, split_lines(v.binding), " : "))
             end
