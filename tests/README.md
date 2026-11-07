@@ -28,6 +28,10 @@ Transcripts depend on the Agda version that recorded them (stored in
 the `agda` field).  After changing a test, run `make record` and review
 the diff.
 
+A few transcripts are edited by hand to simulate output that Agda does
+not produce on demand (for example `non_json_output.json`).  Their tests
+use `h.skip_unless_replay()`, so they are never re-recorded.
+
 ## Golden files
 
 Some tests compare output with `tests/golden/<name>.txt`.  To update

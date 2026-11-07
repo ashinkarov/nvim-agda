@@ -136,6 +136,16 @@ function M.wait_idle()
     end
 end
 
+-- For tests whose transcripts are edited by hand and must not be
+-- re-recorded: returns true (and reports the skip) unless replaying.
+function M.skip_unless_replay()
+    if mode ~= "replay" then
+        io.stdout:write("     (replay only, skipped)\n")
+        return true
+    end
+    return false
+end
+
 -- Make vim.fn.input return `answer` (and record the prompt).
 function M.stub_input(answer)
     M.prompts = {}

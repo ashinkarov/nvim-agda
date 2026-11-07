@@ -102,3 +102,13 @@ t.test("auto", function()
     h.wait_idle()
     t.golden("auto", h.lines())
 end)
+
+-- The transcript is load.json with the line "cannot read: garbage"
+-- inserted into the middle of Agda's response.
+t.test("non-json output is reported and does not stop the reader", function()
+    if h.skip_unless_replay() then return end
+    load("non_json_output")
+    t.ok(vim.tbl_contains(h.messages, "E: Agda interaction error: cannot read: garbage"),
+         "error reported: " .. vim.inspect(h.messages))
+    t.golden("load_highlights", h.highlights())
+end)

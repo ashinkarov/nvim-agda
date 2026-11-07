@@ -44,27 +44,20 @@ local function normalise(s)
     return (s:gsub(vim.pesc(dir), "$DIR"))
 end
 
--- Positions inside a prompt where we must not cut the stream.
--- FIXME: the current reader cannot cope with a prompt split across two
--- chunks; allow such cuts once the reader is fixed.
-local function forbidden_cuts(s)
-    local bad = {}
+local function emit(s)
+    local cuts = {}
+    for _ = 1, math.random(0, math.min(#s - 1, 24)) do
+        cuts[math.random(1, #s - 1)] = true
+    end
+    -- Also split some of the prompts, which is a tricky case for readers.
     local init = 1
     while true do
         local p = s:find(PROMPT, init, true)
         if not p then break end
-        for i = p, p + #PROMPT - 2 do bad[i] = true end
+        if math.random() < 0.5 then
+            cuts[p + math.random(0, #PROMPT - 2)] = true
+        end
         init = p + 1
-    end
-    return bad
-end
-
-local function emit(s)
-    local bad = forbidden_cuts(s)
-    local cuts = {}
-    for _ = 1, math.random(0, math.min(#s - 1, 24)) do
-        local c = math.random(1, #s - 1)
-        if not bad[c] then cuts[c] = true end
     end
     local start = 1
     for i = 1, #s do

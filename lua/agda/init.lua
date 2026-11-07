@@ -27,7 +27,7 @@ local msg_buf = nil
 local msg_win = nil
 local msg_min_width = 25
 
--- Buffer for the bytes coming from the agda process.
+-- The incomplete last line of Agda's output so far.
 -- See `on_event` for the details on the usage.
 local evbuf = ""
 
@@ -845,48 +845,38 @@ function M.getevbuf()
     print("evbuf length is: " .. evbuf)
 end
 
+-- Handle one line of Agda's output.  Agda prints every message as a
+-- single line of json, possibly preceded by the "JSON> " prompt.
+local function handle_line(line)
+    while prefix("JSON> ", line) do
+        line = string.sub(line, 7)
+    end
+    if line == "" then
+        return
+    end
+    local ok, msg = pcall(vim.json.decode, line)
+    if not ok then
+        -- Agda prints failures to parse commands (e.g. "cannot read:")
+        -- to stdout rather than stderr.
+        error("Agda interaction error: " .. line)
+        return
+    end
+    -- `debug` is shadowed by our own function.
+    local ok2, err = xpcall(handle_msg, _G.debug.traceback, msg)
+    if not ok2 then
+        error("Failed to handle Agda message " .. tostring(msg.kind) .. ": " .. err)
+    end
+end
+
 local function on_event(job_id, data, event)
     if event == "stdout"  then
-        -- We assume here that we can never receive mroe than one
-        -- json message in one go.  We can receive less than one,
-        -- but never more.  If this assumption fails, we'd have to
-        -- adjust the code below.
-        for _ , vv in pairs(data) do
-            local v = string.gsub(vv, "^JSON> ", "")
-            --print("on_event: " .. k .. ", v = " .. v , "\n" ..
-            --      "on_event: " .. k .. ", e = ", evbuf)
-            if v ~= "" then
-                -- By some fucked up reason Agda prints failures to parse
-                -- commands into stdout not stderr!
-                if string.match(v, "^cannot read:") or string.match(v, "^not consumed:") then
-                  error("Agda interaction error: " .. v)
-                elseif evbuf == "" then
-                    local status, parsed_v = pcall(vim.fn.json_decode, v)
-                    if status then
-                        handle_msg (parsed_v)
-                    else
-                        evbuf = v
-                    end
-                else
-                    local status, parsed_evbuf = pcall(vim.fn.json_decode, evbuf)
-                    if status then
-                        handle_msg (parsed_evbuf)
-                        evbuf = v
-                    else
-                        evbuf = evbuf .. v
-                    end
-                end
-            end
-        end
-        -- If we have a valid json message in the evbuf, let's
-        -- execute it.  If not, we leave it for the next time this
-        -- function is called.
-        if evbuf ~= "" then
-            local status, parsed_evbuf = pcall(vim.fn.json_decode, evbuf)
-            if status then
-                handle_msg(parsed_evbuf)
-                evbuf = ""
-            end
+        -- `data` is the chunk split at newlines: the first element
+        -- continues the incomplete line from the previous chunk, the last
+        -- one is incomplete ("" if the chunk ended with a newline).
+        data[1] = evbuf .. data[1]
+        evbuf = table.remove(data)
+        for _, line in ipairs(data) do
+            handle_line(line)
         end
     elseif event == "stderr" then
         error("Agda interaction error: " .. table.concat(data, "\n"))
