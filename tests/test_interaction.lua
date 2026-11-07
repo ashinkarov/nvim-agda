@@ -379,6 +379,7 @@ t.test("highlight groups", function()
     vim.cmd("colorscheme default")
     t.eq(0x353535, vim.api.nvim_get_hl(0, { name = "AgdaHole" }).bg)
     t.eq(0x354657, vim.api.nvim_get_hl(0, { name = "NoDefinition" }).bg)
+    t.eq("AgdaHole", vim.api.nvim_get_hl(0, { name = "AgdaUnsolvedMeta" }).link)
 end)
 
 -- The error is at `名前` (line 7, column 7 in code points).
@@ -415,6 +416,13 @@ t.test("comments", function()
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
     vim.cmd("normal gcc")
     t.eq("-- module Basic where", h.lines()[1])
+end)
+
+t.test("unsolved metas have their own highlight group", function()
+    h.open("unsolved_meta", { fixture = "Meta.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.ok(vim.tbl_contains(h.highlights(), "7:8-9 AgdaUnsolvedMeta _"), vim.inspect(h.highlights()))
 end)
 
 t.test("the mappings do not wait for longer global mappings", function()

@@ -24,6 +24,7 @@ setlocal comments=s1fl:{-,mb:-,ex:-},:-- commentstring=--\ %s
 " clears them.
 function! s:Highlights()
     hi default AgdaHole ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
+    hi default link AgdaUnsolvedMeta AgdaHole
     hi default NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
     hi default NoDefinition ctermbg=Brown gui=NONE guibg=#354657
 endfunction

@@ -365,7 +365,7 @@ local function handle_hl(msg)
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
         elseif (name == "hole") then return "AgdaHole"
-        elseif (name == "unsolvedmeta") then return "AgdaHole"
+        elseif (name == "unsolvedmeta") then return "AgdaUnsolvedMeta"
         elseif (name == "string") then return "String"
         elseif (name == "catchallclause") then return "Folded"
         -- XXX I am not sure what's the purpose of highlighting

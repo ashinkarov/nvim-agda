@@ -12,10 +12,10 @@
   are shown whole.
 - Normal forms and helper functions are copied to the system clipboard
   (or to the unnamed register if there is no clipboard provider).
-- Goals and unsolved metas are highlighted with the new `AgdaHole`
-  group instead of `Todo`, which the plugin no longer changes for all
-  filetypes.  `AgdaHole`, `NonTerminating` and `NoDefinition` are
-  defaults that colour schemes and users can override, and they
+- Goals and unsolved metas are highlighted with the new `AgdaHole` and
+  `AgdaUnsolvedMeta` (linked to `AgdaHole`) groups instead of `Todo`,
+  which the plugin no longer changes for all filetypes.  The plugin's
+  groups are defaults that colour schemes and users can override, and they
   survive `:colorscheme`.
 - The commands are defined for Agda buffers only.
 - The key mappings are non-recursive and `<nowait>`: they no longer

@@ -90,12 +90,13 @@ The regular `:q` command would work as well.
 
 ### Highlighting
 Agda's highlighting uses the standard highlight groups (`Keyword`,
-`Type`, ...) and three groups of its own, which you can set in your
+`Type`, ...) and groups of its own, which you can set in your
 colour scheme or configuration:
 
 | Group | Highlights |
 |:-----:| ---------- |
-| `AgdaHole` | Goals and unsolved metas |
+| `AgdaHole` | Goals |
+| `AgdaUnsolvedMeta` | Unsolved metas (linked to `AgdaHole`) |
 | `NonTerminating` | Termination problems |
 | `NoDefinition` | Missing definitions |
 
