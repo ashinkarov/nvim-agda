@@ -77,7 +77,7 @@ local function display(msg)
     messages.show(msg)
 end
 
-local function error(msg)
+local function show_error(msg)
     messages.show(msg, "ErrorMsg")
 end
 
@@ -97,15 +97,12 @@ local function len(t)
     return l
 end
 
-local function debug(x)
-    if debug_p then
-        display(vim.inspect(x))
-    end
-end
-
+-- Show the arguments if `debug_p` is set; tables are inspected.
 local function dprint(...)
     if debug_p then
-        display(table.concat(vim.tbl_map(tostring, {...}), "\t"))
+        display(table.concat(vim.tbl_map(function (x)
+            return type(x) == "string" and x or vim.inspect(x)
+        end, {...}), "\t"))
     end
 end
 
@@ -477,7 +474,7 @@ local function handle_displayinfo(msg)
     end
 
     local inf = msg.info
-    --debug(inf)
+    --dprint(inf)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
@@ -491,7 +488,7 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        error(text)
+        show_error(text)
     elseif inf.kind == "Context" then
         local p = {}
         local max_name_len = max_width(inf.context, "originalName")
@@ -721,7 +718,7 @@ local function get_goal_content(id)
     local n = goals[id]
     if n == nil then return nil end
 
-    --debug(n)
+    --dprint(n)
     local sl = n.start.line
     local sc = n.start.col
     local el = n["end"].line
@@ -911,7 +908,7 @@ end
 --
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
-    --debug(msg)
+    --dprint(msg)
     if (msg["kind"] == "HighlightingInfo") then
         handle_hl(msg)
     elseif (msg["kind"] == "DisplayInfo") then
@@ -972,13 +969,12 @@ local function handle_line(line)
     if not ok then
         -- Agda prints failures to parse commands (e.g. "cannot read:")
         -- to stdout rather than stderr.
-        error("Agda interaction error: " .. line)
+        show_error("Agda interaction error: " .. line)
         return
     end
-    -- `debug` is shadowed by our own function.
-    local ok2, err = xpcall(handle_msg, _G.debug.traceback, msg)
+    local ok2, err = xpcall(handle_msg, debug.traceback, msg)
     if not ok2 then
-        error("Failed to handle Agda message " .. tostring(msg.kind) .. ": " .. err)
+        show_error("Failed to handle Agda message " .. tostring(msg.kind) .. ": " .. err)
     end
 end
 
@@ -1003,7 +999,7 @@ local function on_event(job_id, data, event)
         -- At the end of the stream we get {""}.
         local text = table.concat(data, "\n")
         if vim.trim(text) ~= "" then
-            error("Agda interaction error: " .. text)
+            show_error("Agda interaction error: " .. text)
         end
     elseif event == "exit" then
         agda_job = nil
@@ -1014,7 +1010,7 @@ local function on_event(job_id, data, event)
         -- next goal command.
         goals = {}
         error_count = error_count + 1
-        error(string.format("Agda exited unexpectedly (exit code %d)", data))
+        show_error(string.format("Agda exited unexpectedly (exit code %d)", data))
     end
 end
 
@@ -1025,13 +1021,13 @@ local function detect_version()
         return vim.system({agda_bin, "--version"}, {text = true}):wait()
     end)
     if not ok or res.code ~= 0 then
-        error("Cannot run `" .. agda_bin .. " --version`: "
+        show_error("Cannot run `" .. agda_bin .. " --version`: "
               .. (ok and vim.trim(res.stderr or "") or tostring(res)))
         return false
     end
     local major, minor, patch = string.match(res.stdout, "Agda version (%d+)%.(%d+)%.(%d+)")
     if major == nil then
-        error("Cannot parse Agda version `" .. vim.trim(res.stdout) .. "`")
+        show_error("Cannot parse Agda version `" .. vim.trim(res.stdout) .. "`")
     else
         agda_major = tonumber(major)
         agda_minor = tonumber(minor)
@@ -1072,7 +1068,7 @@ function M.agda_start()
             stderr_buffered = false,
         })
     if not ok or job <= 0 then
-        error("Cannot start Agda: " .. (ok and ("jobstart returned " .. job) or job))
+        show_error("Cannot start Agda: " .. (ok and ("jobstart returned " .. job) or job))
         return false
     end
     agda_job = job
@@ -1313,7 +1309,7 @@ function M.agda_type_context_infer(file,prec,id)
         end
 
         local content = get_trimmed_content(id)
-        debug("Goal content: " .. content)
+        dprint("Goal content: " .. content)
         local g = haskell.string(content)
 
         local cmd = "(Cmd_goal_type_context_infer " .. prec .. " " .. id .. " noRange " .. g .. ")"

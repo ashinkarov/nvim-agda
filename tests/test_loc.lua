@@ -12,3 +12,7 @@ t.test("ordering across lines ignores columns", function()
     t.ok(Loc:new(3, 1) > Loc:new(2, 99))
     t.ok(not (Loc:new(4, 1) <= Loc:new(3, 50)))
 end)
+
+t.test("the module does not define globals", function()
+    t.eq(nil, rawget(_G, "Loc"))
+end)
