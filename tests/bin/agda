@@ -23,4 +23,4 @@ fi
 if [ "$1" = --version ]; then
     exec "${AGDA_REAL:-agda}" "$@"
 fi
-tee "$AGDA_TEST_DIR/stdin.log" | "${AGDA_REAL:-agda}" "$@" | tee "$AGDA_TEST_DIR/stdout.log"
+tee -a "$AGDA_TEST_DIR/stdin.log" | "${AGDA_REAL:-agda}" "$@" | tee -a "$AGDA_TEST_DIR/stdout.log"

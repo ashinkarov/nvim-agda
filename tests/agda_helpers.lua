@@ -53,14 +53,16 @@ local function read(path)
     return s
 end
 
--- Positions (1-based) at which Agda printed a prompt.
+-- Positions (1-based) at which Agda printed a prompt: at the start of a
+-- line or right after another prompt (when a new session's log follows
+-- the final prompt of the previous one).
 local function prompts(s)
     local r = {}
     local init = 1
     while true do
         local p = s:find(PROMPT, init, true)
         if not p then break end
-        if p == 1 or s:sub(p - 1, p - 1) == "\n" then
+        if p == 1 or s:sub(p - 1, p - 1) == "\n" or r[#r] == p - #PROMPT then
             table.insert(r, p)
         end
         init = p + 1
@@ -103,8 +105,10 @@ function M.open(name, opts)
     vim.v.errmsg = ""
 
     vim.cmd.edit(vim.fn.fnameescape(file))
+    -- `sessions` is the number of Agda processes that the test starts;
+    -- in replay mode each of them replays the whole transcript.
     M.ctx = { name = opts.transcript or name, dir = dir, file = file,
-              buf = vim.api.nvim_get_current_buf() }
+              buf = vim.api.nvim_get_current_buf(), sessions = 1 }
     return M.ctx
 end
 
@@ -116,11 +120,20 @@ local function check_replay_error()
 end
 
 -- Agda is idle when it has printed one prompt more than the number of
--- commands it has received.
+-- commands it has received (per session).
 local function state()
     local n = #commands(read(M.ctx.dir .. "/stdin.log"))
     local p = #prompts(read(M.ctx.dir .. "/stdout.log") or "")
     return n, p
+end
+
+-- The job id of the running Agda process (nil if there is none).
+function M.agda_job()
+    for _, ch in ipairs(vim.api.nvim_list_chans()) do
+        if ch.stream == "job" then
+            return ch.id
+        end
+    end
 end
 
 -- Wait until Agda has answered all commands, including the ones the
@@ -130,11 +143,14 @@ function M.wait_idle()
         local ok = vim.wait(timeout, function()
             if mode == "replay" then check_replay_error() end
             local n, p = state()
-            return p >= n + 1
+            return p >= n + M.ctx.sessions
         end, 10)
         if not ok then
             local n, p = state()
-            error(string.format("timeout waiting for Agda (%d commands, %d prompts)", n, p), 2)
+            local out = read(M.ctx.dir .. "/stdout.log") or ""
+            error(string.format("timeout waiting for Agda (%d commands, %d prompts)\n"
+                .. "stdin.log:\n%s\nend of stdout.log:\n%s", n, p,
+                read(M.ctx.dir .. "/stdin.log") or "", out:sub(-300)), 2)
         end
         local n0, p0 = state()
         -- Give the plugin time to process the output (and possibly send
@@ -155,6 +171,16 @@ function M.take_errors()
     end
     M.messages = rest
     return errors
+end
+
+-- For tests that reuse the transcript of another test (and so must not
+-- record it): returns true (and reports the skip) when recording.
+function M.skip_when_recording()
+    if mode == "record" then
+        io.stdout:write("     (not recorded, skipped)\n")
+        return true
+    end
+    return false
 end
 
 -- For tests whose transcripts are edited by hand and must not be
@@ -214,7 +240,7 @@ local function check_transcript_consumed()
         return      -- Agda was never started
     end
     local data = vim.json.decode(read(transcript_path(ctx.name)))
-    t.eq(#data.exchanges - 1, #commands(log), "commands replayed")
+    t.eq(ctx.sessions * (#data.exchanges - 1), #commands(log), "commands replayed")
 end
 
 -- Run after each test: verify/save the transcript and reset the editor.
@@ -223,9 +249,14 @@ function M.finish()
     M.ctx = nil
     vim.fn.input = real_input
 
-    -- Closing stdin makes both Agda and the replay script exit; only
-    -- kill jobs that do not.  (The replay script blocks reading stdin
-    -- and cannot handle SIGTERM promptly.)
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        vim.api.nvim_buf_call(buf, function()
+            vim.cmd("if exists('b:AgdaMod') | call b:AgdaMod.agda_stop() | endif")
+        end)
+    end
+    -- Wait for the processes to exit.  Closing stdin makes both Agda and
+    -- the replay script exit; only kill jobs that do not.  (The replay
+    -- script blocks reading stdin and cannot handle SIGTERM promptly.)
     local jobs = {}
     for _, ch in ipairs(vim.api.nvim_list_chans()) do
         if ch.stream == "job" then

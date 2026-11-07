@@ -869,6 +869,10 @@ local function handle_line(line)
 end
 
 local function on_event(job_id, data, event)
+    -- Ignore processes that we have stopped.
+    if job_id ~= agda_job then
+        return
+    end
     if event == "stdout"  then
         -- `data` is the chunk split at newlines: the first element
         -- continues the incomplete line from the previous chunk, the last
@@ -884,6 +888,16 @@ local function on_event(job_id, data, event)
         if vim.trim(text) ~= "" then
             error("Agda interaction error: " .. text)
         end
+    elseif event == "exit" then
+        agda_job = nil
+        evbuf = ""
+        sfunc = nil
+        sargs = nil
+        -- The goals refer to the old process; force a reload before the
+        -- next goal command.
+        goals = {}
+        error_count = error_count + 1
+        error(string.format("Agda exited unexpectedly (exit code %d)", data))
     end
 end
 
@@ -947,6 +961,20 @@ function M.agda_start()
     agda_job = job
     evbuf = ""
     return true
+end
+
+-- Stop Agda if it is running.
+function M.agda_stop()
+    local job = agda_job
+    if job ~= nil then
+        -- Reset first, so that on_event ignores the exit.
+        agda_job = nil
+        evbuf = ""
+        sfunc = nil
+        sargs = nil
+        vim.fn.chanclose(job, "stdin")
+        vim.fn.jobstop(job)
+    end
 end
 
 local function agda_feed (file, cmd)

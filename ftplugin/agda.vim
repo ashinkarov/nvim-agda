@@ -28,6 +28,7 @@ call b:AgdaMod.setup(g:nvim_agda_settings)
 
 " Vim commands
 command! AgdaStart :call b:AgdaMod.agda_start()
+command! AgdaStop :call b:AgdaMod.agda_stop()
 command! AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
 command! AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
 command! AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))

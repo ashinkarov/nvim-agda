@@ -33,3 +33,34 @@ t.test("Agda versions are compared component-wise", function()
     h.wait_idle()
     t.golden("auto", h.lines())
 end)
+
+t.test("Agda exiting is reported and the next command restarts it", function()
+    if h.skip_when_recording() then return end
+    h.open("restart", { transcript = "load" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    -- Simulate a crash.
+    local job = h.agda_job()
+    vim.fn.chanclose(job, "stdin")
+    vim.fn.jobwait({ job }, 5000)
+    vim.wait(20)
+    t.eq({ "E: Agda exited unexpectedly (exit code 0)" }, h.take_errors())
+
+    h.ctx.sessions = 2
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.golden("load_highlights", h.highlights())
+end)
+
+t.test("AgdaStop stops Agda silently", function()
+    if h.skip_when_recording() then return end
+    h.open("stop", { transcript = "load" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local job = h.agda_job()
+    vim.cmd("AgdaStop")
+    t.eq({ job }, { vim.fn.jobwait({ job }, 5000)[1] ~= -1 and job }, "Agda exited")
+    vim.wait(20)
+    t.eq(nil, h.agda_job())
+    t.eq({}, h.take_errors())
+end)
