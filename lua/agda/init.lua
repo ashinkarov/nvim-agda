@@ -853,8 +853,23 @@ function M.getevbuf()
     print("evbuf length is: " .. evbuf)
 end
 
--- Handle one line of Agda's output.  Agda prints every message as a
--- single line of json, possibly preceded by the "JSON> " prompt.
+-- Handle one line of Agda's output.
+--
+-- We rely on Agda printing every message as exactly one line.  JSON
+-- itself allows newlines between tokens, so this is a property of Agda,
+-- not of the format.  In Agda 2.8.0 (src/full/Agda/Interaction):
+--   * JSONTop.hs: `jsonREPL = repl (liftIO . BS.putStrLn <=< jsonifyResponse)`
+--     with `jsonifyResponse = pure . encode <=< encodeTCM`, where `encode`
+--     is aeson's compact encoder: no whitespace between tokens and
+--     newlines in strings escaped as \n.
+--   * AgdaTop.hs (`repl`): before reading each command Agda prints the
+--     prompt "JSON> " without a newline, so it ends up in front of the
+--     next message (several of them if commands produce no output).
+--     If a command cannot be parsed, it prints the error ("cannot read:
+--     <command>" or "not consumed: <rest>") as a plain line, not json.
+--     Commands are read with `getLine`, so these are single lines too.
+--   * Debug messages (-v) are sent as RunningInfo messages through the
+--     same callback.
 local function handle_line(line)
     while prefix("JSON> ", line) do
         line = string.sub(line, 7)
@@ -882,9 +897,12 @@ local function on_event(job_id, data, event)
         return
     end
     if event == "stdout"  then
-        -- `data` is the chunk split at newlines: the first element
-        -- continues the incomplete line from the previous chunk, the last
-        -- one is incomplete ("" if the chunk ended with a newline).
+        -- `data` is the chunk split at newlines (:h channel-lines): the
+        -- first element continues the incomplete line from the previous
+        -- chunk, the last one is incomplete ("" if the chunk ended with a
+        -- newline).  A line may be spread over any number of chunks; it
+        -- accumulates in `evbuf` until its newline arrives, so
+        -- `handle_line` only ever sees complete lines.
         data[1] = evbuf .. data[1]
         evbuf = table.remove(data)
         for _, line in ipairs(data) do
