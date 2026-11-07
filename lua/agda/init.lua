@@ -439,12 +439,13 @@ local function handle_displayinfo(msg)
     if (inf.kind == "Error") then
         -- Latest versions of Agda changed the interface.
         local text = inf.message or inf["error"].message
-        -- if the prompt window is open, the error message (most likely!)
-        -- is coming from the incorrect info we passed.  It should not
-        -- indicate that the entire file needs loading.
-        if pwin == nil then
+        -- If a goal command is waiting for a reload, the reload failed.
+        -- Agda sends no interaction points then, so drop the command.
+        -- Otherwise, if the prompt window is open, the error message (most
+        -- likely!) is coming from the incorrect info we passed.  It should
+        -- not indicate that the entire file needs loading.
+        if sfunc ~= nil or pwin == nil then
             error_count = error_count + 1
-            -- clear all the possible continuations
             sfunc = nil
             sargs = nil
         end
@@ -653,11 +654,12 @@ local function handle_interpoints(msg)
     end
     --print("hanle interpoints, got: " .. len(goals) .. " goals")
     if sfunc ~= nil then
-        --print("resuming suspended function")
-        -- Run continuation, reset sfunc and sargs.
-        sfunc(unpack(sargs))
+        -- Reset sfunc and sargs before running the continuation, so that
+        -- they are reset even if it fails.
+        local f, args = sfunc, sargs
         sfunc = nil
         sargs = nil
+        f(unpack(args))
     end
 end
 

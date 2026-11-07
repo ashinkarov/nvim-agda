@@ -264,3 +264,22 @@ t.test("loads and popups do not add autocommands", function()
     h.wait_idle()
     t.eq(before, count())
 end)
+
+t.test("a failed reload with the goal-edit window open does not block goal commands", function()
+    load_give("reload_error_with_prompt")
+    h.cursor_at("?", 1)        -- goal 0, in `after`
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { "x" })
+    -- Break the file; the give has to reload it first, which fails.
+    vim.api.nvim_buf_set_lines(h.ctx.buf, 6, 7, true, { "and a b = tt tt" })
+    vim.api.nvim_feedkeys(vim.keycode("<LocalLeader>r"), "x", false)
+    h.wait_idle()
+    local errors = h.take_errors()
+    t.eq(1, #errors, vim.inspect(errors))
+    t.ok(errors[1]:find("CannotApply", 1, true), errors[1])
+    -- Fix it and give again.
+    vim.api.nvim_buf_set_lines(h.ctx.buf, 6, 7, true, { "and a b = a" })
+    vim.api.nvim_feedkeys(vim.keycode("<LocalLeader>r"), "x", false)
+    h.wait_idle()
+    t.eq("after x = and x ff  -- comment", h.lines()[10])
+end)
