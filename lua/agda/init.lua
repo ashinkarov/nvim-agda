@@ -830,15 +830,72 @@ local function handle_give(msg)
     replace_goal(msg.interactionPoint.id, msg.giveResult.str)
 end
 
+-- The byte column in `line` where the clause of an extended lambda
+-- that contains the goal at byte column `sb` starts: right after the
+-- `;` or the unmatched `{` before the goal, or `indent` (the end of the
+-- indentation) if there is neither, as in a `λ where`.
+local function extlam_clause_start(line, sb, indent)
+    local depth = 0
+    local i = sb
+    while i > indent do
+        local c = line:sub(i, i)
+        if c == ";" or (c == "{" and depth == 0) then
+            break
+        elseif c == "{" then
+            depth = depth - 1
+        elseif c == "}" then
+            depth = depth + 1
+        end
+        i = i - 1
+    end
+    return i
+end
+
+-- Replace the clause containing the goal with the clauses from a case
+-- split.  Agda sends the clauses without indentation and does not say
+-- which text they replace (see doc/make-case.md for a proper fix), so
+-- like the Emacs mode we assume that the clause is on the lines of the
+-- goal:
+--   * a function clause starts on the line where the goal starts and
+--     ends on the line where the goal ends: we replace these lines by
+--     the clauses, indented like the first one.  So a clause whose
+--     left-hand side or right-hand side spans several lines is not
+--     replaced properly, and text after the goal on its last line (such
+--     as a `where`) is lost;
+--   * the clause of an extended lambda starts after the `;` or the `{`
+--     before the goal on its line, and ends with the goal: we replace it
+--     by the clauses separated by `;`.  If there is neither, the clause
+--     is the first thing on the line (a `λ where`): we replace it by the
+--     clauses on separate lines, indented like the first one.
 local function handle_make_case(msg)
     reset_prompt()
     local n = goals[msg.interactionPoint.id]
     if n == nil then
         return warning(string.format("goal %d is not in the list of goals, reload the file", msg.interactionPoint.id))
     end
-    local sl = n.start.line --[1]
-    local el = n["end"].line --[1]
-    vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
+    local s, e = n.start, n["end"]
+    local first = vim.api.nvim_buf_get_lines(main_buf, s.line-1, s.line, true)[1]
+    local indent = first:match("^%s*")
+    local clauses = {}
+    for i, c in ipairs(msg.clauses) do
+        clauses[i] = indent .. c
+    end
+    if msg.variant == "ExtendedLambda" then
+        local last = vim.api.nvim_buf_get_lines(main_buf, e.line-1, e.line, true)[1]
+        local sb = utf8.offset(first, s.col) - 1
+        local eb = utf8.offset(last, e.col) - 1
+        local cb = extlam_clause_start(first, sb, #indent)
+        local text
+        if cb == #indent then
+            text = clauses
+            text[1] = msg.clauses[1]
+        else
+            text = {" " .. table.concat(msg.clauses, " ; ")}
+        end
+        vim.api.nvim_buf_set_text(main_buf, s.line-1, cb, e.line-1, eb, text)
+    else
+        vim.api.nvim_buf_set_lines(main_buf, s.line-1, e.line, true, clauses)
+    end
     -- Agda sends the interaction points from before the split after
     -- this response, so we reload to get the new goals, like the Emacs
     -- mode does.

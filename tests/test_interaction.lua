@@ -98,6 +98,38 @@ t.test("case split", function()
     t.golden("make_case", h.lines())
 end)
 
+-- Splits the goal `goal` (the `n`th occurrence) in Case.agda and
+-- returns the lines from `from` to `to` afterwards.
+local function split_case(name, goal, n, from, to)
+    h.open(name, { fixture = "Case.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at(goal, n, 3)
+    vim.cmd("AgdaMakeCase")
+    h.wait_idle()
+    return vim.list_slice(h.lines(), from, to)
+end
+
+t.test("case split keeps the indentation of the clause", function()
+    t.eq({ "  f : 𝔹 → 𝔹", "  f tt = ?", "  f ff = ?", "" },
+         split_case("make_case_indent", "{! x !}", 1, 7, 10))
+end)
+
+t.test("case split in a λ where", function()
+    t.eq({ "  k = λ where", "    tt → ?", "    ff → ?", "" },
+         split_case("make_case_lambda_where", "{! x !}", 2, 11, 14))
+end)
+
+t.test("case split in the first clause of a λ", function()
+    t.eq({ "l = λ { tt tt → ? ; tt ff → ? ; ff y → y }" },
+         split_case("make_case_lambda_first", "{! y !}", 1, 15, 15))
+end)
+
+t.test("case split in a later clause of a λ", function()
+    t.eq({ "m = λ { tt y → y ; ff tt → ? ; ff ff → ? }" },
+         split_case("make_case_lambda_later", "{! y !}", 2, 18, 18))
+end)
+
 -- After a case split Agda sends the goals from before the split, so the
 -- plugin reloads to learn the new ones.
 t.test("goals are updated after a case split", function()
