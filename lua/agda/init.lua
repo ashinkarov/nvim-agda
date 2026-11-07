@@ -1243,6 +1243,15 @@ function M.agda_type_context_infer(file,prec,id)
 
         local content = get_trimmed_content(id)
         debug("Goal content: " .. content)
+        -- TODO: here and in all the other `json_encode` calls below, we
+        -- quote strings for Agda as json, but Agda parses commands with
+        -- Haskell's `reads` (`parseIOTCM` in Interaction/Base.hs).  The two
+        -- agree on \" \\ \n \t \b \f \r, but json_encode writes other
+        -- control characters as \u001B, which Haskell does not accept
+        -- (it expects \27), so Agda replies "cannot read: ...".  Verified
+        -- with Agda 2.8.0.  One helper producing Haskell string literals
+        -- should replace these calls; the file path in `agda_feed` needs
+        -- the same quoting.
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
 
         local cmd = "(Cmd_goal_type_context_infer " .. prec .. " " .. id .. " noRange " .. g .. ")"
