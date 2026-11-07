@@ -11,8 +11,30 @@
 -- displayed but not added to the history.  The full text is in
 -- :messages.  Messages can only be added to the history by displaying
 -- them (:silent echomsg does not add them), hence the overwriting.
+--
+-- The new message UI (ui2, experimental in Neovim 0.12) has no
+-- hit-enter prompt, so with it we simply echo the message.  Once ui2
+-- is the default in the Neovim versions we support, remove `wrap`,
+-- `layout`, `ui2_enabled` and everything in `show` but the ui2 branch,
+-- and in tests/test_msg.lua the tests of the layout and of the old UI.
 
 local M = {}
+
+-- Whether the new message UI is enabled.  It does not show up in
+-- nvim_list_uis(), so we ask its (internal) module, which sets `msg`
+-- when it is enabled.  If this stops working, we fall back to the code
+-- below, which works with ui2 too, but shows the summary in addition
+-- to the lines of the message.
+local function ui2_enabled()
+    local ui2 = package.loaded["vim._core.ui2"]
+    return ui2 ~= nil and ui2.msg ~= nil and ui2.cfg.enable ~= false
+end
+
+-- `msg` without leading empty lines and trailing whitespace (Agda's
+-- messages often end with a newline).
+local function trim(msg)
+    return (msg:gsub("^\n+", ""):gsub("%s+$", ""))
+end
 
 -- `line` split into parts of at most `width` display cells (or one
 -- character, if it is wider), at spaces where possible.
@@ -46,8 +68,7 @@ end
 -- that was added is the whole message).
 function M.layout(msg, width)
     local lines = {}
-    local text = msg:gsub("^\n+", ""):gsub("%s+$", "")
-    for l in vim.gsplit(text, "\n") do
+    for l in vim.gsplit(trim(msg), "\n") do
         vim.list_extend(lines, wrap(l:gsub("%s+$", ""), width))
     end
     if #lines <= 1 then
@@ -68,6 +89,10 @@ end
 -- Show `msg` with highlight group `hl` (optional).
 function M.show(msg, hl)
     vim.schedule(function()
+        if ui2_enabled() then
+            vim.api.nvim_echo({{trim(msg), hl}}, true, {})
+            return
+        end
         -- v:echospace is the room for a message before it prompts, which
         -- is less than the width of the screen if the ruler or the
         -- partial command are shown in the command line.

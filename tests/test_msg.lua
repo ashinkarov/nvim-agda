@@ -16,27 +16,30 @@ t.test("message layout", function()
     t.eq({ string.rep("x", 12) .. "…", "  [+1 lines, see :messages]" }, summary)
 end)
 
--- Runs Neovim with a UI in a terminal and checks that messages shown
--- while a command runs and from a callback do not ask to press ENTER.
-t.test("messages do not ask to press ENTER", function()
+-- Runs Neovim with a UI in a terminal, shows messages from a callback
+-- and from a command (see below), and calls `check(ch, term, long)`
+-- with the RPC channel, the terminal buffer and the long message.
+-- `cmd` is run at startup.
+local function with_ui(cmd, check)
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     local sock = dir .. "/nvim.sock"
     vim.cmd("enew")
     local term = vim.api.nvim_get_current_buf()
-    local job = vim.fn.jobstart({ vim.env.AGDA_TEST_NVIM or "nvim", "--clean", "--listen", sock },
+    local job = vim.fn.jobstart({ vim.env.AGDA_TEST_NVIM or "nvim", "--clean", "--listen", sock,
+                                  "--cmd", cmd },
                                 { term = true, width = 60, height = 10 })
-    t.ok(vim.wait(5000, function() return vim.uv.fs_stat(sock) ~= nil end), "nvim started")
-    local ch = vim.fn.sockconnect("pipe", sock, { rpc = true })
-    -- Messages given during startup always ask to press ENTER.
-    t.ok(vim.wait(5000, function() return vim.rpcrequest(ch, "nvim_get_vvar", "vim_did_enter") == 1 end),
-         "nvim finished starting")
-    vim.wait(200)
-    local function blocked()
-        vim.wait(300)
-        return vim.rpcrequest(ch, "nvim_get_mode").blocking
-    end
     local ok, err = pcall(function()
+        t.ok(vim.wait(5000, function() return vim.uv.fs_stat(sock) ~= nil end), "nvim started")
+        local ch = vim.fn.sockconnect("pipe", sock, { rpc = true })
+        -- Messages given during startup always ask to press ENTER.
+        t.ok(vim.wait(5000, function() return vim.rpcrequest(ch, "nvim_get_vvar", "vim_did_enter") == 1 end),
+             "nvim finished starting")
+        vim.wait(200)
+        local function blocked()
+            vim.wait(300)
+            return vim.rpcrequest(ch, "nvim_get_mode").blocking
+        end
         local long = string.rep("long ", 12)
         vim.rpcrequest(ch, "nvim_exec_lua", [[
             local root, long = ...
@@ -55,6 +58,19 @@ t.test("messages do not ask to press ENTER", function()
         t.ok(not blocked(), "callback asks to press ENTER")
         vim.rpcrequest(ch, "nvim_input", ":T<CR>")
         t.ok(not blocked(), "command asks to press ENTER")
+        check(ch, term, long)
+    end)
+    vim.fn.jobstop(job)
+    vim.cmd("bwipeout!")
+    if not ok then error(err, 0) end
+end
+
+local function history(ch)
+    return vim.rpcrequest(ch, "nvim_exec2", "messages", { output = true }).output
+end
+
+t.test("messages do not ask to press ENTER", function()
+    with_ui("", function(ch, term, long)
         -- All lines are in the history, split as wide as messages can be.
         local width = vim.rpcrequest(ch, "nvim_get_vvar", "echospace")
         local expected = {}
@@ -62,15 +78,22 @@ t.test("messages do not ask to press ENTER", function()
                              "Visible Goals\n  0 : 𝔹\n  1 : 𝔹", long }) do
             vim.list_extend(expected, (msg.layout(m, width)))
         end
-        local hist = vim.rpcrequest(ch, "nvim_exec2", "messages", { output = true }).output
-        t.eq(table.concat(expected, "\n"), hist)
+        t.eq(table.concat(expected, "\n"), history(ch))
         -- The screen shows the summary of the last message.
         local _, summary = msg.layout(long, width)
         local screen = vim.api.nvim_buf_get_lines(term, 0, -1, false)
         local last = table.concat(summary)
         t.eq(last, screen[#screen]:sub(1, #last))
     end)
-    vim.fn.jobstop(job)
-    vim.cmd("bwipeout!")
-    if not ok then error(err, 0) end
+end)
+
+t.test("messages with the new message UI", function()
+    with_ui("lua require('vim._core.ui2').enable({})", function(ch, term, long)
+        -- The messages are added whole, without the trailing newline.
+        t.eq(table.concat({ "error\nwhen checking", vim.trim(long), "Checking Basic.",
+                            "Visible Goals\n  0 : 𝔹\n  1 : 𝔹", vim.trim(long) }, "\n"),
+             history(ch))
+        local screen = table.concat(vim.api.nvim_buf_get_lines(term, 0, -1, false), "\n")
+        t.ok(not screen:find("see :messages", 1, true), "summary shown:\n" .. screen)
+    end)
 end)
