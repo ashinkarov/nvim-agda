@@ -14,7 +14,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 
 if [ "${AGDA_TEST_MODE:-replay}" = replay ]; then
     if [ "$1" = --version ]; then
-        echo "Agda version 2.8.0"
+        echo "Agda version ${AGDA_TEST_VERSION:-2.8.0}"
         exit 0
     fi
     exec "${AGDA_TEST_NVIM:-nvim}" --clean --headless -l "$here/../replay.lua" "$@"

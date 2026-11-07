@@ -887,39 +887,51 @@ local function on_event(job_id, data, event)
     end
 end
 
--- TODO we need to define a function that terminates the process
--- and call it at exit.
-function M.agda_start()
-    local t = {agda_bin}
-    -- Before we start we need to figure out which version
-    -- agda is running, as there are some changes in command interfaces
-    -- starting from version 2.7.0
-    -- TODO: put this into a function?
-    local p = io.popen(agda_bin .. " --version")
-    if p == nil then
-      error("Cannot obtain agda version, running `" .. agda_bin .. " --version` failed")
-      -- XXX: should we exit here?
+-- Determine the version of Agda, as the command interface changes
+-- between versions.  Returns false if Agda cannot be run.
+local function detect_version()
+    local ok, res = pcall(function ()
+        return vim.system({agda_bin, "--version"}, {text = true}):wait()
+    end)
+    if not ok or res.code ~= 0 then
+        error("Cannot run `" .. agda_bin .. " --version`: "
+              .. (ok and vim.trim(res.stderr or "") or tostring(res)))
+        return false
     end
-    local v = ""
-    for l in p:lines() do v = v .. l end
-    p:close()
-    local major, minor, patch = string.match(v, "Agda version (%d+)%.(%d+)%.(%d+)")
-    if major == nil or minor == nil or patch == nil then
-      error("Cannot parse Agda version `" .. v .. "`")
-      -- XXX: should we exit here?
+    local major, minor, patch = string.match(res.stdout, "Agda version (%d+)%.(%d+)%.(%d+)")
+    if major == nil then
+        error("Cannot parse Agda version `" .. vim.trim(res.stdout) .. "`")
     else
-      agda_major = tonumber(major) or 0
-      agda_minor = tonumber(minor) or 0
-      agda_patch = tonumber(patch) or 0
-      --print("version: " .. agda_major .. "."  .. agda_minor .. "." .. agda_patch)
+        agda_major = tonumber(major)
+        agda_minor = tonumber(minor)
+        agda_patch = tonumber(patch)
+    end
+    return true
+end
+
+-- Whether the version of Agda is at least major.minor.patch.
+local function version_at_least(major, minor, patch)
+    if agda_major ~= major then return agda_major > major end
+    if agda_minor ~= minor then return agda_minor > minor end
+    return agda_patch >= (patch or 0)
+end
+
+-- Start Agda unless it is running already.  Returns whether Agda is
+-- running.
+function M.agda_start()
+    if agda_job ~= nil then
+        return true
+    end
+    if not detect_version() then
+        return false
     end
 
-
+    local t = {agda_bin}
     for _,arg in ipairs(agda_args) do
         table.insert(t, arg)
     end
     table.insert(t, "--interaction-json")
-    agda_job = vim.fn.jobstart(
+    local ok, job = pcall(vim.fn.jobstart,
         t,
         {
             on_stderr = on_event,
@@ -928,14 +940,24 @@ function M.agda_start()
             stdout_buffered = false,
             stderr_buffered = false,
         })
+    if not ok or job <= 0 then
+        error("Cannot start Agda: " .. (ok and ("jobstart returned " .. job) or job))
+        return false
+    end
+    agda_job = job
+    evbuf = ""
+    return true
 end
 
 local function agda_feed (file, cmd)
-    if (agda_job == nil) then
-        M.agda_start()
+    if not M.agda_start() then
+        -- Drop the continuation waiting for the response.
+        sfunc = nil
+        sargs = nil
+        return
     end
     local msg = "IOTCM \"" .. file .. "\" Interactive Direct " .. cmd
-    vim.fn.jobsend(agda_job, {msg, ""})
+    vim.fn.chansend(agda_job, {msg, ""})
 end
 
 function M.agda_load (file)
@@ -1293,8 +1315,7 @@ end
 local function agda_auto_toplevel(file)
     local cmd = "(Cmd_autoAll)"
     -- Agda changed interface after 2.7.0
-    -- TODO: introduce proper lexicographic version comparison
-    if agda_major >= 2 and agda_minor >= 7 then
+    if version_at_least(2, 7) then
       cmd = "(Cmd_autoAll AsIs)"
     end
     agda_feed(file, cmd)
@@ -1316,7 +1337,7 @@ function M.agda_auto(file,id)
         local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
         -- Agda changed interface after 2.7.0
-        if agda_major >= 2 and agda_minor >= 7 then
+        if version_at_least(2, 7) then
           cmd = "(Cmd_autoOne AsIs " .. id .. " noRange " .. g .. ")"
         end
         agda_feed(file, cmd)

@@ -81,9 +81,14 @@ local function transcript_path(name)
 end
 
 -- Open a copy of tests/fixtures/<fixture> in a fresh temporary directory.
--- `name` identifies the transcript of this test.
-function M.open(name, fixture)
-    fixture = fixture or "Basic.agda"
+-- `name` identifies the transcript of this test.  Options:
+--   fixture     the file to open (default Basic.agda)
+--   transcript  use the transcript of another test
+--   agda        the Agda binary the plugin uses (default tests/bin/agda)
+--   version     the version the replayed Agda reports (default 2.8.0)
+function M.open(name, opts)
+    opts = opts or {}
+    local fixture = opts.fixture or "Basic.agda"
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     local file = dir .. "/" .. fixture
@@ -92,12 +97,14 @@ function M.open(name, fixture)
     vim.env.AGDA_TEST_MODE = mode
     vim.env.AGDA_TEST_DIR = dir
     vim.env.AGDA_TEST_SEED = tostring(seed)
-    vim.env.AGDA_TRANSCRIPT = transcript_path(name)
-    vim.g.nvim_agda_settings = { agda = t.root .. "/tests/bin/agda" }
+    vim.env.AGDA_TRANSCRIPT = transcript_path(opts.transcript or name)
+    vim.env.AGDA_TEST_VERSION = opts.version
+    vim.g.nvim_agda_settings = { agda = opts.agda or (t.root .. "/tests/bin/agda") }
     vim.v.errmsg = ""
 
     vim.cmd.edit(vim.fn.fnameescape(file))
-    M.ctx = { name = name, dir = dir, file = file, buf = vim.api.nvim_get_current_buf() }
+    M.ctx = { name = opts.transcript or name, dir = dir, file = file,
+              buf = vim.api.nvim_get_current_buf() }
     return M.ctx
 end
 
@@ -138,6 +145,16 @@ function M.wait_idle()
             return
         end
     end
+end
+
+-- Remove the messages that are errors and return them.
+function M.take_errors()
+    local errors, rest = {}, {}
+    for _, m in ipairs(M.messages) do
+        table.insert(m:sub(1, 3) == "E: " and errors or rest, m)
+    end
+    M.messages = rest
+    return errors
 end
 
 -- For tests whose transcripts are edited by hand and must not be
@@ -192,9 +209,12 @@ end
 
 local function check_transcript_consumed()
     local ctx = M.ctx
+    local log = read(ctx.dir .. "/stdin.log")
+    if not log then
+        return      -- Agda was never started
+    end
     local data = vim.json.decode(read(transcript_path(ctx.name)))
-    local n = #commands(read(ctx.dir .. "/stdin.log"))
-    t.eq(#data.exchanges - 1, n, "commands replayed")
+    t.eq(#data.exchanges - 1, #commands(log), "commands replayed")
 end
 
 -- Run after each test: verify/save the transcript and reset the editor.
