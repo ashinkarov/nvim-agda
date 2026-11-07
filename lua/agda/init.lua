@@ -409,6 +409,18 @@ local function handle_hl(msg)
 end
 
 
+-- Copy `text` to the system clipboard, so that it can be pasted into
+-- other programs, or to the unnamed register if Neovim has no clipboard
+-- provider.  Returns where it went, for the header of the popup.
+local function copy(text)
+    if vim.fn.has("clipboard") == 1 then
+        vim.fn.setreg("+", text)
+        return "copied to the clipboard"
+    end
+    vim.fn.setreg('"', text)
+    return "copied to the \" register"
+end
+
 local function handle_displayinfo(msg)
     -- Adds the header and delimiter(s) to the list of lines.
     -- If `lines` is a singleton, and `sep` is not nil,
@@ -491,7 +503,8 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "InferredType" then
         mk_window(add_sep(split_lines(inf.expr), "Inferred Type", " : "))
     elseif inf.kind == "NormalForm" then
-        mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
+        local where = copy(inf.expr)
+        mk_window(add_sep(split_lines(inf.expr), "Normal Form (" .. where .. ")", " : "))
     elseif inf.kind == "Auto" then
         display(string.format("Auto: %s", inf.info))
     elseif inf.kind == "ModuleContents" then
@@ -568,7 +581,8 @@ local function handle_displayinfo(msg)
         if g.kind == "InferredType" then
             p = add_sep(split_lines(g.expr), "Inferred Type", " : ")
         elseif g.kind == "NormalForm" then
-            p = add_sep(split_lines(g.expr), "Normal Form", " : ")
+            local where = copy(g.expr)
+            p = add_sep(split_lines(g.expr), "Normal Form (" .. where .. ")", " : ")
         elseif g.kind == "GoalType" then
             -- FIXME(artem) This is a quick hack to display boundary
             -- when using cubical agda.  Adjust the overall width 
@@ -637,9 +651,8 @@ local function handle_displayinfo(msg)
             p = ty
             --end
         elseif g.kind == "HelperFunction" then
-            p = add_sep(split_lines(g.signature),
-                        "Helper Function (copied to the \" register)")
-            vim.fn.setreg('"', g.signature)
+            local where = copy(g.signature)
+            p = add_sep(split_lines(g.signature), "Helper Function (" .. where .. ")")
         else
             for _,v in pairs(vim.split(vim.inspect(g), "\n")) do
                 table.insert(p, v)

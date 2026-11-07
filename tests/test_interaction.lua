@@ -283,3 +283,31 @@ t.test("a failed reload with the goal-edit window open does not block goal comma
     h.wait_idle()
     t.eq("after x = and x ff  -- comment", h.lines()[10])
 end)
+
+-- Without a clipboard provider (as in the tests) the normal form goes to
+-- the unnamed register.
+t.test("the normal form of a toplevel expression is copied", function()
+    load_give("compute_toplevel")
+    h.stub_input("and ff tt")
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("AgdaCompute")
+    h.wait_idle()
+    t.eq("ff", vim.fn.getreg('"'))
+    local fs = h.floats()
+    t.eq(1, #fs, "number of floats")
+    t.eq("Normal Form (copied to the \" register) : ff", fs[1].lines[2])
+end)
+
+t.test("the normal form in a goal is copied", function()
+    load_give("compute_goal")
+    h.cursor_at("?", 2)        -- the goal in `long`
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { "and tt x" })
+    vim.api.nvim_feedkeys(vim.keycode("<LocalLeader>n"), "x", false)
+    h.wait_idle()
+    t.eq("tt", vim.fn.getreg('"'))
+    -- The goal-edit window stays open; the popup is the second float.
+    local fs = h.floats()
+    t.eq(2, #fs, "number of floats")
+    t.eq("Normal Form (copied to the \" register) : tt", fs[2].lines[2])
+end)
