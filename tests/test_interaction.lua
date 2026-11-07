@@ -311,3 +311,15 @@ t.test("the normal form in a goal is copied", function()
     t.eq(2, #fs, "number of floats")
     t.eq("Normal Form (copied to the \" register) : tt", fs[2].lines[2])
 end)
+
+-- A buffer mapping that is a prefix of a global one (e.g. <LocalLeader>f
+-- and \fg) waits 'timeoutlen' for more keys unless it is <nowait>.
+-- feedkeys() does not wait, so we check the flags of the mappings.
+t.test("the mappings do not wait for longer global mappings", function()
+    load("mapping_nowait")
+    local maps = vim.api.nvim_buf_get_keymap(0, "n")
+    t.ok(#maps >= 18, "number of mappings: " .. #maps)
+    for _, m in ipairs(maps) do
+        t.ok(m.nowait == 1 and m.noremap == 1, "mapping " .. m.lhs)
+    end
+end)

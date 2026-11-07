@@ -65,24 +65,24 @@ command! GetEvbuf :call b:AgdaMod.getevbuf()
 
 
 " Key mappings
-nm <buffer> <LocalLeader>l :<c-u>AgdaLoad<cr>
-nm <buffer> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
-nm <buffer> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
-nm <buffer> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
-nm <buffer> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
-nm <buffer> <LocalLeader>d :<c-u>AgdaInfer<cr>
-nm <buffer> <LocalLeader>r :<c-u>AgdaRefine<cr>
-nm <buffer> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
-nm <buffer> <LocalLeader>n :<c-u>AgdaCompute<cr>
-nm <buffer> <LocalLeader>a :<c-u>AgdaAuto<cr>
-nm <buffer> <LocalLeader>s :<c-u>AgdaSolve<cr>
-nm <buffer> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
-nm <buffer> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
-nm <buffer> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
-nm <buffer> <LocalLeader>e :<c-u>MkPrompt<cr>
-nm <buffer> <LocalLeader>? :<c-u>PrintGoals<cr>
-nm <buffer> <LocalLeader>f :<c-u>GoalNext<cr>
-nm <buffer> <LocalLeader>b :<c-u>GoalPrev<cr>
+nnoremap <buffer> <nowait> <LocalLeader>l :<c-u>AgdaLoad<cr>
+nnoremap <buffer> <nowait> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
+nnoremap <buffer> <nowait> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
+nnoremap <buffer> <nowait> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
+nnoremap <buffer> <nowait> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
+nnoremap <buffer> <nowait> <LocalLeader>d :<c-u>AgdaInfer<cr>
+nnoremap <buffer> <nowait> <LocalLeader>r :<c-u>AgdaRefine<cr>
+nnoremap <buffer> <nowait> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
+nnoremap <buffer> <nowait> <LocalLeader>n :<c-u>AgdaCompute<cr>
+nnoremap <buffer> <nowait> <LocalLeader>a :<c-u>AgdaAuto<cr>
+nnoremap <buffer> <nowait> <LocalLeader>s :<c-u>AgdaSolve<cr>
+nnoremap <buffer> <nowait> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
+nnoremap <buffer> <nowait> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
+nnoremap <buffer> <nowait> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
+nnoremap <buffer> <nowait> <LocalLeader>e :<c-u>MkPrompt<cr>
+nnoremap <buffer> <nowait> <LocalLeader>? :<c-u>PrintGoals<cr>
+nnoremap <buffer> <nowait> <LocalLeader>f :<c-u>GoalNext<cr>
+nnoremap <buffer> <nowait> <LocalLeader>b :<c-u>GoalPrev<cr>
 
 
 " mappings
