@@ -319,24 +319,24 @@ function M.close_msg_win()
 end
 
 
-local function handle_hl(msg)
-    -- Convert a (1-based, code point) offset into the file into a
-    -- {0-based line, byte column} position by binary search in the
-    -- line offsets.
-    local function find_line(offset, lines, content)
-        local lo, hi = 1, #lines
-        while lo <= hi do
-            local i = math.floor((lo + hi) / 2)
-            if offset < lines[i][1] then
-                hi = i - 1
-            elseif offset > lines[i][2] then
-                lo = i + 1
-            else
-                return {i-1, utf8.offset(content[i], offset-lines[i][1]+1)-1}
-            end
+-- Convert a (1-based, code point) offset into the file, as Agda sends
+-- them, into a {0-based line, byte column} position in the main buffer
+-- as it was loaded, by binary search in the line offsets.
+local function offset_pos(offset)
+    local lo, hi = 1, #main_lines
+    while lo <= hi do
+        local i = math.floor((lo + hi) / 2)
+        if offset < main_lines[i][1] then
+            hi = i - 1
+        elseif offset > main_lines[i][2] then
+            lo = i + 1
+        else
+            return {i-1, utf8.offset(main_content[i], offset-main_lines[i][1]+1)-1}
         end
     end
+end
 
+local function handle_hl(msg)
     -- Highlight the text from `s` to `e` (exclusive), which is the range
     -- `key`, with `group`.  During a load Agda sends the same ranges
     -- several times, so we replace the earlier highlighting of exactly
@@ -392,8 +392,8 @@ local function handle_hl(msg)
     for _, v in pairs(msg.info.payload) do
         local r = v.range
         -- FIXME s sometimes can be nil... Why?
-        local s = find_line(r[1], main_lines, main_content)
-        local e = find_line(r[2], main_lines, main_content)
+        local s = offset_pos(r[1])
+        local e = offset_pos(r[2])
 
         if s == nil or e == nil then
             dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
@@ -899,6 +899,25 @@ local function handle_make_case(msg)
     M.agda_load(main_file)
 end
 
+-- Move the cursor to the error, like the Emacs mode.  Agda sends this
+-- after the error, during the load, so the buffer is as it was loaded.
+-- Errors in other files (such as imported modules) are only reported.
+local function handle_jump_to_error(msg)
+    local win = main_window()
+    if win == nil or main_file == nil
+       or vim.uv.fs_realpath(msg.filepath) ~= vim.uv.fs_realpath(main_file) then
+        return
+    end
+    local pos = offset_pos(msg.position)
+    if pos == nil then
+        return dprint("handle_jump_to_error: position outside the file " .. vim.inspect(msg))
+    end
+    vim.api.nvim_win_call(win, function ()
+        vim.cmd("normal! m'")
+        vim.api.nvim_win_set_cursor(win, {pos[1]+1, pos[2]})
+    end)
+end
+
 local function handle_status(msg)
     local a = msg.status.showImplicitArgs
     if a ~= nil then
@@ -927,6 +946,8 @@ local function handle_msg(msg)
         handle_status(msg)
     elseif msg.kind == "RunningInfo" then
         display(msg.message)
+    elseif msg.kind == "JumpToError" then
+        handle_jump_to_error(msg)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
         hl_marks = {}
