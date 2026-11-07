@@ -367,8 +367,8 @@ local function handle_hl(msg)
         elseif (name == "inductiveconstructor") then return "Constant"
         elseif (name == "number") then return "Number"
         elseif (name == "comment") then return "Comment"
-        elseif (name == "hole") then return "Todo"
-        elseif (name == "unsolvedmeta") then return "Todo"
+        elseif (name == "hole") then return "AgdaHole"
+        elseif (name == "unsolvedmeta") then return "AgdaHole"
         elseif (name == "string") then return "String"
         elseif (name == "catchallclause") then return "Folded"
         -- XXX I am not sure what's the purpose of highlighting

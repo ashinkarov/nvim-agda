@@ -88,6 +88,17 @@ commands have to do with management of the popups and goal editing.
 Within the goal-edit window, `q` is mapped to close the window.
 The regular `:q` command would work as well.
 
+### Highlighting
+Agda's highlighting uses the standard highlight groups (`Keyword`,
+`Type`, ...) and three groups of its own, which you can set in your
+colour scheme or configuration:
+
+| Group | Highlights |
+|:-----:| ---------- |
+| `AgdaHole` | Goals and unsolved metas |
+| `NonTerminating` | Termination problems |
+| `NoDefinition` | Missing definitions |
+
 
 ### Todo
   * Implement remaining commands from the original `agda-mode`

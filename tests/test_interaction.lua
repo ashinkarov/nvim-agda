@@ -360,6 +360,27 @@ end)
 -- A buffer mapping that is a prefix of a global one (e.g. <LocalLeader>f
 -- and \fg) waits 'timeoutlen' for more keys unless it is <nowait>.
 -- feedkeys() does not wait, so we check the flags of the mappings.
+t.test("the commands are defined for the Agda buffer only", function()
+    load("buffer_commands")
+    t.ok(vim.api.nvim_buf_get_commands(0, {}).AgdaLoad ~= nil, "AgdaLoad in the buffer")
+    t.ok(vim.api.nvim_get_commands({}).AgdaLoad == nil, "AgdaLoad is global")
+end)
+
+-- The plugin does not change the standard groups, its own groups are
+-- defaults that the user can override, and they survive :colorscheme.
+t.test("highlight groups", function()
+    vim.api.nvim_set_hl(0, "Todo", { bg = "#654321" })
+    local todo = vim.api.nvim_get_hl(0, { name = "Todo" })
+    vim.api.nvim_set_hl(0, "NoDefinition", { bg = "#123456" })
+    load("highlight_groups")
+    t.eq(todo, vim.api.nvim_get_hl(0, { name = "Todo" }))
+    t.eq(0x123456, vim.api.nvim_get_hl(0, { name = "NoDefinition" }).bg)
+    vim.api.nvim_set_hl(0, "NoDefinition", {})
+    vim.cmd("colorscheme default")
+    t.eq(0x353535, vim.api.nvim_get_hl(0, { name = "AgdaHole" }).bg)
+    t.eq(0x354657, vim.api.nvim_get_hl(0, { name = "NoDefinition" }).bg)
+end)
+
 t.test("the mappings do not wait for longer global mappings", function()
     load("mapping_nowait")
     local maps = vim.api.nvim_buf_get_keymap(0, "n")

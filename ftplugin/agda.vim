@@ -14,11 +14,20 @@ lua package.loaded.agda = nil
 " hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
-hi Todo ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
-" hi NonTerminating ctermbg=Red
-hi NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
-hi NoDefinition ctermbg=Brown gui=NONE guibg=#354657
-"ctermbg=LightBlue ctermfg=Black
+" The highlighting groups of the plugin, in addition to standard ones.
+" They are defaults, so that colour schemes and users can override them,
+" and we set them again when the colour scheme changes, as :colorscheme
+" clears them.
+function! s:Highlights()
+    hi default AgdaHole ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
+    hi default NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
+    hi default NoDefinition ctermbg=Brown gui=NONE guibg=#354657
+endfunction
+call s:Highlights()
+augroup agda_highlights
+    autocmd!
+    autocmd ColorScheme * call s:Highlights()
+augroup END
 
 if !exists("g:nvim_agda_settings")
     let g:nvim_agda_settings = {}
@@ -33,35 +42,35 @@ call b:AgdaMod.setup(g:nvim_agda_settings)
 
 
 " Vim commands
-command! AgdaStart :call b:AgdaMod.agda_start()
-command! AgdaStop :call b:AgdaMod.agda_stop()
-command! AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
-command! AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
-command! AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
-command! AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
-command! AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(expand("%:p"))
-command! AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
-command! AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
-command! AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
-command! AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
-command! AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
-command! AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
-command! AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
-command! AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
-command! AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
-command! AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
+command! -buffer AgdaStart :call b:AgdaMod.agda_start()
+command! -buffer AgdaStop :call b:AgdaMod.agda_stop()
+command! -buffer AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
+command! -buffer AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
+command! -buffer AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
+command! -buffer AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
+command! -buffer AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(expand("%:p"))
+command! -buffer AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
+command! -buffer AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
+command! -buffer AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
+command! -buffer AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
+command! -buffer AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
+command! -buffer AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
+command! -buffer AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
+command! -buffer AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
+command! -buffer AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
+command! -buffer AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
 
-command! ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
-command! HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
+command! -buffer ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
+command! -buffer HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
 
-command! MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
-command! PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
-command! GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
-command! GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
+command! -buffer MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
+command! -buffer PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
+command! -buffer GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
+command! -buffer GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
 
-command! AgdaCloseMsg :call b:AgdaMod.close_msg_win()
-command! GoalContent :call b:AgdaMod.gc()
-command! GetEvbuf :call b:AgdaMod.getevbuf()
+command! -buffer AgdaCloseMsg :call b:AgdaMod.close_msg_win()
+command! -buffer GoalContent :call b:AgdaMod.gc()
+command! -buffer GetEvbuf :call b:AgdaMod.getevbuf()
 
 
 " Key mappings
