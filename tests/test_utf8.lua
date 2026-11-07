@@ -53,6 +53,15 @@ t.test("sub extracts code point ranges", function()
     t.eq("", utf8.sub("abc", 3, 2))
 end)
 
+t.test("char_index converts byte columns", function()
+    local s = "pick 名前 y = ?"
+    t.eq(1, utf8.char_index(s, 0))
+    t.eq(6, utf8.char_index(s, 5))      -- 名
+    t.eq(7, utf8.char_index(s, 8))      -- 前
+    t.eq(13, utf8.char_index(s, #s - 1)) -- ?
+    t.eq(1, utf8.char_index("", 0))
+end)
+
 t.test("agrees with the reference implementation", function()
     check_against(reference, "reference")
 end)

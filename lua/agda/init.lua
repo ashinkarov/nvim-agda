@@ -154,8 +154,12 @@ local function main_win_visl()
     return visl
 end
 
+-- Agda counts columns in code points, whereas virtcol counts screen
+-- cells, so we convert the byte column of the cursor.
 local function get_current_loc()
-    return Loc:new(vim.fn.line("."), vim.fn.virtcol("."))
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local line = vim.api.nvim_get_current_line()
+    return Loc:new(cursor[1], utf8.char_index(line, cursor[2]))
 end
 
 ------ Agda interaction-related functions ------

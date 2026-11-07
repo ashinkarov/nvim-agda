@@ -20,6 +20,12 @@ function M.offset(s, n)
     return vim.str_byteindex(s, "utf-32", n - 1, false) + 1
 end
 
+-- Index (1-based) of the code point that starts at the 0-based byte
+-- column `col` of `s`, e.g. the cursor column from nvim_win_get_cursor.
+function M.char_index(s, col)
+    return vim.str_utfindex(s, "utf-32", col, false) + 1
+end
+
 -- Substring from the `i`-th to the `j`-th code point (inclusive, default
 -- to the end).  Negative indices count from the end, as in string.sub.
 function M.sub(s, i, j)

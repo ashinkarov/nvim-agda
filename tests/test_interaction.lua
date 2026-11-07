@@ -36,13 +36,10 @@ t.test("goal navigation", function()
         vim.cmd("GoalPrev")
         table.insert(visited, h.cursor())
     end
-    -- Cursor positions are {line, byte column}.
-    -- FIXME: the cursor column is computed with virtcol, so on the line
-    -- `pick 名前 y = ?` the cursor appears to be after the goal and
-    -- GoalPrev gets stuck there.  Should be:
-    --   { 13, 16 }, { 10, 17 }, { 7, 8 }, { 13, 16 }
+    -- Cursor positions are {line, byte column}.  The goal on the last
+    -- line follows wide characters (`pick 名前 y = ?`).
     t.eq({ { 7, 8 }, { 10, 17 }, { 13, 16 }, { 7, 8 },
-           { 13, 16 }, { 13, 16 }, { 13, 16 }, { 13, 16 } }, visited)
+           { 13, 16 }, { 10, 17 }, { 7, 8 }, { 13, 16 } }, visited)
 end)
 
 t.test("goal type and context", function()
@@ -60,10 +57,9 @@ t.test("goal type and context after wide characters", function()
     h.cursor_at("?", 2)        -- the goal in `pick`
     vim.cmd("AgdaTypeContext")
     h.wait_idle()
-    -- FIXME: same virtcol problem as in "goal navigation".
-    t.eq(0, #h.floats(), "number of floats")
-    t.eq({ "Warning: cannot obtain goal type and context, the cursor is not in the goal" },
-         vim.list_slice(h.messages, #h.messages))
+    local fs = h.floats()
+    t.eq(1, #fs, "number of floats")
+    t.golden("type_context_wide", fs[1].lines)
 end)
 
 t.test("infer type of a toplevel expression", function()
@@ -102,9 +98,6 @@ end)
 t.test("auto", function()
     load("auto")
     h.cursor_at("?", 2)        -- the goal in `pick`
-    -- FIXME: because of the virtcol problem (see "goal navigation") the
-    -- cursor is not recognised as being in the goal, so this solves all
-    -- goals instead of only the one in `pick`.
     vim.cmd("AgdaAuto")
     h.wait_idle()
     t.golden("auto", h.lines())
