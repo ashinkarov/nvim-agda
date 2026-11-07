@@ -60,6 +60,9 @@ local debug_p = false
 
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
+-- The extmarks in `hl_ns` by the range they highlight ("start-end"
+-- offsets as sent by Agda).
+local hl_marks = {}
 
 
 ------ Helper functions ------
@@ -311,15 +314,35 @@ end
 
 
 local function handle_hl(msg)
-    -- Convert an offset into a line/lineoffset format
-    -- that is suitable for the vim highlighter.
-    -- XXX we can use binsearch here if we want to
+    -- Convert a (1-based, code point) offset into the file into a
+    -- {0-based line, byte column} position by binary search in the
+    -- line offsets.
     local function find_line(offset, lines, content)
-        for i,v in pairs(lines) do
-            if (offset >= v[1] and offset <= v[2]) then
-                return {i-1, utf8.offset(content[i], offset-v[1]+1)-1}
+        local lo, hi = 1, #lines
+        while lo <= hi do
+            local i = math.floor((lo + hi) / 2)
+            if offset < lines[i][1] then
+                hi = i - 1
+            elseif offset > lines[i][2] then
+                lo = i + 1
+            else
+                return {i-1, utf8.offset(content[i], offset-lines[i][1]+1)-1}
             end
         end
+    end
+
+    -- Highlight the text from `s` to `e` (exclusive), which is the range
+    -- `key`, with `group`.  During a load Agda sends the same ranges
+    -- several times, so we replace the earlier highlighting of exactly
+    -- the same range rather than adding another one.
+    local function set_hl(key, s, e, group)
+        hl_marks[key] = vim.api.nvim_buf_set_extmark(main_buf, hl_ns, s[1], s[2], {
+            id = hl_marks[key],
+            end_row = e[1],
+            end_col = e[2],
+            hl_group = group,
+            priority = vim.hl.priorities.user,
+        })
     end
 
     -- Convert the names of the agda hl groups into the
@@ -357,7 +380,8 @@ local function handle_hl(msg)
     end
 
 
-    -- FIXME just seen the case when `info` field is nil!  Weird...
+    -- `info` is missing if Agda wrote the highlighting to a file
+    -- ("direct": false), which it does not do when we ask for Direct.
     if msg.info then
     for _, v in pairs(msg.info.payload) do
         local r = v.range
@@ -369,13 +393,10 @@ local function handle_hl(msg)
             dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
         elseif #v.atoms > 0 then
             local g = translate_hl_group(v.atoms[1])
-            -- We are using `highlight.range` instead of `nvim_buf_add_highlight`
-            -- as we can have multiline comments.
             if g ~= "Normal" then
-                vim.highlight.range(main_buf,hl_ns,g,s,e)
+                set_hl(r[1] .. "-" .. r[2], s, e, g)
             end
         end
-        --print("hl: [" .. vim.inspect(s) .. ", " .. vim.inspect(e) .. "]  ", v["atoms"][1])
     end
     end
 end
@@ -831,6 +852,7 @@ local function handle_msg(msg)
         print(msg.message)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
+        hl_marks = {}
     else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
