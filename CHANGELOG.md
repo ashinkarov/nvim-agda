@@ -29,6 +29,7 @@
 
 - A failed load moves the cursor to the error, like the Emacs mode
   (errors in other files are only reported).
+- `\^0`…`\^9`, `\^-`, `\^+`, `\^=`, `\^(` and `\^)` insert superscripts.
 - `'commentstring'` and `'comments'` are set for Agda's comments, so
   Neovim's `gc` and commenting plugins work (#6).
 - `:AgdaStop` stops the Agda process.

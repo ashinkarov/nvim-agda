@@ -493,6 +493,21 @@ noremap! <buffer> <LocalLeader>^w       ʷ
 noremap! <buffer> <LocalLeader>^x       ˣ
 noremap! <buffer> <LocalLeader>^y       ʸ
 noremap! <buffer> <LocalLeader>^z       ᶻ
+noremap! <buffer> <LocalLeader>^0       ⁰
+noremap! <buffer> <LocalLeader>^1       ¹
+noremap! <buffer> <LocalLeader>^2       ²
+noremap! <buffer> <LocalLeader>^3       ³
+noremap! <buffer> <LocalLeader>^4       ⁴
+noremap! <buffer> <LocalLeader>^5       ⁵
+noremap! <buffer> <LocalLeader>^6       ⁶
+noremap! <buffer> <LocalLeader>^7       ⁷
+noremap! <buffer> <LocalLeader>^8       ⁸
+noremap! <buffer> <LocalLeader>^9       ⁹
+noremap! <buffer> <LocalLeader>^-       ⁻
+noremap! <buffer> <LocalLeader>^+       ⁺
+noremap! <buffer> <LocalLeader>^=       ⁼
+noremap! <buffer> <LocalLeader>^(       ⁽
+noremap! <buffer> <LocalLeader>^)       ⁾
 
 
 

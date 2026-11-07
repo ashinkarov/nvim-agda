@@ -404,6 +404,12 @@ t.test("an error in an imported module does not move the cursor", function()
     t.eq({ 2, 3 }, vim.api.nvim_win_get_cursor(0))
 end)
 
+t.test("superscript digits and signs", function()
+    h.open("superscripts")
+    vim.api.nvim_feedkeys("Gox\\^2\\^-\\^(\27", "xt", false)
+    t.eq("x²⁻⁽", h.lines()[#h.lines()])
+end)
+
 t.test("comments", function()
     h.open("comments")
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
