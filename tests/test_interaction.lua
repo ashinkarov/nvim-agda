@@ -55,11 +55,14 @@ end)
 t.test("goal type and context after wide characters", function()
     load("type_context_wide")
     h.cursor_at("?", 2)        -- the goal in `pick`
+    local goal = vim.fn.screenpos(0, 13, vim.fn.col("."))
     vim.cmd("AgdaTypeContext")
     h.wait_idle()
     local fs = h.floats()
     t.eq(1, #fs, "number of floats")
     t.golden("type_context_wide", fs[1].lines)
+    -- The popup is below the goal, starting in its column.
+    t.eq({ goal.row, goal.col - 1 }, vim.api.nvim_win_get_position(fs[1].win))
 end)
 
 t.test("infer type of a toplevel expression", function()
@@ -223,4 +226,41 @@ t.test("goal navigation after the first goal is filled", function()
     -- Wraps to the goals in `twice`, and from the top to the last goal in
     -- `solved`.
     t.eq({ { 13, 19 }, { 13, 29 }, { 21, 19 } }, visited)
+end)
+
+t.test("the goal-edit window is placed at the goal after wide characters", function()
+    load("prompt_position")
+    h.cursor_at("?", 2)        -- the goal in `pick`
+    local goal = vim.fn.screenpos(0, 13, vim.fn.col("."))
+    vim.cmd("MkPrompt")
+    -- Below the goal, starting in its column.
+    t.eq({ goal.row, goal.col - 1 },
+         vim.api.nvim_win_get_position(vim.api.nvim_get_current_win()))
+end)
+
+t.test("the goal-edit window opens in a window created after loading", function()
+    load("prompt_split")
+    -- :split does not trigger BufWinEnter; close the original window.
+    vim.cmd("split")
+    vim.cmd("wincmd j | close")
+    h.cursor_at("?", 1)
+    vim.cmd("MkPrompt")
+    t.eq(1, #h.floats(), "number of floats")
+end)
+
+t.test("loads and popups do not add autocommands", function()
+    local function count()
+        return #vim.api.nvim_get_autocmds({ event = { "BufWinEnter", "WinClosed", "BufUnload" } })
+    end
+    load("autocmds")
+    h.cursor_at("{! x !}", 1, 3)
+    vim.cmd("AgdaTypeContext")
+    h.wait_idle()
+    local before = count()
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at("{! x !}", 1, 3)
+    vim.cmd("AgdaTypeContext")
+    h.wait_idle()
+    t.eq(before, count())
 end)

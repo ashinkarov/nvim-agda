@@ -41,10 +41,9 @@ local error_count = 0
 
 local showImplicitArgs = false
 
--- Main window handles
--- XXX should we set them up at Agda load?
-local main_win = vim.fn.win_getid()
-local main_buf = vim.api.nvim_win_get_buf(main_win)
+-- The buffer of the Agda file.  There is one instance of this module
+-- per buffer, created by the ftplugin.
+local main_buf = vim.api.nvim_get_current_buf()
 
 -- Content and line-offset structure for handling
 -- highlighting.
@@ -146,18 +145,21 @@ local function main_buf_changed()
     return nil
 end
 
--- Get the first visible line number in the main window
-local function main_win_visl()
-    local w = vim.fn.win_getid()
-    local visl = nil
-    if w ~= main_win then
-        vim.fn.win_gotoid(main_win)
-        visl = vim.fn.line("w0")
-        vim.fn.win_gotoid(w)
-    else
-        visl = vim.fn.line("w0")
+-- The window showing the main buffer: the current window if it does,
+-- otherwise any window in the current tab that does, or nil.
+local function main_window()
+    if vim.api.nvim_get_current_buf() == main_buf then
+        return vim.api.nvim_get_current_win()
     end
-    return visl
+    local w = vim.fn.bufwinid(main_buf)
+    return w ~= -1 and w or nil
+end
+
+-- Position of `loc` in the main buffer as {0-based line, byte column},
+-- the format of `bufpos` in `nvim_open_win`.
+local function buf_pos(loc)
+    local line = vim.api.nvim_buf_get_lines(main_buf, loc.line-1, loc.line, true)[1]
+    return {loc.line-1, (utf8.offset(line, loc.col) or #line + 1) - 1}
 end
 
 -- Agda counts columns in code points, whereas virtcol counts screen
@@ -189,14 +191,15 @@ function M.setup(config)
 end
 
 function M.close_prompt_win()
-    if pwin ~= nil then
+    if pwin ~= nil and vim.api.nvim_win_is_valid(pwin) then
         vim.api.nvim_win_close(pwin, true)
-        pwin = nil
     end
+    pwin = nil
 end
 
--- goalid is a pair <id:int, loc:Loc>
-local function mk_prompt_window(file, goal, loff)
+-- goal is a pair <id:int, {start:Loc, end:Loc}>
+local function mk_prompt_window(file, goal)
+    M.close_prompt_win()
     if pbuf == nil then
         pbuf = vim.api.nvim_create_buf(false, true)
         -- load unicode mappings.
@@ -222,18 +225,15 @@ local function mk_prompt_window(file, goal, loff)
     mk_mapping("<LocalLeader>q", "close_msg_win",           "")
     mk_mapping("q",              "close_prompt_win",        "")
 
-    local visl = loff or 1
-    -- We need to add this because things like numbers may
-    -- take some additional space (and it changes when the overall
-    -- number of lines increases).
-    local offset = vim.fn.getwininfo(main_win)[1].textoff
+    -- Just below the line of the goal, starting in its column.
     pwin = vim.api.nvim_open_win(
         pbuf, true,
         {
             relative='win',
-            win=main_win,
-            row=goal[2].start.line - visl + 1,
-            col=goal[2].start.col + offset - 1,
+            win=main_window(),
+            bufpos=buf_pos(goal[2].start),
+            row=1,
+            col=0,
             width=pmin_width,
             height=1,
             style="minimal",
@@ -249,49 +249,50 @@ end
 local function mk_window(lines,loc)
     if msg_buf == nil then
         msg_buf = vim.api.nvim_create_buf(false, true)
+        -- Forget `msg_win` when the window is closed by other means than
+        -- `close_msg_win`, e.g. with :q.
+        vim.api.nvim_create_autocmd("WinClosed", {
+            buffer = msg_buf,
+            callback = function (args)
+                if tonumber(args.match) == msg_win then
+                    msg_win = nil
+                end
+            end
+        })
+        local status = {silent=true, nowait=true, noremap=true}
+        local function mk_mappingx(key, fun, args)
+            vim.api.nvim_buf_set_keymap(
+                msg_buf, 'n', key,
+                ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
+                status)
+        end
+        mk_mappingx("<LocalLeader>q", "close_msg_win",  "")
+        mk_mappingx("q",              "close_msg_win",  "")
     end
 
     local max = max_width(lines)
     vim.api.nvim_buf_set_lines(msg_buf, 0, -1, true, lines)
 
-    if msg_win ~= nil then
-        vim.api.nvim_win_close(msg_win, true)
-    end
+    M.close_msg_win()
 
     local state = {
         width=math.max(max,msg_min_width),
         height=#lines,
         style="minimal"
     }
-    if loc == nil then
+    local win = loc and main_window()
+    if win == nil then
         state.relative='cursor'
         state.row=1
         state.col=1
     else
         state.relative = 'win'
-        state.win = main_win
+        state.win = win
         -- We know that goal defines a position that has to
         -- exist in the buffer, therefore we can use it to
         -- position the window.
-        state.bufpos = {loc.line-1, loc.col-1}
+        state.bufpos = buf_pos(loc)
     end
-
-    -- We need to register autocommand that sets `msg_win` to nil
-    -- when leaving window with :q.
-    vim.api.nvim_buf_call(msg_buf, function ()
-        vim.cmd("au WinClosed <buffer=" .. msg_buf .. "> call getbufvar(" .. main_buf .. ", 'AgdaMod').close_msg_win()")
-
-    end)
-
-    local status = {silent=true, nowait=true, noremap=true}
-    local function mk_mappingx(key, fun, args)
-        vim.api.nvim_buf_set_keymap(
-            msg_buf, 'n', key,
-            ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
-            status)
-    end
-    mk_mappingx("<LocalLeader>q", "close_msg_win",  "")
-    mk_mappingx("q",              "close_msg_win",  "")
 
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
@@ -302,10 +303,10 @@ local function mk_window(lines,loc)
 end
 
 function M.close_msg_win()
-    if msg_win ~= nil then
+    if msg_win ~= nil and vim.api.nvim_win_is_valid(msg_win) then
         vim.api.nvim_win_close(msg_win, true)
-        msg_win = nil
     end
+    msg_win = nil
 end
 
 
@@ -1022,18 +1023,6 @@ function M.agda_load (file)
     end
 
 
-    -- TODO(artem) this is not triggered when we run `:split`,
-    -- and I don't know what event will trigger that.  WinEnter is
-    -- too aggressive because it will trigger entering floating
-    -- windows as well.
-    vim.api.nvim_create_autocmd("BufWinEnter", {
-      buffer = main_buf,
-      callback = function ()
-        local w = vim.fn.win_getid()
-        main_win = w
-      end
-    })
-
     agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " [])")
 end
 
@@ -1433,8 +1422,7 @@ function M.edit_goal(file)
     wrap_goal_action(function ()
         local n = get_current_goal()
         if n ~= nil then
-            local visl = vim.fn.line("w0")
-            mk_prompt_window(file, n, visl)
+            mk_prompt_window(file, n)
         else
             warning("cannot edit goal, the cursor is not in the goal")
         end
