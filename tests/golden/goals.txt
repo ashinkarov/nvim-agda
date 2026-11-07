@@ -1,0 +1,5 @@
+3 goal(s) in $DIR/Basic.agda
+#00    line 007: ?
+#01    line 010: ?
+#02    line 013: ?
+

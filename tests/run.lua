@@ -11,6 +11,9 @@ local root = vim.fs.dirname(vim.fs.dirname(vim.fs.normalize(
 root = vim.fn.fnamemodify(root, ":p"):gsub("/$", "")
 
 vim.opt.rtp:prepend(root)
+vim.cmd("filetype plugin on")
+-- Filetype detection already ran before `root` was on the runtimepath.
+vim.cmd("augroup filetypedetect | runtime! ftdetect/*.vim | augroup END")
 package.path = root .. "/tests/?.lua;" .. package.path
 
 -- Use the real lua-utf8 if it is installed (system-wide or with
@@ -35,6 +38,7 @@ for _, file in ipairs(vim.fn.glob(root .. "/tests/test_*.lua", false, true)) do
     for _, case in ipairs(harness.cases) do
         local full = fname .. ": " .. case.name
         if not filter or full:match(filter) then
+            local t0 = vim.uv.hrtime()
             local ok, err = xpcall(case.fn, debug.traceback)
             if harness.after_each then
                 local ok2, err2 = xpcall(harness.after_each, debug.traceback)
@@ -42,7 +46,7 @@ for _, file in ipairs(vim.fn.glob(root .. "/tests/test_*.lua", false, true)) do
             end
             if ok then
                 passed = passed + 1
-                io.stdout:write("ok   ", full, "\n")
+                io.stdout:write(string.format("ok   %s (%.1fs)\n", full, (vim.uv.hrtime() - t0) / 1e9))
             else
                 failures = failures + 1
                 io.stdout:write("FAIL ", full, "\n", err, "\n")
