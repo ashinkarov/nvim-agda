@@ -147,3 +147,63 @@ t.test("module contents", function()
     t.eq(1, #fs, "number of floats; messages: " .. vim.inspect(h.messages))
     t.golden("module_contents", fs[1].lines)
 end)
+
+-- Tests of the edits that Agda's responses make to the buffer; see the
+-- goals in tests/fixtures/Give.agda.
+local function load_give(name)
+    h.open(name, { fixture = "Give.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+end
+
+local function give(goal, n, text)
+    h.cursor_at(goal, n)
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { text })
+    vim.api.nvim_feedkeys(vim.keycode("<LocalLeader>r"), "x", false)
+    h.wait_idle()
+end
+
+t.test("give keeps the text after the goal", function()
+    load_give("give_after")
+    give("?", 1, "x")
+    t.eq("after x = and x ff  -- comment", h.lines()[10])
+end)
+
+t.test("give indents the continuation lines of a long result", function()
+    load_give("give_long")
+    give("?", 2, "and (and (and (and x x) (and x x)) (and (and x x) (and x x)))"
+              .. " (and (and (and x x) (and x x)) (and (and x x) (and x x)))")
+    t.golden("give_long", h.lines())
+end)
+
+t.test("give edits the agda buffer when another window is current", function()
+    load_give("give_other_window")
+    local agda_buf = vim.api.nvim_get_current_buf()
+    h.cursor_at("?", 1)
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { "x" })
+    -- Send the command, then move to another window before Agda replies.
+    vim.fn.getbufvar(agda_buf, "AgdaMod").agda_refine(h.ctx.file, 0)
+    vim.cmd("new")
+    local other = vim.api.nvim_get_current_buf()
+    h.wait_idle()
+    t.eq("after x = and x ff  -- comment", h.lines()[10])
+    t.eq({ "" }, vim.api.nvim_buf_get_lines(other, 0, -1, true))
+end)
+
+t.test("auto solves several goals on one line", function()
+    load_give("auto_all")
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("AgdaAuto")
+    h.wait_idle()
+    t.golden("auto_all", h.lines())
+end)
+
+t.test("solve fills several goals on one line", function()
+    load_give("solve_all")
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("AgdaSolve")
+    h.wait_idle()
+    t.eq("solved : Two (tt) (ff)", h.lines()[21])
+end)

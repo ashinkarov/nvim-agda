@@ -714,103 +714,88 @@ function M.gc()
     end
 end
 
-local function handle_solve(soln)
-    -- debug(msg)
-    local n = goals[soln.interactionPoint]
-    local sl = n.start.line
-    local sc = n.start.col
-    local el = n["end"].line
-    local ec = n["end"].col
-
-    -- Fucking vim api is in bytes!
-    local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, sl, true)
-    local r = soln.expression
-    local o = utf8.offset(content[1], sc)
+-- Close the prompt window and forget its content, which was sent to
+-- Agda with the command that we got the response for.
+local function reset_prompt()
     if pwin ~= nil then
         M.close_prompt_win()
         vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
     end
-    -- 1-based lines, 0-based columns!
-    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
-    -- if the goal is "?"
-    if utf8.sub(content[1], sc, sc) == "?" then
-        vim.cmd("normal cl(" .. r .. ")")
-    else
-        vim.cmd("normal ca{(" .. r .. ")")
+end
+
+-- After the text from `s` to `e` (Locs) was replaced by `lines`, move the
+-- goals behind it, so that later edits in the same response (e.g. auto
+-- solving several goals on one line) find them.
+local function shift_goals(s, e, lines)
+    local dl = #lines - 1 - (e.line - s.line)
+    -- The column where the text that followed `e` starts now.
+    local col = (#lines == 1 and s.col or 1) + utf8.len(lines[#lines])
+    local function shift(p)
+        if p.line == e.line and p.col >= e.col then
+            return Loc:new(p.line + dl, p.col - e.col + col)
+        elseif p.line > e.line then
+            return Loc:new(p.line + dl, p.col)
+        end
+        return p
     end
+    for _, g in pairs(goals) do
+        g.start = shift(g.start)
+        g["end"] = shift(g["end"])
+    end
+end
+
+-- Replace goal `id` in the main buffer by `text`.  Agda prints
+-- multi-line text without indentation, so we indent the continuation
+-- lines to the column of the goal.  We edit the buffer directly rather
+-- than through a window: the response may arrive while the user is in
+-- another window, and normal-mode commands are subject to mappings.
+local function replace_goal(id, text)
+    local n = goals[id]
+    if n == nil then
+        return warning(string.format("goal %s is not in the list of goals, reload the file", tostring(id)))
+    end
+    local s, e = n.start, n["end"]
+    local first = vim.api.nvim_buf_get_lines(main_buf, s.line-1, s.line, true)[1]
+    local last = vim.api.nvim_buf_get_lines(main_buf, e.line-1, e.line, true)[1]
+    local sb = utf8.offset(first, s.col) - 1
+    local eb = utf8.offset(last, e.col) - 1
+
+    local lines = split_lines(text)
+    local indent = string.rep(" ", width(first:sub(1, sb)))
+    for i = 2, #lines do
+        lines[i] = indent .. lines[i]
+    end
+    vim.api.nvim_buf_set_text(main_buf, s.line-1, sb, e.line-1, eb, lines)
+    goals[id] = nil
+    shift_goals(s, e, lines)
+
+    -- 1-based lines, 0-based columns!
+    if vim.api.nvim_get_current_buf() == main_buf then
+        vim.api.nvim_win_set_cursor(0, {s.line, sb})
+    end
+end
+
+local function handle_solve(soln)
+    reset_prompt()
+    replace_goal(soln.interactionPoint, "(" .. soln.expression .. ")")
 end
 
 local function handle_give(msg)
-    --debug(msg)
-    local n = goals[msg.interactionPoint.id]
-    local sl = n.start.line
-    local sc = n.start.col
-    local el = n["end"].line
-    local ec = n["end"].col
-
-    -- Fucking vim api is in bytes!
-    local content = vim.api.nvim_buf_get_lines(main_buf, sl-1, sl, true)
-    local r = msg.giveResult.str
-    local o = utf8.offset(content[1], sc)
-    if pwin ~= nil then
-        M.close_prompt_win()
-        vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
-    end
-    -- 1-based lines, 0-based columns!
-    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
-
-    -- FIXME lift actions below into a function.
-
-    -- Here we are abusing the block paste feature
-    -- of vim, that is very convenient to position
-    -- the content of the goal.  However, it takes
-    -- a bit of scaffolding to ensure that we have
-    -- space to paste the text correctly.
-
-    -- If the goal is {! !}, replace it with ?
-    if utf8.sub(content[1], sc, sc) == "{" then
-        vim.cmd('normal "_c%?')
-    end
-
-    local rr = split_lines(r)
-    -- construct  #rr + 1 empty lines and store
-    -- it in nn.
-    local nn = {}
-    for _,_ in pairs(rr) do
-        table.insert(nn, "")
-    end
-    -- Insert nn as characters, so that the 
-    -- content of the line after `?` moves nn+1
-    -- lines down.
-    table.insert(nn, "")
-    vim.api.nvim_put(nn, "c", true, true)
-    -- Go back to the place where '?' was
-    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
-
-    -- Insert rr as block (note we use P) as we
-    -- deleted `?`
-    vim.api.nvim_put(rr, "b", true, true)
-    -- Join the next line (we inserted one extra line
-    -- to accomodate for the block paste).
-    vim.cmd("normal J")
-    vim.api.nvim_win_set_cursor(main_win, {sl, o-1})
-
-    -- Remove the ?
-    vim.cmd('normal "_x')
-    --debug(rr)
+    reset_prompt()
+    -- We always send noRange, so Agda never uses our text literally and
+    -- `giveResult` is always {str = ...}, never {paren = ...}.
+    replace_goal(msg.interactionPoint.id, msg.giveResult.str)
 end
 
 local function handle_make_case(msg)
+    reset_prompt()
     local n = goals[msg.interactionPoint.id]
+    if n == nil then
+        return warning(string.format("goal %d is not in the list of goals, reload the file", msg.interactionPoint.id))
+    end
     local sl = n.start.line --[1]
     local el = n["end"].line --[1]
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
-
-    if pwin ~= nil then
-        --print("closing window, setting buffer to nothing")
-        M.close_prompt_win()
-        vim.api.nvim_buf_set_lines(pbuf, 0, -1, true, {})
-    end
 end
 
 local function handle_status(msg)
