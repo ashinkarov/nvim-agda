@@ -97,6 +97,11 @@ local function dprint(...)
     end
 end
 
+-- Display width of a string in screen cells.
+local function width(s)
+    return vim.api.nvim_strwidth(s)
+end
+
 -- Either a list of lines (key=nil), or the list of objects
 -- and we are interested in the field "key".
 local function max_width(lines,key)
@@ -105,7 +110,7 @@ local function max_width(lines,key)
         if key ~= nil then
             v = v[key]
         end
-        max = math.max(max, utf8.len(v))
+        max = math.max(max, width(v))
     end
     return max
 end
@@ -386,7 +391,7 @@ local function handle_displayinfo(msg)
         -- Single-line output.
         if #lines == 1 and sep ~= nil then
             lines[1] = header .. sep .. lines[1]
-            table.insert(lines, 1, mk_delim(math.max(msg_min_width, utf8.len(lines[1]))))
+            table.insert(lines, 1, mk_delim(math.max(msg_min_width, width(lines[1]))))
             return lines
         end
 
@@ -401,11 +406,11 @@ local function handle_displayinfo(msg)
 
     local function mk_decl(name,lines,sep)
         local p = {}
-        local spc = string.rep(" ", utf8.len(sep))
+        local spc = string.rep(" ", width(sep))
         for k,v in ipairs(lines) do
             if k == 1 then
                 table.insert(p, name .. sep .. v)
-                name = string.rep(" ", utf8.len(name))
+                name = string.rep(" ", width(name))
             else
                 table.insert(p, name .. spc .. v)
             end
@@ -440,7 +445,7 @@ local function handle_displayinfo(msg)
         for _,v in ipairs(inf.context) do
             -- FIXME we want reifiedName here, as it may differ.
             local name = v.originalName
-            name = name .. string.rep(" ", max_name_len - utf8.len(name))
+            name = name .. string.rep(" ", max_name_len - width(name))
             table_append(p, mk_decl(name, split_lines(v.binding), " : "))
         end
         mk_window(add_sep(p,"Context"))
@@ -546,7 +551,7 @@ local function handle_displayinfo(msg)
 
             for _,v in ipairs(g.entries) do
                 local name = v.reifiedName
-                name = name .. string.rep(" ", max_name_len - utf8.len(name))
+                name = name .. string.rep(" ", max_name_len - width(name))
                 table_append(p, mk_decl(name, split_lines(v.binding), " : "))
             end
             local ty = split_lines(g.type)
@@ -564,7 +569,7 @@ local function handle_displayinfo(msg)
                 if k == 1 then
                     ty[k] = gt .. ty[k]
                 else
-                    ty[k] = string.rep(" ", utf8.len(gt)) .. ty[k]
+                    ty[k] = string.rep(" ", width(gt)) .. ty[k]
                 end
             end
             -- In case we have inferred type
@@ -572,7 +577,7 @@ local function handle_displayinfo(msg)
                 if k == 1 then
                     have_ty[k] = ht .. have_ty[k]
                 else
-                    have_ty[k] = string.rep(" ", utf8.len(ht)) .. have_ty[k]
+                    have_ty[k] = string.rep(" ", width(ht)) .. have_ty[k]
                 end
             end
 
