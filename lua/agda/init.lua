@@ -45,6 +45,8 @@ local showImplicitArgs = false
 -- The buffer of the Agda file.  There is one instance of this module
 -- per buffer, created by the ftplugin.
 local main_buf = vim.api.nvim_get_current_buf()
+-- The file name that we last loaded the buffer as.
+local main_file = nil
 
 -- Content and line-offset structure for handling
 -- highlighting.
@@ -837,6 +839,10 @@ local function handle_make_case(msg)
     local sl = n.start.line --[1]
     local el = n["end"].line --[1]
     vim.api.nvim_buf_set_lines(main_buf, sl-1, el, true, msg.clauses)
+    -- Agda sends the interaction points from before the split after
+    -- this response, so we reload to get the new goals, like the Emacs
+    -- mode does.
+    M.agda_load(main_file)
 end
 
 local function handle_status(msg)
@@ -1046,6 +1052,7 @@ function M.agda_load (file)
     -- XXX should we kill evbuf in case we are stuck with an
     -- annoying error, or should it be done by a separate command?
     error_count = 0
+    main_file = file
     -- if the main buffer changed, save it before issuing agda (re)load.
     if main_buf_changed() == 1 then
         vim.api.nvim_buf_call(main_buf, function () vim.cmd('w') end)

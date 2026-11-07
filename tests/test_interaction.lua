@@ -98,6 +98,19 @@ t.test("case split", function()
     t.golden("make_case", h.lines())
 end)
 
+-- After a case split Agda sends the goals from before the split, so the
+-- plugin reloads to learn the new ones.
+t.test("goals are updated after a case split", function()
+    load("make_case_goals")
+    h.cursor_at("{! x !}", 1, 3)
+    vim.cmd("AgdaMakeCase")
+    h.wait_idle()
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("GoalNext")
+    vim.cmd("GoalNext")
+    t.eq({ 8, 9 }, vim.api.nvim_win_get_cursor(0))
+end)
+
 t.test("auto", function()
     load("auto")
     h.cursor_at("?", 2)        -- the goal in `pick`
