@@ -1,4 +1,10 @@
 
+" When the ftplugin runs again for the buffer (e.g. on :edit), stop the
+" Agda process of the previous instance of the module.
+if exists("b:AgdaMod") && has_key(b:AgdaMod, "agda_stop")
+    call b:AgdaMod.agda_stop()
+endif
+
 " Kill the cache of previously loaded "agda" module.
 " Lua does this automatically, but we want a newly loaded
 " module per every buffer.

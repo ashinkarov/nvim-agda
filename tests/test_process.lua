@@ -64,3 +64,36 @@ t.test("AgdaStop stops Agda silently", function()
     t.eq(nil, h.agda_job())
     t.eq({}, h.take_errors())
 end)
+
+-- Both commands source the ftplugin again, which creates a new
+-- instance of the plugin for the buffer.
+for _, cmd in ipairs({ "edit", "set filetype=agda" }) do
+    t.test(":" .. cmd .. " stops the Agda of the old instance", function()
+        if h.skip_when_recording() then return end
+        h.open("reload", { transcript = "load" })
+        vim.cmd("AgdaLoad")
+        h.wait_idle()
+        local job = h.agda_job()
+        vim.cmd(cmd)
+        t.ok(vim.fn.jobwait({ job }, 5000)[1] ~= -1, "old Agda exited")
+        vim.wait(20)
+        t.eq({}, h.take_errors())
+
+        h.ctx.sessions = 2
+        vim.cmd("AgdaLoad")
+        h.wait_idle()
+        t.golden("load_highlights", h.highlights())
+    end)
+end
+
+t.test("wiping the buffer stops its Agda", function()
+    if h.skip_when_recording() then return end
+    h.open("wipe", { transcript = "load" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local job = h.agda_job()
+    vim.cmd("bwipeout!")
+    t.ok(vim.fn.jobwait({ job }, 5000)[1] ~= -1, "Agda exited")
+    vim.wait(20)
+    t.eq({}, h.take_errors())
+end)

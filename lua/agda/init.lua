@@ -171,6 +171,14 @@ end
 ------------------------------------------------
 
 function M.setup(config)
+    -- Stop Agda when the buffer is unloaded: when it is loaded again the
+    -- ftplugin creates a new instance of this module anyway.  The group
+    -- is per buffer and replaced when the ftplugin runs again.
+    vim.api.nvim_create_autocmd("BufUnload", {
+        group = vim.api.nvim_create_augroup("agda_buf_" .. main_buf, {clear = true}),
+        buffer = main_buf,
+        callback = function () M.agda_stop() end,
+    })
     if not config then
         return
     end
