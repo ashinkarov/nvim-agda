@@ -1417,7 +1417,7 @@ function M.agda_module_contents(file)
     wrap_goal_action(function ()
         local content = vim.fn.input("Module Name: ")
         local e = haskell.string(content)
-        local cmd = "(Cmd_show_module_contents_toplevel Simplified" .. e .. ")"
+        local cmd = "(Cmd_show_module_contents_toplevel Simplified " .. e .. ")"
         agda_feed(file,cmd)
     end, file)
 end
