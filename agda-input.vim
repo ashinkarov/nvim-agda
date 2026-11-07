@@ -280,7 +280,7 @@ noremap! <buffer> <LocalLeader>bv  𝕧
 noremap! <buffer> <LocalLeader>bW  𝕎
 noremap! <buffer> <LocalLeader>bw  𝕨
 noremap! <buffer> <LocalLeader>bX  𝕏
-noremap! <buffer> <LocalLeader>bx  𝕩
+noremap! <buffer> <LocalLeader>bsx  𝕩
 noremap! <buffer> <LocalLeader>bY  𝕐
 noremap! <buffer> <LocalLeader>by  𝕪
 noremap! <buffer> <LocalLeader>bZ  ℤ
