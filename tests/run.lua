@@ -16,14 +16,10 @@ vim.cmd("filetype plugin on")
 vim.cmd("augroup filetypedetect | runtime! ftdetect/*.vim | augroup END")
 package.path = root .. "/tests/?.lua;" .. package.path
 
--- Use the real lua-utf8 if it is installed (system-wide or with
--- `luarocks install --local --lua-version=5.1 luautf8`), the shim otherwise.
+-- Make lua-utf8 available when installed with
+-- `luarocks install --local --lua-version=5.1 luautf8`; tests/test_utf8.lua
+-- then also compares against it.
 package.cpath = package.cpath .. ";" .. vim.fn.expand("~/.luarocks/lib/lua/5.1/?.so")
-if not pcall(require, "lua-utf8") then
-    package.preload["lua-utf8"] = function()
-        return dofile(root .. "/tests/shim/lua-utf8.lua")
-    end
-end
 
 local harness = require("harness")
 harness.root = root

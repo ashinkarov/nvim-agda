@@ -1,7 +1,6 @@
--- Pure-Lua stand-in for the subset of starwing/luautf8 that the plugin
--- uses (len, offset, sub).  The test runner loads it only when the real
--- `lua-utf8` C module cannot be found, so that the characterisation
--- tests can run on machines without the library installed.
+-- Straightforward pure-Lua implementation of the subset of
+-- starwing/luautf8 that the plugin used to depend on (len, offset, sub).
+-- It serves as the reference for lua/agda/utf8.lua in the unit tests.
 --
 -- Semantics follow luautf8 (which follows Lua 5.3's utf8 library):
 -- strings are sequences of code points; composing characters count as
@@ -31,7 +30,7 @@ end
 -- Byte position where the n-th (n >= 1) code point starts; n = len+1
 -- gives #s+1, anything beyond that gives nil.
 function M.offset(s, n)
-    assert(n >= 1, "shim only supports positive offsets")
+    assert(n >= 1, "only positive offsets are supported")
     local st = starts(s)
     if n <= #st then
         return st[n]

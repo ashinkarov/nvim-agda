@@ -6,8 +6,9 @@
     make record                  # run against the real Agda, rewrite tests/transcripts/
 
 Tests run in `nvim --clean --headless -l tests/run.lua` and need nothing
-beyond Neovim.  If the `lua-utf8` module is not installed, a pure-Lua
-shim (`tests/shim/lua-utf8.lua`) is used instead.
+beyond Neovim.  If the `lua-utf8` library is installed (for instance with
+`luarocks install --local --lua-version=5.1 luautf8`), `tests/test_utf8.lua`
+also checks that `lua/agda/utf8.lua` agrees with it.
 
 ## How the Agda interaction is tested
 

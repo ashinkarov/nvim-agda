@@ -1,4 +1,4 @@
-local utf8 = require('lua-utf8')
+local utf8 = require('agda.utf8')
 local Loc = require('agda.loc')
 
 local M = {}

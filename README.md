@@ -4,22 +4,19 @@
 
 # Installation
 
-This plugin requires [Neovim (0.5)](https://github.com/neovim/neovim/releases/tag/nightly)
-to work.  One could probably force earlier versions to work as well, but
-this is non-trivial.
+This plugin requires [Neovim 0.11](https://github.com/neovim/neovim/releases)
+or later and has no other dependencies.
 
-1. Install [lua-utf8](https://github.com/starwing/luautf8) library on your system.
-
-2. Use a plugin manager such as [paq](https://github.com/savq/paq-nvim)
-   and pass the name of this repository:
-   ```lua
-   paq 'ashinkarov/nvim-agda'
-   ```
-   Alternatively, you can install the plugin manually as follows:
-   ```sh
-   $ mkdir -p ~/.local/share/nvim/site/pack/git-plugins/start
-   $ git clone https://github.com/ashinkarov/nvim-agda.git --depth=1 ~/.local/share/nvim/site/pack/git-plugins/start/nvim-agda
-   ```
+Use a plugin manager such as [paq](https://github.com/savq/paq-nvim)
+and pass the name of this repository:
+```lua
+paq 'ashinkarov/nvim-agda'
+```
+Alternatively, you can install the plugin manually as follows:
+```sh
+$ mkdir -p ~/.local/share/nvim/site/pack/git-plugins/start
+$ git clone https://github.com/ashinkarov/nvim-agda.git --depth=1 ~/.local/share/nvim/site/pack/git-plugins/start/nvim-agda
+```
 
 ## Configuration
 
@@ -100,9 +97,7 @@ The regular `:q` command would work as well.
   * Asynchronous communication quirks:
     - Highlighting information uses offsets (number of characters from the
       beginning of file), whereas nvim interface expects line and byte-offset
-      in that line to set the hilighting.  This is important as this conversion
-      is expensive and it
-      pulls `lua-utf8` as a dependency.
+      in that line to set the hilighting.  This conversion is expensive.
     - Errors are printed on `stdout` (not `stderr`)
   * If highlighting information arrives, and the file is modified --- should we
     attempt to colorise all but modified pieces?  This is a typical case whe
@@ -117,6 +112,10 @@ The regular `:q` command would work as well.
   * Support working with multiple files.  Currently we assume a single
     file per vim instance.  See issue [#1](https://github.com/ashinkarov/nvim-agda/issues/1) for more details.
 
+
+# Development
+
+`make test` runs the test-suite; see [tests/README.md](tests/README.md).
 
 # Credit
   * https://github.com/coot/vim-agda-integration
