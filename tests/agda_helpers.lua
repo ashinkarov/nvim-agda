@@ -88,12 +88,14 @@ end
 --   transcript  use the transcript of another test
 --   agda        the Agda binary the plugin uses (default tests/bin/agda)
 --   version     the version the replayed Agda reports (default 2.8.0)
+--   subdir      put the file in this subdirectory of the test directory
 function M.open(name, opts)
     opts = opts or {}
     local fixture = opts.fixture or "Basic.agda"
     local dir = vim.fn.tempname()
-    vim.fn.mkdir(dir, "p")
-    local file = dir .. "/" .. fixture
+    local fdir = opts.subdir and (dir .. "/" .. opts.subdir) or dir
+    vim.fn.mkdir(fdir, "p")
+    local file = fdir .. "/" .. fixture
     vim.fn.writefile(vim.fn.readfile(t.root .. "/tests/fixtures/" .. fixture, "b"), file, "b")
 
     vim.env.AGDA_TEST_MODE = mode

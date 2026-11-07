@@ -1,5 +1,6 @@
 local utf8 = require('agda.utf8')
 local Loc = require('agda.loc')
+local haskell = require('agda.haskell')
 
 local M = {}
 
@@ -1010,7 +1011,7 @@ local function agda_feed (file, cmd)
         sargs = nil
         return
     end
-    local msg = "IOTCM \"" .. file .. "\" Interactive Direct " .. cmd
+    local msg = "IOTCM " .. haskell.string(file) .. " Interactive Direct " .. cmd
     vim.fn.chansend(agda_job, {msg, ""})
 end
 
@@ -1048,7 +1049,7 @@ function M.agda_load (file)
       end
     })
 
-    agda_feed(file, "(Cmd_load \"" .. file .. "\" [])")
+    agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " [])")
 end
 
 ------ Goal-specific helper functions ------
@@ -1243,16 +1244,7 @@ function M.agda_type_context_infer(file,prec,id)
 
         local content = get_trimmed_content(id)
         debug("Goal content: " .. content)
-        -- TODO: here and in all the other `json_encode` calls below, we
-        -- quote strings for Agda as json, but Agda parses commands with
-        -- Haskell's `reads` (`parseIOTCM` in Interaction/Base.hs).  The two
-        -- agree on \" \\ \n \t \b \f \r, but json_encode writes other
-        -- control characters as \u001B, which Haskell does not accept
-        -- (it expects \27), so Agda replies "cannot read: ...".  Verified
-        -- with Agda 2.8.0.  One helper producing Haskell string literals
-        -- should replace these calls; the file path in `agda_feed` needs
-        -- the same quoting.
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
 
         local cmd = "(Cmd_goal_type_context_infer " .. prec .. " " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
@@ -1261,7 +1253,7 @@ end
 
 
 local function agda_infer_toplevel(file, e)
-    local e = vim.fn.json_encode(e)
+    local e = haskell.string(e)
     local cmd = "(Cmd_infer_toplevel Normalised " .. e .. ")"
     agda_feed(file, cmd)
 end
@@ -1280,7 +1272,7 @@ function M.agda_infer(file,id)
         if content == "" then
             return warning("The goal is empty")
         end
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
         local cmd = "(Cmd_infer Normalised " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1297,7 +1289,7 @@ function M.agda_make_case(file,id)
         if content == "" then
             content = vim.fn.input("Variables to split on: ")
         end
-        local g = vim.fn.json_encode(content)
+        local g = haskell.string(content)
         local cmd = "(Cmd_make_case " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1317,7 +1309,7 @@ function M.agda_refine(file,id)
         --if content == "" then
         --    return warning("cannot refine empty goal")
         --end
-        local g = vim.fn.json_encode(content)
+        local g = haskell.string(content)
         local cmd = "(Cmd_refine_or_intro True " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1332,7 +1324,7 @@ end
 --   * HeadCompute
 --
 local function agda_compute_toplevel(file, e)
-    local e = vim.fn.json_encode(e)
+    local e = haskell.string(e)
     local cmd = "(Cmd_compute_toplevel DefaultCompute " .. e .. ")"
     agda_feed(file, cmd)
 end
@@ -1351,7 +1343,7 @@ function M.agda_compute(file,id)
         if content == "" then
             return warning("The goal is empty")
         end
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
         local cmd = "(Cmd_compute DefaultCompute " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1368,7 +1360,7 @@ function M.agda_helper_fun(file,id)
         if content == "" then
             content = vim.fn.input("Expression: ")
         end
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
         local cmd = "(Cmd_helper_function AsIs " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1397,7 +1389,7 @@ function M.agda_auto(file,id)
             return agda_auto_toplevel(file)
         end
         local content = get_trimmed_content(id)
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
         local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
         -- Agda changed interface after 2.7.0
         if version_at_least(2, 7) then
@@ -1415,7 +1407,7 @@ function M.agda_solve(file,id)
             return agda_solve_toplevel(file)
         end
         local content = get_trimmed_content(id)
-        local g = vim.fn.json_encode(content) -- puts "" around, and escapes \n
+        local g = haskell.string(content)
         local cmd = "(Cmd_solveOne Simplified " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
@@ -1424,7 +1416,7 @@ end
 function M.agda_module_contents(file)
     wrap_goal_action(function ()
         local content = vim.fn.input("Module Name: ")
-        local e = vim.fn.json_encode(content)
+        local e = haskell.string(content)
         local cmd = "(Cmd_show_module_contents_toplevel Simplified" .. e .. ")"
         agda_feed(file,cmd)
     end, file)
@@ -1438,7 +1430,7 @@ function M.agda_why_inscope(file)
         --           |
         -- cWORD is returning `(F.blah`, what a nonsense...
         local content = vim.fn.expand("<cWORD>")
-        local e = vim.fn.json_encode(content)
+        local e = haskell.string(content)
         local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"
         agda_feed(file,cmd)
     end, file)

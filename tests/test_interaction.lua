@@ -113,3 +113,24 @@ t.test("non-json output is reported and does not stop the reader", function()
     h.messages = {}
     t.golden("load_highlights", h.highlights())
 end)
+
+-- Agda reads commands as Haskell, so the path has to be quoted as a
+-- Haskell string.
+t.test("file path with quotes and backslashes", function()
+    h.open("unusual_path", { subdir = 'we"ird\\dir' })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.golden("load_highlights", h.highlights())
+end)
+
+-- Agda's own parser rejects control characters, but the command itself
+-- has to get through (json escapes like \u001B made it "cannot read").
+t.test("control characters in an expression reach Agda", function()
+    load("control_characters")
+    h.stub_input("not\27")
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("AgdaInfer")
+    h.wait_idle()
+    t.eq({ "E: 1.1: error: [ParseError]\nLexical error (unprintable character):" },
+         h.take_errors())
+end)
