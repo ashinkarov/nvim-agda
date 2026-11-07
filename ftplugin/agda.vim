@@ -14,6 +14,10 @@ lua package.loaded.agda = nil
 " hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
+" Comments, as in Vim's ftplugin for Haskell, which has the same syntax
+" for them.  'commentstring' is used by Neovim's gc and by plugins.
+setlocal comments=s1fl:{-,mb:-,ex:-},:-- commentstring=--\ %s
+
 " The highlighting groups of the plugin, in addition to standard ones.
 " They are defaults, so that colour schemes and users can override them,
 " and we set them again when the colour scheme changes, as :colorscheme

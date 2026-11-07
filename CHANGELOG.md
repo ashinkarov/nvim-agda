@@ -27,6 +27,8 @@
 
 ### Added
 
+- `'commentstring'` and `'comments'` are set for Agda's comments, so
+  Neovim's `gc` and commenting plugins work (#6).
 - `:AgdaStop` stops the Agda process.
 - A test suite (`make test`, `make test-live`, `make record`) that
   replays recorded Agda sessions, so it needs no Agda; see

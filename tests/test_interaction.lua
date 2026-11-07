@@ -381,6 +381,13 @@ t.test("highlight groups", function()
     t.eq(0x354657, vim.api.nvim_get_hl(0, { name = "NoDefinition" }).bg)
 end)
 
+t.test("comments", function()
+    h.open("comments")
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("normal gcc")
+    t.eq("-- module Basic where", h.lines()[1])
+end)
+
 t.test("the mappings do not wait for longer global mappings", function()
     load("mapping_nowait")
     local maps = vim.api.nvim_buf_get_keymap(0, "n")
