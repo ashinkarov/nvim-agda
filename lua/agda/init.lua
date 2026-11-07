@@ -1413,6 +1413,12 @@ function M.agda_solve(file,id)
     end, file)
 end
 
+-- TODO: show the contents of the current module.  Agda cannot resolve a
+-- module's own name inside it ("Not in scope"), but an empty name gives
+-- the current module (Agda 2.8.0), so the prompt should say that.  Also,
+-- the ModuleContents handler only shows `contents`; it ignores `names`
+-- (the submodules) and `telescope` (the module parameters), so a module
+-- containing only submodules displays as empty.
 function M.agda_module_contents(file)
     wrap_goal_action(function ()
         local content = vim.fn.input("Module Name: ")
