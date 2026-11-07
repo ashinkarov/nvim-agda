@@ -207,3 +207,20 @@ t.test("solve fills several goals on one line", function()
     h.wait_idle()
     t.eq("solved : Two (tt) (ff)", h.lines()[21])
 end)
+
+t.test("goal navigation after the first goal is filled", function()
+    load_give("navigation_after_give")
+    give("?", 1, "x")          -- goal 0, in `after`
+    local visited = {}
+    vim.api.nvim_win_set_cursor(0, { #h.lines(), 0 })
+    for _ = 1, 2 do
+        vim.cmd("GoalNext")
+        table.insert(visited, h.cursor())
+    end
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
+    vim.cmd("GoalPrev")
+    table.insert(visited, h.cursor())
+    -- Wraps to the goals in `twice`, and from the top to the last goal in
+    -- `solved`.
+    t.eq({ { 13, 19 }, { 13, 29 }, { 21, 19 } }, visited)
+end)

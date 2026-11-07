@@ -1113,69 +1113,60 @@ function M.agda_show_goals(file)
     end
 end
 
-function M.agda_goal_next(file)
-    local loc = get_current_loc()
-    if len(goals) == 0 then
-        print(string.format("no goals in %s", file))
-        return
+-- The start positions of the goals in the order of the file.
+local function goal_starts()
+    local starts = {}
+    for _, v in pairs(goals) do
+        table.insert(starts, v.start)
     end
-    local pos = nil
-    for _,v in pairs(goals) do
-        if v.start > loc then
-            pos = v.start
-            break
-        end
-    end
-    -- if we didn't find the goal after the cursor
-    -- just return the first goal in the list
-    if pos == nil then
-        pos = goals[0].start
-    end
-
-    local content = vim.api.nvim_buf_get_lines(main_buf, pos.line-1, pos.line, true)
-    local o = utf8.offset(content[1], pos.col)
-    -- 1-based lines, 0-based columns!
-    vim.api.nvim_win_set_cursor(main_win, {pos.line, o-1})
+    table.sort(starts)
+    return starts
 end
 
-
-function M.agda_goal_prev(file)
-    local loc = get_current_loc()
-    if len(goals) == 0 then
-        print(string.format("no goals in %s", file))
-        return
-    end
-
-    -- We have a 0-indexed table of goals which is not
-    -- canonical in lua.  Therefore we have to take an extra
-    -- step to traverse it in reverse.
-    local ix = {}
-    for k,_ in pairs(goals) do
-        table.insert(ix,k)
-    end
-    -- Fuck you LUA, fucking piece of shit!
-    -- As 0 is a non-canonical index, it is inserted at the end
-    -- of the table.  What a nonsense!
-    table.sort(ix)
-
-    local pos = nil
-    for i = #ix,1,-1 do
-        if goals[ix[i]].start < loc then
-            pos = goals[ix[i]].start
-            break
-        end
-    end
-    -- if we didn't find the goal before the cursor,
-    -- return the last goal in the list
-    if pos == nil then
-        -- We do have at least one goal
-        pos = goals[ix[#ix]].start
-    end
-
+-- Move the cursor of the current window to `pos`.
+local function goto_loc(pos)
     local content = vim.api.nvim_buf_get_lines(main_buf, pos.line-1, pos.line, true)
     local o = utf8.offset(content[1], pos.col)
     -- 1-based lines, 0-based columns!
-    vim.api.nvim_win_set_cursor(main_win, {pos.line, o-1})
+    vim.api.nvim_win_set_cursor(0, {pos.line, o-1})
+end
+
+-- Go to the first goal after the cursor, or to the first goal in the
+-- file if there is none.
+function M.agda_goal_next(file)
+    local starts = goal_starts()
+    if #starts == 0 then
+        print(string.format("no goals in %s", file))
+        return
+    end
+    local loc = get_current_loc()
+    local pos = starts[1]
+    for _, p in ipairs(starts) do
+        if p > loc then
+            pos = p
+            break
+        end
+    end
+    goto_loc(pos)
+end
+
+-- Go to the last goal before the cursor, or to the last goal in the
+-- file if there is none.
+function M.agda_goal_prev(file)
+    local starts = goal_starts()
+    if #starts == 0 then
+        print(string.format("no goals in %s", file))
+        return
+    end
+    local loc = get_current_loc()
+    local pos = starts[#starts]
+    for i = #starts, 1, -1 do
+        if starts[i] < loc then
+            pos = starts[i]
+            break
+        end
+    end
+    goto_loc(pos)
 end
 
 -- XXX weird name of the function
