@@ -35,8 +35,11 @@ _G.print = function(...)
     end
     table.insert(M.messages, table.concat(parts, "\t"))
 end
-vim.api.nvim_err_writeln = function(msg)
-    table.insert(M.messages, "E: " .. msg)
+-- The plugin shows all its messages with agda.msg.show; errors are
+-- prefixed with "E: ".  tests/test_msg.lua tests the real function.
+M.show_message = require("agda.msg").show
+require("agda.msg").show = function(msg, hl)
+    table.insert(M.messages, (hl == "ErrorMsg" and "E: " or "") .. msg)
 end
 
 local real_input = vim.fn.input

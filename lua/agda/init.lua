@@ -1,6 +1,7 @@
 local utf8 = require('agda.utf8')
 local Loc = require('agda.loc')
 local haskell = require('agda.haskell')
+local messages = require('agda.msg')
 
 local M = {}
 
@@ -68,12 +69,18 @@ local hl_marks = {}
 ------ Helper functions ------
 ------------------------------
 
+-- Messages go through `agda.msg`, which avoids the hit-enter prompt;
+-- the full text is in :messages.
+local function display(msg)
+    messages.show(msg)
+end
+
 local function error(msg)
-    vim.api.nvim_err_writeln(msg)
+    messages.show(msg, "ErrorMsg")
 end
 
 local function warning(msg)
-    print("Warning: " .. msg)
+    display("Warning: " .. msg)
 end
 
 local function prefix(p, s)
@@ -90,13 +97,13 @@ end
 
 local function debug(x)
     if debug_p then
-        print(vim.inspect(x))
+        display(vim.inspect(x))
     end
 end
 
 local function dprint(...)
     if debug_p then
-        print(...)
+        display(table.concat(vim.tbl_map(tostring, {...}), "\t"))
     end
 end
 
@@ -486,7 +493,7 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "NormalForm" then
         mk_window(add_sep(split_lines(inf.expr), "Normal Form", " : "))
     elseif inf.kind == "Auto" then
-        print(string.format("Auto: %s", inf.info))
+        display(string.format("Auto: %s", inf.info))
     elseif inf.kind == "ModuleContents" then
         local indent = "   "
         local p = {}
@@ -553,10 +560,7 @@ local function handle_displayinfo(msg)
                 table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
             end
         end
-        print(table.concat(m, "\n"))
-        -- This is a way to see all the info at the same time, but this
-        -- gets too noisy when we are in the middle of development.
-        --vim.api.nvim_echo({ { table.concat(m, "\n") } }, true, {})
+        display(table.concat(m, "\n"))
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -654,7 +658,7 @@ end
 -- Goals
 local function print_goals()
     for k,v in pairs(goals) do
-        print (k .. " : " .. vim.inspect(v.start) .. vim.inspect(v["end"]))
+        display(k .. " : " .. vim.inspect(v.start) .. vim.inspect(v["end"]))
     end
 end
 
@@ -732,9 +736,9 @@ end
 function M.gc()
     local n = get_current_goal()
     if n ~= nil then
-      print("'" .. get_goal_content(n[1]) .. "'")
+      display("'" .. get_goal_content(n[1]) .. "'")
     else
-      print("<empty-goal>")
+      display("<empty-goal>")
     end
 end
 
@@ -849,7 +853,7 @@ local function handle_msg(msg)
     elseif msg.kind == "Status" then
         handle_status(msg)
     elseif msg.kind == "RunningInfo" then
-        print(msg.message)
+        display(msg.message)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
         hl_marks = {}
@@ -861,7 +865,7 @@ end
 
 -- XXX deprecated function
 function M.getevbuf()
-    print("evbuf length is: " .. evbuf)
+    display("evbuf length is: " .. evbuf)
 end
 
 -- Handle one line of Agda's output.
@@ -1120,9 +1124,9 @@ function M.agda_show_goals(file)
         c = c + 1
     end
     if c > 0 then
-        print(string.format("%d goal(s) in %s\n", c, file) .. g)
+        display(string.format("%d goal(s) in %s\n", c, file) .. g)
     else
-        print(string.format("no goals in %s", file))
+        display(string.format("no goals in %s", file))
     end
 end
 
@@ -1149,7 +1153,7 @@ end
 function M.agda_goal_next(file)
     local starts = goal_starts()
     if #starts == 0 then
-        print(string.format("no goals in %s", file))
+        display(string.format("no goals in %s", file))
         return
     end
     local loc = get_current_loc()
@@ -1168,7 +1172,7 @@ end
 function M.agda_goal_prev(file)
     local starts = goal_starts()
     if #starts == 0 then
-        print(string.format("no goals in %s", file))
+        display(string.format("no goals in %s", file))
         return
     end
     local loc = get_current_loc()
