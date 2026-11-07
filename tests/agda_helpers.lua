@@ -41,6 +41,10 @@ end
 
 local real_input = vim.fn.input
 
+local function prefix_e(m)
+    return m:sub(1, 3) == "E: "
+end
+
 local function read(path)
     local f = io.open(path, "rb")
     if not f then return nil end
@@ -199,20 +203,24 @@ function M.finish()
     M.ctx = nil
     vim.fn.input = real_input
 
+    -- Closing stdin makes both Agda and the replay script exit; only
+    -- kill jobs that do not.  (The replay script blocks reading stdin
+    -- and cannot handle SIGTERM promptly.)
     local jobs = {}
     for _, ch in ipairs(vim.api.nvim_list_chans()) do
         if ch.stream == "job" then
-            -- Closing stdin is enough for both Agda and the replay
-            -- script, which blocks reading stdin and so cannot handle
-            -- the SIGTERM sent by jobstop() promptly.
             vim.fn.chanclose(ch.id, "stdin")
-            vim.fn.jobstop(ch.id)
             table.insert(jobs, ch.id)
         end
     end
-    -- Let the exit callbacks run before resetting the messages.
-    vim.fn.jobwait(jobs, 2000)
+    for i, status in ipairs(vim.fn.jobwait(jobs, 2000)) do
+        if status == -1 then
+            vim.fn.jobstop(jobs[i])
+        end
+    end
+    -- Let the exit callbacks run before checking the messages.
     vim.wait(20)
+    local errors = vim.tbl_filter(function(m) return prefix_e(m) end, M.messages)
     M.messages = {}
     for _, w in ipairs(vim.api.nvim_list_wins()) do
         if vim.api.nvim_win_get_config(w).relative ~= "" then
@@ -233,6 +241,10 @@ function M.finish()
     M.ctx = nil
     if errmsg ~= "" then
         error("unexpected error message: " .. errmsg, 0)
+    end
+    -- Tests that expect errors remove them from M.messages.
+    if #errors > 0 then
+        error("unexpected errors reported by the plugin: " .. vim.inspect(errors), 0)
     end
 end
 

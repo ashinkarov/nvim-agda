@@ -879,7 +879,11 @@ local function on_event(job_id, data, event)
             handle_line(line)
         end
     elseif event == "stderr" then
-        error("Agda interaction error: " .. table.concat(data, "\n"))
+        -- At the end of the stream we get {""}.
+        local text = table.concat(data, "\n")
+        if vim.trim(text) ~= "" then
+            error("Agda interaction error: " .. text)
+        end
     end
 end
 
