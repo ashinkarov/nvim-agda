@@ -3,8 +3,8 @@
 --     nvim --clean --headless -l tests/run.lua [pattern]
 --
 -- Runs every tests/test_*.lua file (optionally only the cases whose
--- "file: name" matches the Lua pattern) and exits with a non-zero
--- status if any case fails.
+-- "file: name" matches one of the "|"-separated Lua patterns) and exits
+-- with a non-zero status if any case fails.
 
 local root = vim.fs.dirname(vim.fs.dirname(vim.fs.normalize(
     debug.getinfo(1, "S").source:sub(2))))
@@ -24,7 +24,19 @@ package.cpath = package.cpath .. ";" .. vim.fn.expand("~/.luarocks/lib/lua/5.1/?
 local harness = require("harness")
 harness.root = root
 
-local filter = _G.arg[1]
+local filters = _G.arg[1] and vim.split(_G.arg[1], "|", { plain = true })
+
+local function selected(name)
+    if not filters then
+        return true
+    end
+    for _, f in ipairs(filters) do
+        if name:match(f) then
+            return true
+        end
+    end
+    return false
+end
 local failures, passed = 0, 0
 
 for _, file in ipairs(vim.fn.glob(root .. "/tests/test_*.lua", false, true)) do
@@ -33,7 +45,7 @@ for _, file in ipairs(vim.fn.glob(root .. "/tests/test_*.lua", false, true)) do
     local fname = vim.fn.fnamemodify(file, ":t:r")
     for _, case in ipairs(harness.cases) do
         local full = fname .. ": " .. case.name
-        if not filter or full:match(filter) then
+        if selected(full) then
             local t0 = vim.uv.hrtime()
             local ok, err = xpcall(case.fn, debug.traceback)
             if harness.after_each then

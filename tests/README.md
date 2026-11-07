@@ -2,6 +2,7 @@
 
     make test                    # replay recorded Agda sessions (no Agda needed)
     make test FILTER=navigation  # only cases whose "file: name" matches the Lua pattern
+    make test FILTER='stop|wipe' # ... or one of several patterns
     make test-live               # run against the real Agda
     make record                  # run against the real Agda, rewrite tests/transcripts/
 
