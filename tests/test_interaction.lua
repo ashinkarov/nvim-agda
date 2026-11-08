@@ -418,6 +418,40 @@ t.test("comments", function()
     t.eq("-- module Basic where", h.lines()[1])
 end)
 
+local function load_constraints(name)
+    h.open(name, { fixture = "Constraints.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+end
+
+t.test("goals are listed like Agda prints them", function()
+    load_constraints("constraint_goals")
+    local goals = h.messages[#h.messages]
+    t.ok(goals:find("Visible Goals\n    ?0 : 𝔹\n    ?1 : P tt\n", 1, true), goals)
+    t.ok(goals:find("Invisible Goals\n    _5 : 𝔹  [at 8.9-10]", 1, true), goals)
+end)
+
+t.test("show constraints", function()
+    load_constraints("show_constraints")
+    h.messages = {}
+    vim.cmd("AgdaShowConstraints")
+    h.wait_idle()
+    t.eq({ "Constraints\n    G _x_13 = tt : 𝔹\n    _14 := q" }, h.messages)
+end)
+
+t.test("refine on an empty goal", function()
+    load_constraints("refine_intro")
+    h.messages = {}
+    h.cursor_at("?", 1)        -- s : 𝔹
+    vim.cmd("AgdaRefine")
+    h.wait_idle()
+    h.cursor_at("?", 2)        -- t : P tt
+    vim.cmd("AgdaRefine")
+    h.wait_idle()
+    t.eq({ "Don't know which constructor to introduce of tt or ff",
+           "No introduction forms found." }, h.messages)
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")

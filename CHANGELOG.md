@@ -24,6 +24,8 @@
   not reachable in Agda buffers.
 - `\bx` inserts `⊠`, as in Agda's Emacs mode; `𝕩` is `\bsx`.
 - The file is reloaded after a case split, like in the Emacs mode.
+- Goals are listed like Agda prints them (`?0 : 𝔹`, and invisible goals
+  with their position) rather than as `0 OfType 𝔹`.
 
 ### Added
 
@@ -64,6 +66,11 @@
   on the goal in progress" until Agda is restarted.
 
 #### Goals
+
+- `:AgdaShowConstraints` showed nothing, and neither did refine on an
+  empty goal when Agda cannot introduce a constructor; both are shown
+  now.  Any other information from Agda that the plugin cannot show is
+  reported instead of being ignored.
 
 - Goals after wide or composing characters (`pick 名前 y = ?`) were not
   found under the cursor, as the column was counted in screen cells

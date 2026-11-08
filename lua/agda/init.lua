@@ -1,6 +1,7 @@
 local utf8 = require('agda.utf8')
 local Loc = require('agda.loc')
 local haskell = require('agda.haskell')
+local constraint = require('agda.constraint')
 local messages = require('agda.msg')
 
 local M = {}
@@ -552,27 +553,39 @@ local function handle_displayinfo(msg)
             end
         end
 
-        if #inf.invisibleGoals > 0 then
-            table.insert(m, "Invisible Goals")
-            for _,v in ipairs(inf.invisibleGoals) do
-                local o = v.constraintObj
-                if type(o) == "table" then o = o.name end
-                if v.type ~= nil then
-                    table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
-                else
-                    table.insert(m, string.format("%s%s %s", indent, o, v.kind))
-                end
-            end
-        end
         if #inf.visibleGoals > 0 then
             table.insert(m, "Visible Goals")
             for _,v in ipairs(inf.visibleGoals) do
-        local o = v.constraintObj
-        if type(o) == "table" then o = o.id end
-                table.insert(m, string.format("%s%s %s %s", indent, o, v.kind, v.type))
+                table.insert(m, indent .. constraint.show(v))
+            end
+        end
+        if #inf.invisibleGoals > 0 then
+            table.insert(m, "Invisible Goals")
+            for _,v in ipairs(inf.invisibleGoals) do
+                table.insert(m, indent .. constraint.show_at(v, v.constraintObj.range))
             end
         end
         display(table.concat(m, "\n"))
+    elseif inf.kind == "Constraints" then
+        if #inf.constraints == 0 then
+            return display("No constraints")
+        end
+        local m = {"Constraints"}
+        for _,c in ipairs(inf.constraints) do
+            local text = constraint.show_at(c.constraint, c.range)
+            for _,l in ipairs(split_lines(text)) do
+                table.insert(m, "    " .. l)
+            end
+        end
+        display(table.concat(m, "\n"))
+    elseif inf.kind == "IntroNotFound" then
+        display("No introduction forms found.")
+    elseif inf.kind == "IntroConstructorUnknown" then
+        -- As the Emacs mode: "a, b or c".
+        local cs = inf.constructors
+        local text = #cs < 2 and table.concat(cs)
+            or table.concat(cs, ", ", 1, #cs - 1) .. " or " .. cs[#cs]
+        display("Don't know which constructor to introduce of " .. text)
     elseif inf.kind == "GoalSpecific" then
         local p = {}
         local g = inf.goalInfo
@@ -661,8 +674,9 @@ local function handle_displayinfo(msg)
         -- We assume that GoalSpecific things always have a location
         mk_window(p, Loc:new(ip.range[1].start.line, ip.range[1].start.col))
     else
-        dprint("Don't know how to handle DisplayInfo of kind: "
-               .. inf.kind .. " :: " .. vim.inspect(msg))
+        -- Agda sends information only in answer to a command, so say
+        -- that we cannot show it rather than ignoring it.
+        warning("cannot show Agda's " .. inf.kind .. " information:\n" .. vim.inspect(inf))
     end
 end
 
