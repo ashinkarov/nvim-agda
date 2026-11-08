@@ -69,6 +69,29 @@ t.test("shadowed names in the context", function()
     t.ok(vim.tbl_contains(lines, "x₁ : 𝔹  (not in scope)"), vim.inspect(lines))
 end)
 
+-- On a narrow screen the popup is as wide as the screen, its separators
+-- as wide as the popup, and its height counts the wrapped lines.
+t.test("popups fit narrow screens", function()
+    h.open("type_context_narrow", { transcript = "type_context" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local columns = vim.o.columns
+    vim.o.columns = 12
+    h.cursor_at("{! x !}", 1, 3)
+    vim.cmd("AgdaTypeContext")
+    h.wait_idle()
+    local f = h.floats()[1]
+    vim.o.columns = columns
+    t.eq(12, f.width)
+    local rows = 0
+    for _, l in ipairs(f.lines) do
+        if l:find("^─") then t.eq(string.rep("─", 12), l) end
+        rows = rows + math.max(1, math.ceil(vim.api.nvim_strwidth(l) / 12))
+    end
+    t.eq(rows, vim.api.nvim_win_get_height(f.win))
+    t.ok(rows > #f.lines, "no line wraps: " .. vim.inspect(f.lines))
+end)
+
 t.test("goal type and context after wide characters", function()
     load("type_context_wide")
     h.cursor_at("?", 2)        -- the goal in `pick`

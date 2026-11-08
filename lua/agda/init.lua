@@ -139,13 +139,9 @@ local function max_width(lines,key)
     return max
 end
 
-local function mk_delim(w)
-    local s = ""
-    for _ = 1,w do
-        s = s .. "─"
-    end
-    return s
-end
+-- A separator line in the content of a popup; `mk_window` draws it as
+-- wide as the window.
+local SEP = "\0SEP"
 
 local function split_lines(s)
     return vim.split(s, "\n")
@@ -290,14 +286,29 @@ local function mk_window(lines,loc)
         mk_mappingx("q",              "close_msg_win",  "")
     end
 
-    local max = max_width(lines)
+    -- As wide as the content, but at most as wide as the screen; longer
+    -- lines wrap, so the height counts the screen lines they take.
+    local w = 0
+    for _, l in ipairs(lines) do
+        if l ~= SEP then w = math.max(w, width(l)) end
+    end
+    w = math.min(math.max(w, msg_min_width), vim.o.columns)
+    local h = 0
+    for i, l in ipairs(lines) do
+        if l == SEP then
+            lines[i] = string.rep("─", w)
+            h = h + 1
+        else
+            h = h + math.max(1, math.ceil(width(l) / w))
+        end
+    end
     vim.api.nvim_buf_set_lines(msg_buf, 0, -1, true, lines)
 
     M.close_msg_win()
 
     local state = {
-        width=math.max(max,msg_min_width),
-        height=#lines,
+        width=w,
+        height=h,
         style="minimal"
     }
     local win = loc and main_window()
@@ -479,22 +490,17 @@ local function handle_displayinfo(msg)
     --      `lines`
     --
     local function add_sep(lines,header,sep)
-        -- FIXME we also need to consider `max_width`, as we can only have the window
-        -- as large as the buffer/window width.
-        --
         -- Single-line output.
         if #lines == 1 and sep ~= nil then
             lines[1] = header .. sep .. lines[1]
-            table.insert(lines, 1, mk_delim(math.max(msg_min_width, width(lines[1]))))
+            table.insert(lines, 1, SEP)
             return lines
         end
 
         -- Multiline ouput with header.
-        local m = max_width(lines)
-        local l = mk_delim(math.max(msg_min_width, m))
         table.insert(lines,1,header)
-        table.insert(lines,2,l)
-        table.insert(lines,1,l)
+        table.insert(lines,2,SEP)
+        table.insert(lines,1,SEP)
         return lines
     end
 
@@ -653,66 +659,22 @@ local function handle_displayinfo(msg)
             local where = copy(g.expr)
             p = add_sep(split_lines(g.expr), "Normal Form (" .. where .. ")", " : ")
         elseif g.kind == "GoalType" then
-            -- FIXME(artem) This is a quick hack to display boundary
-            -- when using cubical agda.  Adjust the overall width 
-            -- considering boundaries as well as type/context info.
-            local max_b_len = 0
-            if #g["boundary"] > 0 then
-                table_append(p, { "Boundary: " })
-                for _,v in pairs(g.boundary) do
-                    local vs = split_lines(v)
-                    max_b_len = math.max(max_b_len, max_width(vs))
-                    table_append(p, vs)
+            -- The goal type and the type of the goal's content, then
+            -- the boundary (in Cubical Agda) and the context.
+            p = mk_decl("Goal Type", split_lines(g.type), " : ")
+            table.insert(p, 1, SEP)
+            if g.typeAux.kind == "GoalAndHave" then
+                table_append(p, mk_decl("Have Type", split_lines(g.typeAux.expr), " : "))
+            end
+            table.insert(p, SEP)
+            if #g.boundary > 0 then
+                table.insert(p, "Boundary:")
+                for _,v in ipairs(g.boundary) do
+                    table_append(p, split_lines(v))
                 end
-                table_append(p, { mk_delim(max_b_len) })
+                table.insert(p, SEP)
             end
             table_append(p, context_lines(g.entries))
-            local ty = split_lines(g.type)
-            local gt = "Goal Type : "
-            local ht = "Have Type : "
-
-            -- If there is inferred type we want to show this as well
-            local have_ty = {}
-            if g.typeAux.kind == "GoalAndHave" then
-                have_ty = split_lines(g.typeAux.expr)
-            end
-
-            -- XXX we can lift this into the add_sep, if this is a common case.
-            for k,_ in ipairs(ty) do
-                if k == 1 then
-                    ty[k] = gt .. ty[k]
-                else
-                    ty[k] = string.rep(" ", width(gt)) .. ty[k]
-                end
-            end
-            -- In case we have inferred type
-            for k,_ in ipairs(have_ty) do
-                if k == 1 then
-                    have_ty[k] = ht .. have_ty[k]
-                else
-                    have_ty[k] = string.rep(" ", width(ht)) .. have_ty[k]
-                end
-            end
-
-            local m = max_width(p)
-            m = math.max(max_width(ty),m)
-            m = math.max(max_width(have_ty),m)
-            m = math.max(msg_min_width, m)
-            local l = mk_delim(m)
-            -- Insert line at the top of context
-            table.insert(p,1,l)
-            -- Insert line at the top of goal type
-            table.insert(ty,1,l)
-            -- Add inferred type to goal type (no delimiter)
-            for _,v in ipairs(have_ty) do
-                table.insert(ty,v)
-            end
-            -- Add context to `ty`
-            for _,v in ipairs(p) do
-                table.insert(ty,v)
-            end
-            p = ty
-            --end
         elseif g.kind == "HelperFunction" then
             local where = copy(g.signature)
             p = add_sep(split_lines(g.signature), "Helper Function (" .. where .. ")")

@@ -110,6 +110,8 @@
   file was loaded (e.g. with `:split`).
 - Autocommands and mappings were added again on every load or popup;
   opening the goal-edit window twice leaked a window.
+- Popups wider than the screen are as wide as the screen, with their
+  separators drawn to that width and room for the wrapped lines.
 - Message windows are laid out by display width, so contexts with wide
   characters are aligned.
 - Records, fields, coinductive constructors, macros, pragmas and
