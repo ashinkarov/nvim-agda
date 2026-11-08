@@ -1,9 +1,9 @@
 ─────────────────────────
-Module Content
+Module Contents
 ─────────────────────────
-   T
-       : Set
-   a
-       : M.T
-   b
-       : M.T
+Modules
+  T
+Names
+  T : Set
+  a : M.T
+  b : M.T

@@ -230,10 +230,43 @@ t.test("module contents", function()
     h.stub_input("M")
     vim.cmd("AgdaModuleContents")
     h.wait_idle()
-    t.eq({ "Module Name: " }, h.prompts)
+    t.eq({ "Module name (empty for the current module): " }, h.prompts)
     local fs = h.floats()
     t.eq(1, #fs, "number of floats; messages: " .. vim.inspect(h.messages))
     t.golden("module_contents", fs[1].lines)
+end)
+
+-- Shows the contents of the module `name` (asked for) and returns the
+-- lines of the popup and the command sent.
+local function module_contents(name)
+    h.stub_input(name)
+    vim.cmd("AgdaModuleContents")
+    h.wait_idle()
+    local cmds = h.sent_commands()
+    return h.floats()[1].lines, cmds[#cmds]:match("%((Cmd.*)%)$")
+end
+
+t.test("module contents with submodules and of the current module", function()
+    h.open("module_contents_submodules", { fixture = "Modules.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local lines = module_contents("Only")
+    t.eq({ "Module Contents", "Modules", "  A", "  B", "Names" },
+         vim.tbl_filter(function(l) return not l:find("^─") end, lines))
+    lines = module_contents("")
+    t.ok(vim.tbl_contains(lines, "  Only") and vim.tbl_contains(lines, "  top : M.T"),
+         vim.inspect(lines))
+end)
+
+t.test("module contents in a goal", function()
+    h.open("module_contents_goal", { fixture = "Modules.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at("{! M !}", 1, 3)
+    local lines, cmd = module_contents("unused")
+    t.eq('Cmd_show_module_contents Simplified 0 noRange "M"', cmd)
+    t.eq({}, h.prompts)
+    t.ok(vim.tbl_contains(lines, "  T : Set"), vim.inspect(lines))
 end)
 
 -- Tests of the edits that Agda's responses make to the buffer; see the

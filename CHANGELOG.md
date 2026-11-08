@@ -100,6 +100,10 @@
   it explains the goal's content in its context, like the Emacs mode,
   and without a name it asks, suggesting the text under the cursor.
   The answer says whether it is for the top level or for a goal.
+- Module contents show the submodules, which were left out (a module
+  with only submodules looked empty), with aligned names and types like
+  the Emacs mode.  An empty module name shows the current module, and in
+  a goal the goal's content names the module, in the goal's scope.
 - Moving between goals follows the order of the file and no longer
   fails once goal 0 has been filled, or after a case split.
 

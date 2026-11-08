@@ -570,13 +570,21 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "Auto" then
         display(string.format("Auto: %s", inf.info))
     elseif inf.kind == "ModuleContents" then
-        local indent = "   "
-        local p = {}
-        for _,v in ipairs(inf.contents) do
-            table.insert(p, indent .. v.name)
-            table_append(p, mk_decl(indent .. indent, split_lines(v.term), " : "))
+        -- Like the Emacs mode: the submodules (`names`), then the other
+        -- names with their types.  The Emacs mode does not show the
+        -- `telescope` either, which Agda uses as the context of the types.
+        local indent = "  "
+        local p = {"Modules"}
+        for _,v in ipairs(inf.names) do
+            table.insert(p, indent .. v)
         end
-        mk_window(add_sep(p, "Module Content"))
+        table.insert(p, "Names")
+        local max_name_len = max_width(inf.contents, "name")
+        for _,v in ipairs(inf.contents) do
+            local name = indent .. v.name .. string.rep(" ", max_name_len - width(v.name))
+            table_append(p, mk_decl(name, split_lines(v.term), " : "))
+        end
+        mk_window(add_sep(p, "Module Contents"))
     elseif inf.kind == "WhyInScope" then
         mk_window(add_sep(split_lines(inf.message),
                       "Why `" .. inf.thing .. "' is in scope"
@@ -1493,18 +1501,24 @@ function M.agda_solve(file,id)
     end, file)
 end
 
--- TODO: show the contents of the current module.  Agda cannot resolve a
--- module's own name inside it ("Not in scope"), but an empty name gives
--- the current module (Agda 2.8.0), so the prompt should say that.  Also,
--- the ModuleContents handler only shows `contents`; it ignores `names`
--- (the submodules) and `telescope` (the module parameters), so a module
--- containing only submodules displays as empty.
+-- Show the contents of a module, like the Emacs mode: in a goal, of the
+-- module named by the goal's content in the scope of the goal (asking
+-- for the name if it is empty); otherwise of a module that we ask for,
+-- in the scope at the top level of the file.  An empty name stands for
+-- the current module: inside a module, Agda cannot resolve the module's
+-- own name ("Not in scope").
 function M.agda_module_contents(file)
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        local content = vim.fn.input("Module Name: ")
-        local e = haskell.string(content)
-        local cmd = "(Cmd_show_module_contents_toplevel Simplified " .. e .. ")"
-        agda_feed(file,cmd)
+        local prompt = "Module name (empty for the current module): "
+        local id = id_or_current_goal(nil, loc)
+        local name = id and get_trimmed_content(id) or ""
+        if name == "" then
+            name = vim.fn.input(prompt)
+        end
+        local cmd = id and ("(Cmd_show_module_contents Simplified " .. id .. " noRange ")
+                    or "(Cmd_show_module_contents_toplevel Simplified "
+        agda_feed(file, cmd .. haskell.string(name) .. ")")
     end, file)
 end
 
