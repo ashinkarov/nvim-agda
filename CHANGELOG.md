@@ -64,6 +64,9 @@
 - When Agda exits, the exit is reported and the next command starts a
   new Agda; before, every command failed until Neovim was restarted.
   The end of Agda's stderr is no longer reported as an empty error.
+- If the file changed on disk, loading it first lets Neovim reload the
+  buffer (`:checktime`), so that Agda does not check a different text
+  than the buffer shows.
 - The Agda process is stopped when its buffer is reloaded (`:edit`) or
   unloaded, rather than left running.
 - After a failed reload, goal commands no longer report "an operation

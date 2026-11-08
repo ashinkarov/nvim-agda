@@ -5,6 +5,9 @@ local constraint = require('agda.constraint')
 local messages = require('agda.msg')
 
 local M = {}
+-- Different for every instance of the module (the ftplugin creates one
+-- per buffer, and a new one when it runs again).
+M.instance = tostring(M)
 
 ------ State Variable ------
 ----------------------------
@@ -153,10 +156,6 @@ local function split_lines(s)
     -- return ls
 end
 
--- This one reiles on the presence of main_buf variable.
--- TODO we also need to consider the case when the file
---      has been changed externally.  Otherwise locations
---      and definitions wouldn't match-up.
 local function main_buf_changed()
     for _,v in pairs(vim.fn.getbufinfo()) do
         if v.bufnr == main_buf then
@@ -1165,6 +1164,20 @@ local function agda_feed (file, cmd)
 end
 
 function M.agda_load (file)
+    -- If the file changed on disk, let Neovim reload the buffer (or ask
+    -- whether to), so that Agda checks what the buffer shows; otherwise
+    -- the positions of highlighting and goals would not match.  Reloading
+    -- runs the ftplugin again, which stops the Agda of this instance of
+    -- the module and replaces it, so the new instance loads the file.
+    vim.cmd("checktime " .. main_buf)
+    local current = vim.b[main_buf].AgdaMod
+    if current ~= nil and current.instance ~= M.instance then
+        if sfunc ~= nil then
+            sfunc, sargs = nil, nil
+            warning("the file changed on disk and was reloaded, repeat the command")
+        end
+        return current.agda_load(file)
+    end
     error_count = 0
     main_file = file
     -- if the main buffer changed, save it before issuing agda (re)load.

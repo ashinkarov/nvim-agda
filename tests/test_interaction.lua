@@ -563,6 +563,21 @@ t.test("why in scope outside names asks with a guess", function()
     t.eq({ "Lib.unit" }, h.input_texts)
 end)
 
+t.test("a file changed on disk is reloaded before loading it", function()
+    h.open("changed_on_disk")
+    vim.o.autoread = true
+    local lines = vim.fn.readfile(h.ctx.file)
+    table.insert(lines, 1, "-- changed on disk")
+    vim.fn.writefile(lines, h.ctx.file)
+    local future = os.time() + 10
+    vim.uv.fs_utime(h.ctx.file, future, future)
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    vim.o.autoread = false
+    t.eq("-- changed on disk", h.lines()[1])
+    t.ok(vim.tbl_contains(h.highlights(), "1:0-6 Keyword module"), vim.inspect(h.highlights()))
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")
