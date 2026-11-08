@@ -19,7 +19,7 @@ Emacs commands (with their keys) that the plugin does not have:
 | Goal type | `C-c C-t` | `Cmd_goal_type` | Only the goal type, without the context (the plugin has goal type and context). |
 | Goal type, context and checked type | `C-c C-;` | `Cmd_goal_type_context_check` | Would also need the `GoalAndElaboration` answer. |
 | Search about | `C-c C-z` | `Cmd_search_about_toplevel` | Would also need the `SearchAbout` answer. |
-| Show goals | `C-c C-?` | `Cmd_metas` | The plugin's `:PrintGoals` lists the goal positions it knows; Agda's list (with types, as shown after a load) is not requested. |
+| Show goals | `C-c C-?` | `Cmd_metas` | **Implemented:** `\?` and `:PrintGoals` show Agda's list of goals, warnings and errors, as after a load. |
 | Abort | `C-c C-x C-a` | `Cmd_abort` | Stops a running command without stopping Agda; would also need `DoneAborting`. |
 | Compile | `C-c C-x C-c` | `Cmd_compile` | Would also need the `CompilationOk` answer. |
 | Backend interaction | `C-c C-i` | `Cmd_backend_top`, `Cmd_backend_hole` | |

@@ -26,6 +26,8 @@
 - The file is reloaded after a case split, like in the Emacs mode.
 - `:ShowImplicit` and `:HideImplicit` last until changed; Agda reset the
   choice on every load.
+- `\?` (`:PrintGoals`) shows Agda's list of goals with their types, as
+  after a load, instead of the positions of the goals.
 - Goals are listed like Agda prints them (`?0 : 𝔹`, and invisible goals
   with their position) rather than as `0 OfType 𝔹`.
 

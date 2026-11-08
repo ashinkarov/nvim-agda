@@ -21,6 +21,7 @@ t.test("load reports goals", function()
     load("goals")
     h.messages = {}
     vim.cmd("PrintGoals")
+    h.wait_idle()
     local out = table.concat(h.messages, "\n"):gsub(vim.pesc(h.ctx.dir), "$DIR")
     t.golden("goals", vim.split(out, "\n"))
 end)

@@ -638,7 +638,7 @@ local function handle_displayinfo(msg)
                 table.insert(m, indent .. constraint.show_at(v, v.constraintObj.range))
             end
         end
-        display(table.concat(m, "\n"))
+        display(#m > 0 and table.concat(m, "\n") or "No goals, warnings or errors")
     elseif inf.kind == "Constraints" then
         if #inf.constraints == 0 then
             return display("No constraints")
@@ -1238,18 +1238,12 @@ function M.agda_context(file)
 end
 
 
+-- Show the goals (and warnings and errors) as Agda lists them after a
+-- load, like the Emacs mode.
 function M.agda_show_goals(file)
-    local g = ""
-    local c = 0
-    for _,v in pairs(goals) do
-        g = g .. string.format("#%02d    line %03d: ?\n", c, v.start.line)
-        c = c + 1
-    end
-    if c > 0 then
-        display(string.format("%d goal(s) in %s\n", c, file) .. g)
-    else
-        display(string.format("no goals in %s", file))
-    end
+    wrap_goal_action(function ()
+        agda_feed(file, "(Cmd_metas Simplified)")
+    end, file)
 end
 
 -- The start positions of the goals in the order of the file.
