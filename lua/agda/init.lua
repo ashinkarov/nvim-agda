@@ -65,6 +65,14 @@ local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 -- The extmarks in `hl_ns` by the range they highlight ("start-end"
 -- offsets as sent by Agda), a list for every range.
 local hl_marks = {}
+-- The names in the highlighting, by the first extmark of their range:
+-- {site = {filepath, position}, atoms = {...}} with the definition site
+-- of the name as Agda sends it.  The extmarks move with edits, so the
+-- name under the cursor can be found after the buffer was changed.
+local hl_names = {}
+-- The first extmark of the range that starts at an offset, for the names
+-- in `hl_names`, to find definitions in this file after edits.
+local hl_name_at = {}
 
 
 ------ Helper functions ------
@@ -385,20 +393,29 @@ local function handle_hl(msg)
     -- name and the underline of a coverage problem); earlier groups get
     -- a higher priority, as Agda sends the other aspects (errors and
     -- problems) before the kind of name.
-    local function set_hl(key, s, e, groups)
+    --
+    -- Names (`v` with a definition site) are remembered in `hl_names`
+    -- with the first extmark, which is added without a group if there is
+    -- none.
+    local function set_hl(key, s, e, groups, v)
         for _, id in ipairs(hl_marks[key] or {}) do
             vim.api.nvim_buf_del_extmark(main_buf, hl_ns, id)
+            hl_names[id] = nil
         end
         local ids = {}
-        for i, group in ipairs(groups) do
+        for i = 1, math.max(#groups, v and 1 or 0) do
             ids[i] = vim.api.nvim_buf_set_extmark(main_buf, hl_ns, s[1], s[2], {
                 end_row = e[1],
                 end_col = e[2],
-                hl_group = group,
+                hl_group = groups[i],
                 priority = vim.hl.priorities.user + #groups - i,
             })
         end
         hl_marks[key] = ids
+        if v then
+            hl_names[ids[1]] = {site = v.definitionSite, atoms = v.atoms}
+            hl_name_at[v.range[1]] = ids[1]
+        end
     end
 
     -- `info` is missing if Agda wrote the highlighting to a file
@@ -416,10 +433,15 @@ local function handle_hl(msg)
         if s == nil or e == nil then
             -- Only if the file that Agda loaded differs from the buffer.
             dprint("handle_hl: range outside the buffer " .. vim.inspect(v))
-        elseif #groups > 0 then
+        else
+            -- Agda sends `"definitionSite": null` for ranges that are not
+            -- names.
+            local name = v.definitionSite ~= nil and v.definitionSite ~= vim.NIL
             -- Updates without groups (e.g. only `typechecks`) keep the
             -- earlier highlighting.
-            set_hl(r[1] .. "-" .. r[2], s, e, groups)
+            if #groups > 0 or name then
+                set_hl(r[1] .. "-" .. r[2], s, e, groups, name and v)
+            end
         end
     end
     end
@@ -967,6 +989,8 @@ local function handle_msg(msg)
     elseif msg.kind == "ClearHighlighting" then
         vim.api.nvim_buf_clear_namespace(main_buf,hl_ns,0,-1)
         hl_marks = {}
+        hl_names = {}
+        hl_name_at = {}
     else
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))

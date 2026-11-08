@@ -336,7 +336,7 @@ function M.lines(buf)
 end
 
 -- Highlights in the plugin's namespace, one line per highlighted
--- segment: "row:startcol-endcol Group text", where columns are bytes and
+-- segment (extmarks without a group are left out): "row:startcol-endcol Group text", where columns are bytes and
 -- multi-line marks are split per line.
 function M.highlights(buf)
     buf = buf or M.ctx.buf
@@ -350,7 +350,8 @@ function M.highlights(buf)
             local l = lines[r + 1] or ""
             local s = (r == row) and col or 0
             local e = (r == erow) and ecol or #l
-            if e > s then
+            -- Names without a group are marked only to find them.
+            if e > s and d.hl_group then
                 table.insert(segs, { r, s, e, d.hl_group, l:sub(s + 1, e) })
             end
         end
