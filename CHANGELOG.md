@@ -33,6 +33,8 @@
 
 ### Added
 
+- Search about (`\z`, `:AgdaSearchAbout`) lists the definitions whose
+  types mention the given names, like `C-c C-z` in the Emacs mode.
 - `:AgdaVersion` shows the version of the running Agda.
 - `:ShowIrrelevant` and `:HideIrrelevant` show or hide irrelevant
   arguments, and the choice lasts across reloads.

@@ -76,6 +76,7 @@ commands have to do with management of the popups and goal editing.
 | h | Helper function for the goal |
 | o | Show the content of the module |
 | w | Explain why a name is in scope: the goal's content in a goal, otherwise the name under the cursor (an operator part such as `∧` stands for `_∧_`) |
+| z | Search about: the definitions whose types mention the given names |
 | ? | Show the goals with their types, and warnings and errors |
 | f | Go to the next goal |
 | b | Go to the previous goal |
@@ -93,8 +94,8 @@ The regular `:q` command would work as well.
 and `:ShowIrrelevant` and `:HideIrrelevant` irrelevant ones; the choice
 lasts across reloads.
 
-Outside goals, why in scope, infer and compute work in the scope at the
-top level of the file, as in the Emacs mode: names that a nested module
+Outside goals, why in scope, search about, infer and compute work in
+the scope at the top level of the file, as in the Emacs mode: names that a nested module
 opens or imports are not in scope there.  To ask in the scope of a
 place inside a module, put a goal (`?`) there and use the command in
 the goal.
@@ -136,11 +137,9 @@ Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
 
 ### Missing functionality
-Compared with the Emacs mode, the plugin does not yet have search
-about, the goal type alone or with the checked type, aborting a command,
-compiling, or backend commands.  The
-normalisation and compute modes are fixed (Emacs chooses them with a
-prefix argument), the messages that Agda attaches to highlighted ranges
+Compared with the Emacs mode, the plugin does not yet have aborting a
+command, compiling, or backend commands.  The normalisation and compute
+modes are fixed (Emacs chooses them with a prefix argument), the messages that Agda attaches to highlighted ranges
 (such as errors) are not shown, and typing an input sequence such as
 `\alpha` gives no feedback until it is complete.  See
 [doc/missing.md](doc/missing.md) for the full list.

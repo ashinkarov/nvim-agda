@@ -660,6 +660,17 @@ local function handle_displayinfo(msg)
             end
         end
         display(table.concat(m, "\n"))
+    elseif inf.kind == "SearchAbout" then
+        if #inf.results == 0 then
+            return display("No definitions about " .. inf.search)
+        end
+        -- Like module contents, with the types below the names.
+        local p = {}
+        for _,v in ipairs(inf.results) do
+            table.insert(p, v.name)
+            table_append(p, mk_decl("  ", split_lines(v.term), " : "))
+        end
+        mk_window(add_sep(p, "Definitions about " .. inf.search))
     elseif inf.kind == "Version" then
         display("Agda version " .. inf.version)
     elseif inf.kind == "IntroNotFound" then
@@ -1758,6 +1769,18 @@ end
 function M.hide_implicit(file)
     vim.b[main_buf].agda_show_implicit = false
     agda_feed(file, "(ShowImplicitArgs False)")
+end
+
+-- Search for the definitions whose types mention the given names, like
+-- the Emacs mode's search about.  Agda searches in the scope at the top
+-- level of the file.
+function M.agda_search_about(file)
+    wrap_goal_action(function ()
+        local s = vim.fn.input("Search about: ")
+        if s ~= "" then
+            agda_feed(file, "(Cmd_search_about_toplevel Simplified " .. haskell.string(s) .. ")")
+        end
+    end, file)
 end
 
 -- Show the version of the running Agda, with the commit it was built

@@ -82,6 +82,7 @@ command! -buffer AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
 command! -buffer AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
 command! -buffer AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
 command! -buffer AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
+command! -buffer AgdaSearchAbout :call b:AgdaMod.agda_search_about(expand("%:p"))
 command! -buffer AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
 
 command! -buffer ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
@@ -113,6 +114,7 @@ nnoremap <buffer> <nowait> <LocalLeader>s :<c-u>AgdaSolve<cr>
 nnoremap <buffer> <nowait> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
 nnoremap <buffer> <nowait> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
 nnoremap <buffer> <nowait> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
+nnoremap <buffer> <nowait> <LocalLeader>z :<c-u>AgdaSearchAbout<cr>
 nnoremap <buffer> <nowait> <LocalLeader>e :<c-u>MkPrompt<cr>
 nnoremap <buffer> <nowait> <LocalLeader>? :<c-u>PrintGoals<cr>
 nnoremap <buffer> <nowait> <LocalLeader>f :<c-u>GoalNext<cr>

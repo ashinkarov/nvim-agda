@@ -16,9 +16,9 @@ Emacs commands (with their keys) that the plugin does not have:
 |---|---|---|---|
 | Give | `C-c C-SPC` | `Cmd_give` | The plugin gives through refine (`Cmd_refine_or_intro`), which behaves the same when the expression fits the goal. |
 | Elaborate and give | `C-c C-m` | `Cmd_elaborate_give` | **Implemented:** `\m`, `:AgdaElaborateGive`, with `Simplified` (the Emacs default). |
-| Goal type | `C-c C-t` | `Cmd_goal_type` | Only the goal type, without the context (the plugin has goal type and context). |
-| Goal type, context and checked type | `C-c C-;` | `Cmd_goal_type_context_check` | Would also need the `GoalAndElaboration` answer. |
-| Search about | `C-c C-z` | `Cmd_search_about_toplevel` | Would also need the `SearchAbout` answer. |
+| Goal type | `C-c C-t` | `Cmd_goal_type` | **Won't implement:** only the goal type, without the context; `\,` shows both, and the type comes first. |
+| Goal type, context and checked type | `C-c C-;` | `Cmd_goal_type_context_check` | **Won't implement:** like `\.`, but shows the goal's content checked against the goal type and normalised instead of its type, i.e. what elaborate and give (`\m`) would put in; `\m` and `\n` cover this. |
+| Search about | `C-c C-z` | `Cmd_search_about_toplevel` | **Implemented:** `\z`, `:AgdaSearchAbout`. |
 | Show goals | `C-c C-?` | `Cmd_metas` | **Implemented:** `\?` and `:PrintGoals` show Agda's list of goals, warnings and errors, as after a load. |
 | Abort | `C-c C-x C-a` | `Cmd_abort` | Stops a running command without stopping Agda; would also need `DoneAborting`. |
 | Compile | `C-c C-x C-c` | `Cmd_compile` | Would also need the `CompilationOk` answer. |
@@ -74,7 +74,7 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
 * `Mimer`, `DoneAborting`, `DoneExiting`: not sent for the commands the
   plugin uses.
 * `DisplayInfo` kinds for commands the plugin does not send:
-  `CompilationOk`, `Time`, `SearchAbout`, the goal-specific
+  `CompilationOk`, `Time`, the goal-specific
   `CurrentGoal`, and the `GoalAndElaboration` part of a goal type.  If
   they arrive, the plugin says that it cannot show them.
 * Highlighting:
