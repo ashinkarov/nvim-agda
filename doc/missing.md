@@ -25,7 +25,7 @@ Emacs commands (with their keys) that the plugin does not have:
 | Backend interaction | `C-c C-i` | `Cmd_backend_top`, `Cmd_backend_hole` | |
 | Restart | `C-c C-x C-r` | | `:AgdaStop`, then any command starts a new Agda. |
 | Remove annotations | `C-c C-x C-d` | | Remove the goals and the highlighting. |
-| Toggle irrelevant arguments | `C-c C-x C-i` | `ShowIrrelevantArgs`, `ToggleIrrelevantArgs` | Like `:ShowImplicit` and `:HideImplicit`; the choice would also have to be passed on every load (`--show-irrelevant`). |
+| Toggle irrelevant arguments | `C-c C-x C-i` | `ShowIrrelevantArgs` | **Implemented:** `:ShowIrrelevant`, `:HideIrrelevant`, kept across reloads like the implicit ones. |
 | Version | | `Cmd_show_version` | Would also need the `Version` answer. |
 | Switch Agda version | `C-c C-x C-s` | | The binary is set in `g:nvim_agda_settings`. |
 | Comment the rest of the buffer | `C-c C-x M-;` | | |
@@ -62,7 +62,8 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
   text of the goal as written (and `GiveAction` always has `str`, never
   `paren`).  The Emacs mode sends the goal's range when the input comes
   from the goal.
-* **Load options**: `Cmd_load` gets only `--show-implicit` (when set).
+* **Load options**: `Cmd_load` gets only `--show-implicit` and
+  `--show-irrelevant` (when set).
 * **Highlighting**: commands always ask for `Interactive` highlighting
   sent `Direct`ly, which is what an editor needs.
 

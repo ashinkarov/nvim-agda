@@ -33,6 +33,8 @@
 
 ### Added
 
+- `:ShowIrrelevant` and `:HideIrrelevant` show or hide irrelevant
+  arguments, and the choice lasts across reloads.
 - Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with
   its content checked and simplified, like `C-c C-m` in the Emacs mode.
 - `CTRL-]` jumps to the definition of the name under the cursor, and

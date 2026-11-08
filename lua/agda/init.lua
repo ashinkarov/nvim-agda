@@ -1172,8 +1172,15 @@ function M.agda_load (file)
 
     -- Agda resets the options on every load, so we pass the ones the
     -- user chose.
-    local opts = vim.b[main_buf].agda_show_implicit and '["--show-implicit"]' or "[]"
-    agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " " .. opts .. ")")
+    local opts = {}
+    if vim.b[main_buf].agda_show_implicit then
+        table.insert(opts, haskell.string("--show-implicit"))
+    end
+    if vim.b[main_buf].agda_show_irrelevant then
+        table.insert(opts, haskell.string("--show-irrelevant"))
+    end
+    agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " ["
+                    .. table.concat(opts, ",") .. "])")
 end
 
 ------ Goal-specific helper functions ------
@@ -1728,9 +1735,10 @@ function M.edit_goal(file)
     end, file)
 end
 
--- Show or hide implicit arguments.  Agda forgets the choice when it
--- loads the file, so we remember it in a buffer variable (which also
--- survives a new instance of the module) and pass it with every load.
+-- Show or hide implicit (and irrelevant) arguments.  Agda forgets the
+-- choice when it loads the file, so we remember it in a buffer variable
+-- (which also survives a new instance of the module) and pass it with
+-- every load.
 function M.show_implicit(file)
     vim.b[main_buf].agda_show_implicit = true
     agda_feed(file, "(ShowImplicitArgs True)")
@@ -1739,6 +1747,16 @@ end
 function M.hide_implicit(file)
     vim.b[main_buf].agda_show_implicit = false
     agda_feed(file, "(ShowImplicitArgs False)")
+end
+
+function M.show_irrelevant(file)
+    vim.b[main_buf].agda_show_irrelevant = true
+    agda_feed(file, "(ShowIrrelevantArgs True)")
+end
+
+function M.hide_irrelevant(file)
+    vim.b[main_buf].agda_show_irrelevant = false
+    agda_feed(file, "(ShowIrrelevantArgs False)")
 end
 
 return M

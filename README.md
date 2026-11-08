@@ -89,6 +89,10 @@ commands have to do with management of the popups and goal editing.
 Within the goal-edit window, `q` is mapped to close the window.
 The regular `:q` command would work as well.
 
+`:ShowImplicit` and `:HideImplicit` show or hide implicit arguments,
+and `:ShowIrrelevant` and `:HideIrrelevant` irrelevant ones; the choice
+lasts across reloads.
+
 Outside goals, why in scope, infer and compute work in the scope at the
 top level of the file, as in the Emacs mode: names that a nested module
 opens or imports are not in scope there.  To ask in the scope of a
@@ -132,8 +136,7 @@ for example a name keeps its colour in a clause with missing cases.
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not yet have search
 about, the goal type alone or with the checked type, aborting a command,
-compiling, backend commands, removing annotations, or showing irrelevant
-arguments.  The
+compiling, backend commands, or removing annotations.  The
 normalisation and compute modes are fixed (Emacs chooses them with a
 prefix argument), the messages that Agda attaches to highlighted ranges
 (such as errors) are not shown, and typing an input sequence such as

@@ -653,6 +653,25 @@ t.test("showing implicit arguments survives reloads", function()
            "(Cmd_load " .. file .. " [])" }, cmds)
 end)
 
+t.test("showing irrelevant arguments survives reloads", function()
+    load("irrelevant_args")
+    vim.cmd("ShowIrrelevant")
+    vim.cmd("ShowImplicit")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    vim.cmd("HideIrrelevant")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local cmds = vim.tbl_map(function(c) return c:match("Direct (.*)$") end, h.sent_commands())
+    local file = haskell_string(h.ctx.file)
+    t.eq({ "(Cmd_load " .. file .. " [])",
+           "(ShowIrrelevantArgs True)",
+           "(ShowImplicitArgs True)",
+           "(Cmd_load " .. file .. ' ["--show-implicit","--show-irrelevant"])',
+           "(ShowIrrelevantArgs False)",
+           "(Cmd_load " .. file .. ' ["--show-implicit"])' }, cmds)
+end)
+
 -- Like the Emacs mode without a prefix argument: a plain lambda, not a
 -- pattern-matching one.
 t.test("refine on an empty goal of function type introduces a lambda", function()

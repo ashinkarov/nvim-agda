@@ -85,6 +85,8 @@ command! -buffer AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expan
 
 command! -buffer ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
 command! -buffer HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
+command! -buffer ShowIrrelevant :call b:AgdaMod.show_irrelevant(expand("%:p"))
+command! -buffer HideIrrelevant :call b:AgdaMod.hide_irrelevant(expand("%:p"))
 
 command! -buffer MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
 command! -buffer PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
