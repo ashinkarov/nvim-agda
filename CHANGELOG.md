@@ -47,6 +47,8 @@
   proposed fix in Agda.
 - `doc/agda-upstream.md` collects other places where Agda's interaction
   interface could be improved.
+- `doc/missing.md` lists what the plugin does not do yet compared with
+  the Emacs mode and Agda's interface; the README's todo list is gone.
 
 ### Fixed
 

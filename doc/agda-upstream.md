@@ -144,3 +144,15 @@ which are wrong as soon as the editor has inserted the clauses.
 
 *Proposal:* do not send them after a case split, or say in the
 documentation that the file has to be reloaded.
+
+## 10. Everything goes to stdout
+
+Agda writes all its output to stdout: the json responses, the errors in
+them, the plain-text command errors (item 4) and the prompt.  Writing
+errors (or at least the non-json ones) to stderr would let a client
+tell them apart without parsing, but it would change what existing
+clients see, so it is a nice-to-have that needs a breaking change (or a
+new option).
+
+*Plugin:* reads stdout only for responses; non-json lines are reported
+as errors, and stderr output is reported as well.

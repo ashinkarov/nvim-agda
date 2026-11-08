@@ -128,23 +128,16 @@ scheme or configuration:
 Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
 
-### Todo
-  * Implement remaining commands from the original `agda-mode`
-  * Asynchronous communication quirks:
-    - Errors are printed on `stdout` (not `stderr`)
-  * If highlighting information arrives, and the file is modified --- should we
-    attempt to colorise all but modified pieces?  This is a typical case whe
-    happening big files.  Agda is very slow, and it is tempting to edit a few
-    things before the colors arrive.
-  * Utf-8 input is happening via defining insert mode shortcuts, so there
-    is no visual response when one is typing things like `\alpha`.  Should
-    we implement a [which-key](https://github.com/liuchengxu/vim-which-key)
-    for the insert mode?
-
-### Done
-  * Support working with multiple files.  Currently we assume a single
-    file per vim instance.  See issue [#1](https://github.com/ashinkarov/nvim-agda/issues/1) for more details.
-
+### Missing functionality
+Compared with the Emacs mode, the plugin does not yet have give with
+force, elaborate and give, search about, the goal type alone or with
+the checked type, aborting a command, compiling, backend commands,
+removing annotations, or showing irrelevant arguments.  The
+normalisation and compute modes are fixed (Emacs chooses them with a
+prefix argument), the messages that Agda attaches to highlighted ranges
+(such as errors) are not shown, and typing an input sequence such as
+`\alpha` gives no feedback until it is complete.  See
+[doc/missing.md](doc/missing.md) for the full list.
 
 # Development
 
