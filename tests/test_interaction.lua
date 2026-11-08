@@ -380,6 +380,7 @@ t.test("highlight groups", function()
     t.eq(0x353535, vim.api.nvim_get_hl(0, { name = "AgdaHole" }).bg)
     t.eq(0x354657, vim.api.nvim_get_hl(0, { name = "NoDefinition" }).bg)
     t.eq("AgdaHole", vim.api.nvim_get_hl(0, { name = "AgdaUnsolvedMeta" }).link)
+    t.eq("DiagnosticUnderlineWarn", vim.api.nvim_get_hl(0, { name = "AgdaCoverageProblem" }).link)
 end)
 
 -- The error is at `名前` (line 7, column 7 in code points).
@@ -450,6 +451,13 @@ t.test("refine on an empty goal", function()
     h.wait_idle()
     t.eq({ "Don't know which constructor to introduce of tt or ff",
            "No introduction forms found." }, h.messages)
+end)
+
+t.test("highlighting of records, fields and problems", function()
+    h.open("highlight_problems", { fixture = "Problems.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.golden("highlight_problems", h.highlights())
 end)
 
 t.test("unsolved metas have their own highlight group", function()

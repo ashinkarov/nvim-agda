@@ -90,16 +90,28 @@ The regular `:q` command would work as well.
 
 ### Highlighting
 Agda's highlighting uses the standard highlight groups (`Keyword`,
-`Type`, ...) and groups of its own, which you can set in your
-colour scheme or configuration:
+`Type`, ...) and groups of its own, which you can set in your colour
+scheme or configuration:
 
-| Group | Highlights |
-|:-----:| ---------- |
-| `AgdaHole` | Goals |
-| `AgdaUnsolvedMeta` | Unsolved metas (linked to `AgdaHole`) |
-| `NonTerminating` | Termination problems |
-| `NoDefinition` | Missing definitions |
+| Group | Highlights | Default |
+|:-----:| ---------- | ------- |
+| `AgdaHole` | Goals | dark grey background |
+| `AgdaUnsolvedMeta` | Unsolved metas | `AgdaHole` |
+| `AgdaUnsolvedConstraint` | Unsolved constraints | `AgdaUnsolvedMeta` |
+| `NonTerminating` | Termination problems | red background |
+| `NoDefinition` | Missing definitions | blue background |
+| `AgdaCoverageProblem` | Missing cases | `DiagnosticUnderlineWarn` |
+| `AgdaIncompletePattern` | Incomplete patterns | `DiagnosticUnderlineWarn` |
+| `AgdaPositivityProblem` | Positivity problems | `DiagnosticUnderlineWarn` |
+| `AgdaInstanceProblem` | Instance problems | `DiagnosticUnderlineWarn` |
+| `AgdaConfluenceProblem` | Confluence problems | `DiagnosticUnderlineWarn` |
+| `AgdaErrorWarning` | Warnings that are errors | `DiagnosticUnderlineError` |
+| `AgdaShadowingInTelescope` | Shadowed names in telescopes | `DiagnosticUnderlineHint` |
+| `AgdaCosmeticProblem` | Cosmetic problems | `DiagnosticUnderlineHint` |
+| `AgdaDeadcode` | Unreachable clauses | `DiagnosticUnnecessary` |
 
+Problems are highlighted on top of the highlighting of names, so that
+for example a name keeps its colour in a clause with missing cases.
 
 ### Todo
   * Implement remaining commands from the original `agda-mode`

@@ -65,7 +65,7 @@ local debug_p = false
 -- Highlighting namespace.
 local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 -- The extmarks in `hl_ns` by the range they highlight ("start-end"
--- offsets as sent by Agda).
+-- offsets as sent by Agda), a list for every range.
 local hl_marks = {}
 
 
@@ -337,72 +337,95 @@ local function offset_pos(offset)
     end
 end
 
+-- The highlight groups of the atoms in Agda's highlighting: the aspects
+-- and kinds of names, then the other aspects (src/full/Agda/Syntax/
+-- Common/Aspect.hs and `toAtoms` in src/full/Agda/Interaction/
+-- Highlighting/Common.hs, Agda 2.8.0).  Atoms that are not here, such
+-- as `symbol`, `operator`, `typechecks` and `dottedpattern`, are not
+-- highlighted.  The ftplugin defines the groups starting with Agda.
+local hl_groups = {
+    comment = "Comment",
+    keyword = "Keyword",
+    string = "String",
+    number = "Number",
+    hole = "AgdaHole",
+    primitivetype = "Type",
+    pragma = "PreProc",
+    bound = "Identifier",
+    generalizable = "Identifier",
+    argument = "Identifier",
+    inductiveconstructor = "Constant",
+    coinductiveconstructor = "Constant",
+    datatype = "Type",
+    record = "Type",
+    field = "Identifier",
+    ["function"] = "Operator",
+    macro = "Macro",
+    module = "Structure",
+    postulate = "PreProc",
+    primitive = "PreProc",
+
+    error = "Error",
+    errorwarning = "AgdaErrorWarning",
+    unsolvedmeta = "AgdaUnsolvedMeta",
+    unsolvedconstraint = "AgdaUnsolvedConstraint",
+    terminationproblem = "NonTerminating",
+    positivityproblem = "AgdaPositivityProblem",
+    deadcode = "AgdaDeadcode",
+    shadowingintelescope = "AgdaShadowingInTelescope",
+    coverageproblem = "AgdaCoverageProblem",
+    incompletepattern = "AgdaIncompletePattern",
+    missingdefinition = "NoDefinition",
+    instanceproblem = "AgdaInstanceProblem",
+    cosmeticproblem = "AgdaCosmeticProblem",
+    catchallclause = "Folded",
+    confluenceproblem = "AgdaConfluenceProblem",
+}
+
 local function handle_hl(msg)
     -- Highlight the text from `s` to `e` (exclusive), which is the range
-    -- `key`, with `group`.  During a load Agda sends the same ranges
+    -- `key`, with `groups`.  During a load Agda sends the same ranges
     -- several times, so we replace the earlier highlighting of exactly
-    -- the same range rather than adding another one.
-    local function set_hl(key, s, e, group)
-        hl_marks[key] = vim.api.nvim_buf_set_extmark(main_buf, hl_ns, s[1], s[2], {
-            id = hl_marks[key],
-            end_row = e[1],
-            end_col = e[2],
-            hl_group = group,
-            priority = vim.hl.priorities.user,
-        })
-    end
-
-    -- Convert the names of the agda hl groups into the
-    -- Vim ones.  TODO replace with table.
-    local function translate_hl_group(name)
-        if     (name == "keyword")  then return "Keyword"
-        elseif (name == "symbol")   then return "Normal"
-        elseif (name == "datatype") then return "Type"
-        -- XXX we can give a distinct color to primitive types if we want to
-        elseif (name == "primitivetype") then return "Type"
-        elseif (name == "function") then return "Operator"
-        elseif (name == "bound") then return "Identifier"
-        elseif (name == "inductiveconstructor") then return "Constant"
-        elseif (name == "number") then return "Number"
-        elseif (name == "comment") then return "Comment"
-        elseif (name == "hole") then return "AgdaHole"
-        elseif (name == "unsolvedmeta") then return "AgdaUnsolvedMeta"
-        elseif (name == "string") then return "String"
-        elseif (name == "catchallclause") then return "Folded"
-        -- XXX I am not sure what's the purpose of highlighting
-        --     areas that have been typechecked with a different color...
-        elseif (name == "typechecks") then return "Normal"
-        elseif (name == "module") then return "Structure"
-        elseif (name == "postulate") then return "PreProc"
-        elseif (name == "primitive") then return "PreProc"
-        elseif (name == "error") then return "Error"
-        elseif (name == "terminationproblem") then return "NonTerminating"
-        elseif (name == "missingdefinition") then return "NoDefinition"
-        -- TODO add more!
-        else
-            --name = name or "nil, WEIRD!!!"
-            --dprint("Don't know hl-group for " .. name)
-            return "Normal"
+    -- the same range rather than adding to it.  Every group gets its own
+    -- extmark, so that their attributes combine (e.g. the colour of a
+    -- name and the underline of a coverage problem); earlier groups get
+    -- a higher priority, as Agda sends the other aspects (errors and
+    -- problems) before the kind of name.
+    local function set_hl(key, s, e, groups)
+        for _, id in ipairs(hl_marks[key] or {}) do
+            vim.api.nvim_buf_del_extmark(main_buf, hl_ns, id)
         end
+        local ids = {}
+        for i, group in ipairs(groups) do
+            ids[i] = vim.api.nvim_buf_set_extmark(main_buf, hl_ns, s[1], s[2], {
+                end_row = e[1],
+                end_col = e[2],
+                hl_group = group,
+                priority = vim.hl.priorities.user + #groups - i,
+            })
+        end
+        hl_marks[key] = ids
     end
-
 
     -- `info` is missing if Agda wrote the highlighting to a file
     -- ("direct": false), which it does not do when we ask for Direct.
     if msg.info then
     for _, v in pairs(msg.info.payload) do
         local r = v.range
-        -- FIXME s sometimes can be nil... Why?
         local s = offset_pos(r[1])
         local e = offset_pos(r[2])
+        local groups = {}
+        for _, atom in ipairs(v.atoms) do
+            table.insert(groups, hl_groups[atom])
+        end
 
         if s == nil or e == nil then
-            dprint("handle_hl: crazy s=nil state " .. vim.inspect(v))
-        elseif #v.atoms > 0 then
-            local g = translate_hl_group(v.atoms[1])
-            if g ~= "Normal" then
-                set_hl(r[1] .. "-" .. r[2], s, e, g)
-            end
+            -- Only if the file that Agda loaded differs from the buffer.
+            dprint("handle_hl: range outside the buffer " .. vim.inspect(v))
+        elseif #groups > 0 then
+            -- Updates without groups (e.g. only `typechecks`) keep the
+            -- earlier highlighting.
+            set_hl(r[1] .. "-" .. r[2], s, e, groups)
         end
     end
     end

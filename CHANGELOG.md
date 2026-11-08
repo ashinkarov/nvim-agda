@@ -95,5 +95,11 @@
   opening the goal-edit window twice leaked a window.
 - Message windows are laid out by display width, so contexts with wide
   characters are aligned.
+- Records, fields, coinductive constructors, macros, pragmas and
+  generalizable variables are highlighted, as are coverage, positivity,
+  instance and confluence problems, incomplete patterns, unreachable
+  clauses and shadowed names, with new groups linked to Neovim's
+  diagnostic groups.  Problems are shown on top of the highlighting of
+  names.
 - Highlighting no longer creates duplicate extmarks for ranges that
   Agda sends several times during a load.

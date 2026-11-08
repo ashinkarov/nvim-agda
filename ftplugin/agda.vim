@@ -25,6 +25,16 @@ setlocal comments=s1fl:{-,mb:-,ex:-},:-- commentstring=--\ %s
 function! s:Highlights()
     hi default AgdaHole ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
     hi default link AgdaUnsolvedMeta AgdaHole
+    hi default link AgdaUnsolvedConstraint AgdaUnsolvedMeta
+    hi default link AgdaErrorWarning DiagnosticUnderlineError
+    hi default link AgdaPositivityProblem DiagnosticUnderlineWarn
+    hi default link AgdaCoverageProblem DiagnosticUnderlineWarn
+    hi default link AgdaIncompletePattern DiagnosticUnderlineWarn
+    hi default link AgdaInstanceProblem DiagnosticUnderlineWarn
+    hi default link AgdaConfluenceProblem DiagnosticUnderlineWarn
+    hi default link AgdaShadowingInTelescope DiagnosticUnderlineHint
+    hi default link AgdaCosmeticProblem DiagnosticUnderlineHint
+    hi default link AgdaDeadcode DiagnosticUnnecessary
     hi default NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
     hi default NoDefinition ctermbg=Brown gui=NONE guibg=#354657
 endfunction
