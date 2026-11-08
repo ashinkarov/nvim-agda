@@ -137,8 +137,9 @@ Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
 
 ### Missing functionality
-Compared with the Emacs mode, the plugin does not yet have aborting a
-command, compiling, or backend commands.  The normalisation and compute
+Compared with the Emacs mode, the plugin does not have aborting a
+command (use `:AgdaStop`, which has the same effect), compiling, or
+backend commands.  The normalisation and compute
 modes are fixed (Emacs chooses them with a prefix argument), the
 messages that Agda attaches to highlighted ranges (such as errors) are
 not shown, and typing an input sequence such as `\alpha` gives no

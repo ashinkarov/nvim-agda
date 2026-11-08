@@ -20,7 +20,7 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Backend interaction | `C-c C-i` | **Missing:** `Cmd_backend_top`, `Cmd_backend_hole`. |
 | Quit | `C-c C-x C-q` | **Works:** `:AgdaStop`. |
 | Restart | `C-c C-x C-r` | **Won't implement:** `:AgdaStop` followed by `\l` (or any command) does the same, e.g. for an Agda that is stuck or after upgrading it; a command would only save a step. |
-| Abort | `C-c C-x C-a` | **Missing:** `Cmd_abort`; the plugin would have to drop a postponed goal command and close waiting popups (`DoneAborting`). |
+| Abort | `C-c C-x C-a` | **Won't implement (for now):** after `Cmd_abort` Agda goes back to the state it keeps across loads (`maybeAbort` in `Interaction/InteractionTop.hs`), so the loaded file and its goals are gone and the file has to be loaded again, as after `:AgdaStop`.  Abort only keeps the imported modules in memory, whereas a new Agda reads them from their `.agdai` files. |
 | Remove annotations | `C-c C-x C-d` | **Won't implement:** in Emacs goals are overlays that get in the way of editing, and this turns them back into text and removes the highlighting.  Here goals are plain text and highlighting is only colour, and misplaced highlighting after edits is better fixed by reloading. |
 | Toggle implicit arguments | `C-c C-x C-h` | **Works:** `:ShowImplicit`, `:HideImplicit`.  Unlike in Emacs, the choice lasts across reloads. |
 | Toggle irrelevant arguments | `C-c C-x C-i` | **Works:** `:ShowIrrelevant`, `:HideIrrelevant`, also lasting across reloads. |
