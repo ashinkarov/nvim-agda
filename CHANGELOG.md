@@ -24,6 +24,8 @@
   not reachable in Agda buffers.
 - `\bx` inserts `⊠`, as in Agda's Emacs mode; `𝕩` is `\bsx`.
 - The file is reloaded after a case split, like in the Emacs mode.
+- `:ShowImplicit` and `:HideImplicit` last until changed; Agda reset the
+  choice on every load.
 - Goals are listed like Agda prints them (`?0 : 𝔹`, and invisible goals
   with their position) rather than as `0 OfType 𝔹`.
 

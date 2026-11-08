@@ -2,6 +2,7 @@
 -- against recorded transcripts; see tests/agda_helpers.lua.
 local t = require("harness")
 local h = require("agda_helpers")
+local haskell_string = require("agda.haskell").string
 
 t.after_each = h.finish
 
@@ -632,6 +633,23 @@ t.test("a file changed on disk is reloaded before loading it", function()
     vim.o.autoread = false
     t.eq("-- changed on disk", h.lines()[1])
     t.ok(vim.tbl_contains(h.highlights(), "1:0-6 Keyword module"), vim.inspect(h.highlights()))
+end)
+
+t.test("showing implicit arguments survives reloads", function()
+    load("implicit_args")
+    vim.cmd("ShowImplicit")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    vim.cmd("HideImplicit")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    local cmds = vim.tbl_map(function(c) return c:match("Direct (.*)$") end, h.sent_commands())
+    local file = haskell_string(h.ctx.file)
+    t.eq({ "(Cmd_load " .. file .. " [])",
+           "(ShowImplicitArgs True)",
+           "(Cmd_load " .. file .. ' ["--show-implicit"])',
+           "(ShowImplicitArgs False)",
+           "(Cmd_load " .. file .. " [])" }, cmds)
 end)
 
 t.test("unsolved metas have their own highlight group", function()

@@ -1168,7 +1168,10 @@ function M.agda_load (file)
     end
 
 
-    agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " [])")
+    -- Agda resets the options on every load, so we pass the ones the
+    -- user chose.
+    local opts = vim.b[main_buf].agda_show_implicit and '["--show-implicit"]' or "[]"
+    agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " " .. opts .. ")")
 end
 
 ------ Goal-specific helper functions ------
@@ -1709,12 +1712,17 @@ function M.edit_goal(file)
     end, file)
 end
 
+-- Show or hide implicit arguments.  Agda forgets the choice when it
+-- loads the file, so we remember it in a buffer variable (which also
+-- survives a new instance of the module) and pass it with every load.
 function M.show_implicit(file)
-        agda_feed(file, "(ShowImplicitArgs True)")
+    vim.b[main_buf].agda_show_implicit = true
+    agda_feed(file, "(ShowImplicitArgs True)")
 end
 
 function M.hide_implicit(file)
-        agda_feed(file, "(ShowImplicitArgs False)")
+    vim.b[main_buf].agda_show_implicit = false
+    agda_feed(file, "(ShowImplicitArgs False)")
 end
 
 return M
