@@ -1566,8 +1566,12 @@ end
 -- {1-based line, byte column}, or nil.  Agda counts the position in code points from the start of the
 -- file.  In the main buffer we take the extmark of the name at the
 -- definition, which moved with any edits since the load.
+local function in_main_file(filepath)
+    return main_file ~= nil and vim.uv.fs_realpath(filepath) == vim.uv.fs_realpath(main_file)
+end
+
 local function site_pos(filepath, position)
-    if main_file ~= nil and vim.uv.fs_realpath(filepath) == vim.uv.fs_realpath(main_file) then
+    if in_main_file(filepath) then
         local id = hl_name_at[position]
         local p = id and vim.api.nvim_buf_get_extmark_by_id(main_buf, hl_ns, id, {})
         if p and #p > 0 then
@@ -1609,17 +1613,73 @@ function M.tagfunc(pattern, flags)
     }}
 end
 
+-- Characters that cannot be part of a name, as in Agda's lexer.
+local not_name = "%s%.;{}()@\""
+
+-- The name under the cursor for why-in-scope, from Agda's highlighting
+-- (see `name_at_cursor`), or nil.  A part of an operator, such as `∧` in
+-- `x ∧ y` or `then` in `if b then x else y`, is not in scope by itself,
+-- so we take the name at its definition (`_∧_`, `if_then_else_`), with
+-- the qualifier of the part, if any.  If the operator was renamed when
+-- it was imported, this gives the old name.
+local function scope_name()
+    local name = name_at_cursor()
+    if name == nil or not name.data[3] then
+        return name and name.text
+    end
+    local qualifier, part = name.text:match("^(.*%.)([^.]*)$")
+    if qualifier == nil then
+        qualifier, part = "", name.text
+    end
+    if part:find("_", 1, true) then
+        return name.text        -- the whole operator, e.g. _∧_
+    end
+    local filepath = name.data[1]
+    local pos = site_pos(filepath, name.data[2])
+    local line
+    if pos and in_main_file(filepath) then
+        line = vim.api.nvim_buf_get_lines(main_buf, pos[1] - 1, pos[1], true)[1]
+    elseif pos then
+        line = (file_lines(filepath) or {})[pos[1]]
+    end
+    local def = line and line:sub(pos[2] + 1):match("^[^" .. not_name .. "]+")
+    return def and (qualifier .. def) or name.text
+end
+
+-- A guess at the name under the cursor when Agda's highlighting has
+-- none (e.g. before the first load): the characters around the cursor
+-- that can be part of a (qualified) name.
+local function guess_name()
+    local line = vim.api.nvim_get_current_line()
+    local col = vim.api.nvim_win_get_cursor(0)[2]
+    local chars = "[^%s;{}()@\"]*"
+    local before = line:sub(1, col):match(chars .. "$")
+    local after = line:sub(col + 1):match("^" .. chars)
+    return ((before .. after):gsub("^%.+", ""):gsub("%.+$", ""))
+end
+
+-- Explain why a name is in scope, like the Emacs mode: in a goal with
+-- contents, the contents in the context of the goal; otherwise the name
+-- under the cursor, or a name from the user.
 function M.agda_why_inscope(file)
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        -- FIXME this is a bug when we have something like
-        --       (F.blah + ...)
-        --           ^
-        --           |
-        -- cWORD is returning `(F.blah`, what a nonsense...
-        local content = vim.fn.expand("<cWORD>")
-        local e = haskell.string(content)
-        local cmd = "(Cmd_why_in_scope_toplevel " .. e .. ")"
-        agda_feed(file,cmd)
+        local id = id_or_current_goal(nil, loc)
+        if id ~= nil then
+            local content = get_trimmed_content(id)
+            if content == "" then
+                content = vim.fn.input("Name: ")
+            end
+            if content ~= "" then
+                agda_feed(file, "(Cmd_why_in_scope " .. id .. " noRange "
+                                .. haskell.string(content) .. ")")
+            end
+            return
+        end
+        local name = scope_name() or vim.fn.input("Name: ", guess_name())
+        if name ~= "" then
+            agda_feed(file, "(Cmd_why_in_scope_toplevel " .. haskell.string(name) .. ")")
+        end
     end, file)
 end
 

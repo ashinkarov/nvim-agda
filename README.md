@@ -74,7 +74,7 @@ commands have to do with management of the popups and goal editing.
 | s | Automatically solve constraints in a goal (or in all goals in the file) |
 | h | Helper function for the goal |
 | o | Show the content of the module |
-| w | Explain why the name (under cursor) is in scope |
+| w | Explain why a name is in scope: the goal's content in a goal, otherwise the name under the cursor (an operator part such as `∧` stands for `_∧_`) |
 | ? | Show Goals |
 | f | Go to the next goal |
 | b | Go to the previous goal |

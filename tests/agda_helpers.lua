@@ -81,6 +81,11 @@ local function commands(s)
     return r
 end
 
+-- The commands that the plugin sent to Agda in the current test.
+function M.sent_commands()
+    return commands(read(M.ctx.dir .. "/stdin.log"))
+end
+
 local function transcript_path(name)
     return t.root .. "/tests/transcripts/" .. name:gsub("[^%w]+", "_") .. ".json"
 end
@@ -198,11 +203,14 @@ function M.skip_unless_replay()
     return false
 end
 
--- Make vim.fn.input return `answer` (and record the prompt).
+-- Make vim.fn.input return `answer` (and record the prompt and the
+-- text it was given).
 function M.stub_input(answer)
     M.prompts = {}
-    vim.fn.input = function(prompt)
+    M.input_texts = {}
+    vim.fn.input = function(prompt, text)
         table.insert(M.prompts, prompt)
+        table.insert(M.input_texts, text or "")
         return answer
     end
 end

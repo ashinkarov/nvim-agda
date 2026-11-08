@@ -510,7 +510,7 @@ end)
 
 t.test("CTRL-] jumps to definitions in other files", function()
     load_definitions("definition_other_file")
-    h.cursor_at("unit", 1)     -- in `u = unit`
+    h.cursor_at("u = unit", 1, 4)
     t.eq({ 4, 2 }, jump())
     t.eq(h.ctx.dir .. "/Lib.agda", vim.api.nvim_buf_get_name(0))
     local lib = vim.api.nvim_get_current_buf()
@@ -521,10 +521,42 @@ end)
 
 t.test("CTRL-] outside names leaves the cursor alone", function()
     load_definitions("definition_none")
-    h.cursor_at("comment", 1)
+    h.cursor_at("like", 1)
     local before = vim.api.nvim_win_get_cursor(0)
     pcall(vim.cmd, "normal! \29")
     t.eq(before, vim.api.nvim_win_get_cursor(0))
+end)
+
+-- Asks why-in-scope with the cursor at the `n`th `s` (moved by `off`
+-- bytes) and returns the command sent to Agda.
+local function why_in_scope(s, n, off)
+    h.cursor_at(s, n, off)
+    vim.cmd("AgdaWhyInscope")
+    h.wait_idle()
+    local cmds = h.sent_commands()
+    return cmds[#cmds]:match("%((Cmd_why_in_scope.*)%)$")
+end
+
+t.test("why in scope asks about the name under the cursor", function()
+    load_definitions("why_in_scope")
+    -- An infix and a mixfix operator part, a qualified operator.
+    t.eq('Cmd_why_in_scope_toplevel "_∧_"', why_in_scope("x ∧ tt", 1, 2))
+    t.eq('Cmd_why_in_scope_toplevel "if_then_else_"', why_in_scope("then ff", 1, 0))
+    t.eq('Cmd_why_in_scope_toplevel "M.if_then_else_"', why_in_scope("M.if_", 1, 3))
+    t.eq('Cmd_why_in_scope_toplevel "unit"', why_in_scope("u = unit", 1, 4))
+end)
+
+t.test("why in scope in a goal uses the goal", function()
+    load_definitions("why_in_scope_goal")
+    t.eq('Cmd_why_in_scope 0 noRange "x"', why_in_scope("{! x !}", 1, 3))
+end)
+
+t.test("why in scope outside names asks with a guess", function()
+    load_definitions("why_in_scope_prompt")
+    h.stub_input("tt")
+    t.eq('Cmd_why_in_scope_toplevel "tt"', why_in_scope("Lib.unit)", 1, 5))
+    t.eq({ "Name: " }, h.prompts)
+    t.eq({ "Lib.unit" }, h.input_texts)
 end)
 
 t.test("unsolved metas have their own highlight group", function()
