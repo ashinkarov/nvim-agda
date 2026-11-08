@@ -90,6 +90,23 @@ commands have to do with management of the popups and goal editing.
 Within the goal-edit window, `q` is mapped to close the window.
 The regular `:q` command would work as well.
 
+### Normalisation and modes
+A number between `<LocalLeader>` and the key chooses how far Agda
+normalises what it shows: `\1,` as is, `\2,` instantiated, `\3,` head
+normal form, `\4,` simplified and `\5,` normalised.  This works for
+`, . d m a s h o z ?` (also in the goal-edit window) and for
+`:AgdaContext`; the commands take the number as an argument, as in
+`:AgdaInfer 5`.  Without a number each command uses its default:
+simplified, except for the context (head normal form), infer
+(normalised), and helper functions and auto (as is).  `\u,` is the same
+as `\5,`.
+
+For compute (`n`) the number chooses the mode instead: `\1n` ignores
+`abstract`, `\2n` uses the `Show` instance of the type to print the
+result, and `\3n` computes only the head normal form.  `\1r` refines an
+empty goal of function type with a pattern-matching lambda
+(`λ { x → ? }`) rather than `λ x → ?`.
+
 `:ShowImplicit` and `:HideImplicit` show or hide implicit arguments,
 and `:ShowIrrelevant` and `:HideIrrelevant` irrelevant ones; the choice
 lasts across reloads.
@@ -139,10 +156,8 @@ for example a name keeps its colour in a clause with missing cases.
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not have aborting a
 command (use `:AgdaStop`, which has the same effect), compiling, or
-backend commands.  The normalisation and compute
-modes are fixed (Emacs chooses them with a prefix argument), the
-messages that Agda attaches to highlighted ranges (such as errors) are
-not shown, and typing an input sequence such as `\alpha` gives no
+backend commands.  The messages that Agda attaches to highlighted
+ranges (such as errors) are not shown, and typing an input sequence such as `\alpha` gives no
 feedback until it is complete.  See [doc/emacs-mode.md](doc/emacs-mode.md)
 for a comparison with the Emacs mode.
 

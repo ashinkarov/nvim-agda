@@ -33,6 +33,11 @@
 
 ### Added
 
+- A number between `<LocalLeader>` and the key (`\5,`), or after the
+  command (`:AgdaInfer 5`), chooses the normalisation level, from 1 (as
+  is) to 5 (normalised), for every command that takes one; for compute
+  it chooses the compute mode, and `\1r` introduces a pattern-matching
+  lambda.
 - Goal type and context (`\,`, `\.`) also show the constraints that
   mention the goal, like the Emacs mode.
 - Search about (`\z`, `:AgdaSearchAbout`) lists the definitions whose

@@ -208,6 +208,100 @@ function M.setup(config)
     if config.debug_p then debug_p = config.debug_p end
 end
 
+------ Commands ------
+----------------------
+
+-- The levels of normalisation that commands take as a number (`\1,` to
+-- `\5,`, or `:AgdaTypeContext 5`), in Agda's order, from none to full.
+-- Without a number each command uses its own default.
+local rewrites = {"AsIs", "Instantiated", "HeadNormal", "Simplified", "Normalised"}
+-- The modes of compute, numbered like the prefix arguments of the Emacs
+-- mode (C-u, C-u C-u, C-u C-u C-u); the default is DefaultCompute.
+local compute_modes = {"IgnoreAbstract", "UseShowInstance", "HeadCompute"}
+-- Refine with 1 introduces a pattern-matching lambda.
+local refine_modes = {"True"}
+
+-- The commands of Agda buffers: the Vim command, the key of its mapping
+-- after <LocalLeader> (if any), and the function of this module, which
+-- gets the file, the value that the number selects (or nil) and the goal
+-- (nil for the goal at the cursor).  `modes` are the values that the
+-- numbers select, `mode` a number that the command always uses, and
+-- `goal` means that the mapping works in the window that edits a goal.
+local commands = {
+    {"AgdaStart",           nil,  "agda_start"},
+    {"AgdaStop",            nil,  "agda_stop"},
+    {"AgdaVersion",         nil,  "agda_version"},
+    {"AgdaLoad",            "l",  "agda_load"},
+    {"AgdaContext",         nil,  "agda_context",            modes = rewrites},
+    {"AgdaTypeContext",     ",",  "agda_type_context",       modes = rewrites, goal = true},
+    {"AgdaTypeContextNorm", "u,", "agda_type_context",       modes = rewrites, mode = 5},
+    {"AgdaTypeContextInfer", ".", "agda_type_context_infer", modes = rewrites, goal = true},
+    {"AgdaInfer",           "d",  "agda_infer",              modes = rewrites, goal = true},
+    {"AgdaRefine",          "r",  "agda_refine",             modes = refine_modes, goal = true},
+    {"AgdaElaborateGive",   "m",  "agda_elaborate_give",     modes = rewrites, goal = true},
+    {"AgdaMakeCase",        "c",  "agda_make_case",          goal = true},
+    {"AgdaCompute",         "n",  "agda_compute",            modes = compute_modes, goal = true},
+    {"AgdaAuto",            "a",  "agda_auto",               modes = rewrites, goal = true},
+    {"AgdaSolve",           "s",  "agda_solve",              modes = rewrites, goal = true},
+    {"AgdaHelperFun",       "h",  "agda_helper_fun",         modes = rewrites, goal = true},
+    {"AgdaModuleContents",  "o",  "agda_module_contents",    modes = rewrites},
+    {"AgdaWhyInscope",      "w",  "agda_why_inscope"},
+    {"AgdaSearchAbout",     "z",  "agda_search_about",       modes = rewrites},
+    {"AgdaShowConstraints", nil,  "agda_show_constraints"},
+    {"PrintGoals",          "?",  "agda_show_goals",         modes = rewrites},
+    {"GoalNext",            "f",  "agda_goal_next"},
+    {"GoalPrev",            "b",  "agda_goal_prev"},
+    {"MkPrompt",            "e",  "edit_goal"},
+    {"AgdaCloseMsg",        "q",  "close_msg_win",           goal = true},
+    {"ShowImplicit",        nil,  "show_implicit"},
+    {"HideImplicit",        nil,  "hide_implicit"},
+    {"ShowIrrelevant",      nil,  "show_irrelevant"},
+    {"HideIrrelevant",      nil,  "hide_irrelevant"},
+}
+
+-- Run command `c` with the number `n` (nil for none) on goal `id` (nil
+-- for the goal at the cursor).
+local function run_command(c, n, id)
+    n = c.mode or n
+    local value = nil
+    if n ~= nil then
+        value = (c.modes or {})[n]
+        if value == nil then
+            return warning(string.format("%s takes a number from 1 to %d", c[1], #(c.modes or {})))
+        end
+    end
+    M[c[3]](vim.fn.fnamemodify(vim.api.nvim_buf_get_name(main_buf), ":p"), value, id)
+end
+
+-- Map <LocalLeader> followed by the key of command `c` in buffer `buf`,
+-- and with numbers before the key if it takes them.
+local function map_command(buf, c, id)
+    local function map(lhs, n)
+        vim.keymap.set("n", "<LocalLeader>" .. lhs, function () run_command(c, n, id) end,
+                       {buffer = buf, nowait = true, silent = true, desc = c[1]})
+    end
+    map(c[2])
+    if c.mode == nil then
+        for n = 1, #(c.modes or {}) do
+            map(n .. c[2], n)
+        end
+    end
+end
+
+-- Define the commands and mappings in the main buffer (called by the
+-- ftplugin).  When the ftplugin runs again for the buffer, the new
+-- instance of this module replaces them.
+function M.define_commands()
+    for _, c in ipairs(commands) do
+        vim.api.nvim_buf_create_user_command(main_buf, c[1], function (a)
+            run_command(c, a.args ~= "" and (tonumber(a.args) or -1) or nil)
+        end, {nargs = (c.modes and not c.mode) and "?" or 0})
+        if c[2] ~= nil then
+            map_command(main_buf, c)
+        end
+    end
+end
+
 function M.close_prompt_win()
     if pwin ~= nil and vim.api.nvim_win_is_valid(pwin) then
         vim.api.nvim_win_close(pwin, true)
@@ -225,25 +319,13 @@ local function mk_prompt_window(file, goal)
         vim.api.nvim_buf_call(pbuf, function () vim.cmd("runtime agda-input.vim") end)
     end
 
-    local status = {silent=true, nowait=true, noremap=true}
-    local function mk_mapping(key, fun, args)
-        vim.api.nvim_buf_set_keymap(
-            pbuf, 'n', key,
-            ":call getbufvar(" .. main_buf .. ", 'AgdaMod')." .. fun .. "(" .. args .. ")<cr>",
-            status)
+    -- The goal commands work on this goal, with the content of the window.
+    for _, c in ipairs(commands) do
+        if c.goal then
+            map_command(pbuf, c, goal[1])
+        end
     end
-    mk_mapping("<LocalLeader>,", "agda_type_context",       string.format("'%s', 'Simplified', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>.", "agda_type_context_infer", string.format("'%s', 'Simplified', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>d", "agda_infer",              string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>c", "agda_make_case",          string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>r", "agda_refine",             string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>m", "agda_elaborate_give",     string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>n", "agda_compute",            string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>a", "agda_auto",               string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>s", "agda_solve",              string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>h", "agda_helper_fun",         string.format("'%s', %d", file, goal[1]))
-    mk_mapping("<LocalLeader>q", "close_msg_win",           "")
-    mk_mapping("q",              "close_prompt_win",        "")
+    vim.keymap.set("n", "q", M.close_prompt_win, {buffer = pbuf, nowait = true, silent = true})
 
     -- Just below the line of the goal, starting in its column.
     pwin = vim.api.nvim_open_win(
@@ -1266,25 +1348,43 @@ local function get_trimmed_content(id)
     return content
 end
 
-function M.agda_context(file)
+-- A command on goal `id` with `content`, with `args` before the goal,
+-- e.g. (Cmd_infer Normalised 3 noRange "x").
+local function goal_cmd(cmd, args, id, content)
+    local parts = vim.list_extend({cmd}, args)
+    vim.list_extend(parts, {tostring(id), "noRange", haskell.string(content)})
+    return "(" .. table.concat(parts, " ") .. ")"
+end
+
+-- Run `in_goal(id)` for goal `id`, or for the goal at the cursor, once
+-- the goals are up to date.  Outside goals run `outside()` if given, and
+-- otherwise warn that one cannot `what` there.
+local function goal_command(file, id, what, in_goal, outside)
+    local loc = get_current_loc()
     wrap_goal_action(function ()
-        local n = get_current_goal()
-        if n ~= nil then
-            -- The goal content shold not matter
-            local cmd = "(Cmd_context HeadNormal " .. n[1] .. " noRange \"\")"
-            agda_feed(file, cmd)
+        id = id_or_current_goal(id, loc)
+        if id ~= nil then
+            in_goal(id)
+        elseif outside ~= nil then
+            outside()
         else
-            warning("cannot infer goal type, the cursor is not in the goal")
+            warning("cannot " .. what .. ", the cursor is not in a goal")
         end
     end, file)
 end
 
+function M.agda_context(file, rewrite, id)
+    goal_command(file, id, "show the context", function (id)
+        -- The goal content does not matter.
+        agda_feed(file, goal_cmd("Cmd_context", {rewrite or "HeadNormal"}, id, ""))
+    end)
+end
 
 -- Show the goals (and warnings and errors) as Agda lists them after a
 -- load, like the Emacs mode.
-function M.agda_show_goals(file)
+function M.agda_show_goals(file, rewrite)
     wrap_goal_action(function ()
-        agda_feed(file, "(Cmd_metas Simplified)")
+        agda_feed(file, "(Cmd_metas " .. (rewrite or "Simplified") .. ")")
     end, file)
 end
 
@@ -1344,222 +1444,113 @@ function M.agda_goal_prev(file)
     goto_loc(pos)
 end
 
-function M.agda_type_context(file,prec,id)
-    -- Get the location of the cursor at the time we called `agda_type_context`.
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot obtain goal type and context, the cursor is not in the goal")
-        end
-
-        if prec == nil then
-            prec = "Simplified"
-        end
-
-        local cmd = "(Cmd_goal_type_context " .. prec .. " " .. id .. " noRange \"\")"
-        agda_feed(file, cmd)
-    end, file)
+function M.agda_type_context(file, rewrite, id)
+    goal_command(file, id, "show the goal type and context", function (id)
+        agda_feed(file, goal_cmd("Cmd_goal_type_context", {rewrite or "Simplified"}, id, ""))
+    end)
 end
 
-function M.agda_type_context_infer(file,prec,id)
-    -- Get the location of the cursor at the time we called `agda_type_context`.
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot obtain goal type and context, the cursor is not in the goal")
-        end
-
-        if prec == nil then
-            prec = "Simplified"
-        end
-
-        local content = get_trimmed_content(id)
-        dprint("Goal content: " .. content)
-        local g = haskell.string(content)
-
-        local cmd = "(Cmd_goal_type_context_infer " .. prec .. " " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+function M.agda_type_context_infer(file, rewrite, id)
+    goal_command(file, id, "show the goal type and context", function (id)
+        agda_feed(file, goal_cmd("Cmd_goal_type_context_infer", {rewrite or "Simplified"},
+                                 id, get_trimmed_content(id)))
+    end)
 end
 
-
-local function agda_infer_toplevel(file, e)
-    local e = haskell.string(e)
-    local cmd = "(Cmd_infer_toplevel Normalised " .. e .. ")"
-    agda_feed(file, cmd)
-end
-
-function M.agda_infer(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            -- In case we are not in the goal, or the content of the goal
-            -- is empty, prompt the user for the expression.
-            local g = vim.fn.input("Expression: ")
-            return agda_infer_toplevel(file, g)
-        end
+-- Infer the type of the goal's content, or of an expression that we ask
+-- for outside goals.
+function M.agda_infer(file, rewrite, id)
+    rewrite = rewrite or "Normalised"
+    goal_command(file, id, "infer the type", function (id)
         local content = get_trimmed_content(id)
         if content == "" then
             return warning("The goal is empty")
         end
-        local g = haskell.string(content)
-        local cmd = "(Cmd_infer Normalised " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_infer", {rewrite}, id, content))
+    end, function ()
+        local e = vim.fn.input("Expression: ")
+        agda_feed(file, "(Cmd_infer_toplevel " .. rewrite .. " " .. haskell.string(e) .. ")")
+    end)
 end
 
-function M.agda_make_case(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot make case, the cursor is not in the goal")
-        end
+function M.agda_make_case(file, _, id)
+    goal_command(file, id, "make case", function (id)
         local content = get_trimmed_content(id)
         if content == "" then
             content = vim.fn.input("Variables to split on: ")
         end
-        local g = haskell.string(content)
-        local cmd = "(Cmd_make_case " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_make_case", {}, id, content))
+    end)
 end
 
-
-function M.agda_refine(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot refine, the cursor is not in the goal")
-        end
-
-        local content = get_trimmed_content(id)
-        local g = haskell.string(content)
-        local cmd = "(Cmd_refine_or_intro False " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+-- Refine the goal with its content; an empty goal of function type gets
+-- a lambda, which is a pattern-matching lambda with `pm_lambda` "True".
+function M.agda_refine(file, pm_lambda, id)
+    goal_command(file, id, "refine", function (id)
+        agda_feed(file, goal_cmd("Cmd_refine_or_intro", {pm_lambda or "False"},
+                                 id, get_trimmed_content(id)))
+    end)
 end
 
 -- Give the goal's content, elaborated and simplified, like the Emacs
 -- mode's elaborate and give (without a prefix argument): Agda checks the
 -- expression and fills the goal with the result, e.g. with `ff` for
 -- `not tt`.
-function M.agda_elaborate_give(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot elaborate and give, the cursor is not in the goal")
-        end
+function M.agda_elaborate_give(file, rewrite, id)
+    goal_command(file, id, "elaborate and give", function (id)
         local content = get_trimmed_content(id)
         if content == "" then
             return warning("The goal is empty")
         end
-        agda_feed(file, "(Cmd_elaborate_give Simplified " .. id .. " noRange "
-                        .. haskell.string(content) .. ")")
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_elaborate_give", {rewrite or "Simplified"}, id, content))
+    end)
 end
 
--- TODO ensure that we can pass the argument to Cmd_compute.  Right now
--- we are just hard-coding DefaultCompute, but there are other values one
--- can pass:
---   * DefaultCompute
---   * IgnoreAbstract
---   * UseShowInstance
---   * HeadCompute
---
-local function agda_compute_toplevel(file, e)
-    local e = haskell.string(e)
-    local cmd = "(Cmd_compute_toplevel DefaultCompute " .. e .. ")"
-    agda_feed(file, cmd)
-end
-
-function M.agda_compute(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            -- In case we are not in the goal, or the content of the goal
-            -- is empty, prompt the user for the expression.
-            local g = vim.fn.input("Expression: ")
-            return agda_compute_toplevel(file, g)
-        end
+-- Compute the normal form of the goal's content, or of an expression
+-- that we ask for outside goals.
+function M.agda_compute(file, mode, id)
+    mode = mode or "DefaultCompute"
+    goal_command(file, id, "compute", function (id)
         local content = get_trimmed_content(id)
         if content == "" then
             return warning("The goal is empty")
         end
-        local g = haskell.string(content)
-        local cmd = "(Cmd_compute DefaultCompute " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_compute", {mode}, id, content))
+    end, function ()
+        local e = vim.fn.input("Expression: ")
+        agda_feed(file, "(Cmd_compute_toplevel " .. mode .. " " .. haskell.string(e) .. ")")
+    end)
 end
 
-function M.agda_helper_fun(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return warning("cannot create helper function, the cursor is not in the goal")
-        end
+function M.agda_helper_fun(file, rewrite, id)
+    goal_command(file, id, "create a helper function", function (id)
         local content = get_trimmed_content(id)
         if content == "" then
             content = vim.fn.input("Expression: ")
         end
-        local g = haskell.string(content)
-        local cmd = "(Cmd_helper_function AsIs " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_helper_function", {rewrite or "AsIs"}, id, content))
+    end)
 end
 
-
-local function agda_auto_toplevel(file)
-    local cmd = "(Cmd_autoAll)"
-    -- Agda changed interface after 2.7.0
-    if version_at_least(2, 7) then
-      cmd = "(Cmd_autoAll AsIs)"
-    end
-    agda_feed(file, cmd)
+-- Auto in the goal, or in all goals outside goals.  Before Agda 2.7
+-- auto took no normalisation level.
+function M.agda_auto(file, rewrite, id)
+    local args = version_at_least(2, 7) and {rewrite or "AsIs"} or {}
+    goal_command(file, id, "auto", function (id)
+        agda_feed(file, goal_cmd("Cmd_autoOne", args, id, get_trimmed_content(id)))
+    end, function ()
+        agda_feed(file, "(" .. table.concat(vim.list_extend({"Cmd_autoAll"}, args), " ") .. ")")
+    end)
 end
 
-local function agda_solve_toplevel(file)
-    local cmd = "(Cmd_solveAll Simplified)"
-    agda_feed(file, cmd)
-end
-
-function M.agda_auto(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return agda_auto_toplevel(file)
-        end
-        local content = get_trimmed_content(id)
-        local g = haskell.string(content)
-        local cmd = "(Cmd_autoOne " .. id .. " noRange " .. g .. ")"
-        -- Agda changed interface after 2.7.0
-        if version_at_least(2, 7) then
-          cmd = "(Cmd_autoOne AsIs " .. id .. " noRange " .. g .. ")"
-        end
-        agda_feed(file, cmd)
-    end, file)
-end
-
-function M.agda_solve(file,id)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(id, loc)
-        if id == nil then
-            return agda_solve_toplevel(file)
-        end
-        local content = get_trimmed_content(id)
-        local g = haskell.string(content)
-        local cmd = "(Cmd_solveOne Simplified " .. id .. " noRange " .. g .. ")"
-        agda_feed(file, cmd)
-    end, file)
+-- Solve the constraints in the goal, or in all goals outside goals.
+function M.agda_solve(file, rewrite, id)
+    rewrite = rewrite or "Simplified"
+    goal_command(file, id, "solve", function (id)
+        agda_feed(file, goal_cmd("Cmd_solveOne", {rewrite}, id, get_trimmed_content(id)))
+    end, function ()
+        agda_feed(file, "(Cmd_solveAll " .. rewrite .. ")")
+    end)
 end
 
 -- Show the contents of a module, like the Emacs mode: in a goal, of the
@@ -1568,19 +1559,19 @@ end
 -- in the scope at the top level of the file.  An empty name stands for
 -- the current module: inside a module, Agda cannot resolve the module's
 -- own name ("Not in scope").
-function M.agda_module_contents(file)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local prompt = "Module name (empty for the current module): "
-        local id = id_or_current_goal(nil, loc)
-        local name = id and get_trimmed_content(id) or ""
+function M.agda_module_contents(file, rewrite)
+    rewrite = rewrite or "Simplified"
+    local prompt = "Module name (empty for the current module): "
+    goal_command(file, nil, nil, function (id)
+        local name = get_trimmed_content(id)
         if name == "" then
             name = vim.fn.input(prompt)
         end
-        local cmd = id and ("(Cmd_show_module_contents Simplified " .. id .. " noRange ")
-                    or "(Cmd_show_module_contents_toplevel Simplified "
-        agda_feed(file, cmd .. haskell.string(name) .. ")")
-    end, file)
+        agda_feed(file, goal_cmd("Cmd_show_module_contents", {rewrite}, id, name))
+    end, function ()
+        agda_feed(file, "(Cmd_show_module_contents_toplevel " .. rewrite .. " "
+                        .. haskell.string(vim.fn.input(prompt)) .. ")")
+    end)
 end
 
 ------ Names and definitions ------
@@ -1728,46 +1719,35 @@ end
 -- Agda has no command for the scope at a position; see
 -- doc/agda-upstream.md.  The header of the answer says which scope it
 -- is for.
-function M.agda_why_inscope(file)
-    local loc = get_current_loc()
-    wrap_goal_action(function ()
-        local id = id_or_current_goal(nil, loc)
-        if id ~= nil then
-            local content = get_trimmed_content(id)
-            if content == "" then
-                content = vim.fn.input("Name: ")
-            end
-            if content ~= "" then
-                why_scope = "in goal ?" .. id
-                agda_feed(file, "(Cmd_why_in_scope " .. id .. " noRange "
-                                .. haskell.string(content) .. ")")
-            end
-            return
+function M.agda_why_inscope(file, _, id)
+    goal_command(file, id, nil, function (id)
+        local content = get_trimmed_content(id)
+        if content == "" then
+            content = vim.fn.input("Name: ")
         end
+        if content ~= "" then
+            why_scope = "in goal ?" .. id
+            agda_feed(file, goal_cmd("Cmd_why_in_scope", {}, id, content))
+        end
+    end, function ()
         local name = scope_name() or vim.fn.input("Name: ", guess_name())
         if name ~= "" then
             why_scope = "at the top level"
             agda_feed(file, "(Cmd_why_in_scope_toplevel " .. haskell.string(name) .. ")")
         end
-    end, file)
+    end)
 end
 
 function M.agda_show_constraints(file)
     wrap_goal_action(function ()
-        local cmd = "(Cmd_constraints )"
-        agda_feed(file,cmd)
+        agda_feed(file, "(Cmd_constraints)")
     end, file)
 end
 
 function M.edit_goal(file)
-    wrap_goal_action(function ()
-        local n = get_current_goal()
-        if n ~= nil then
-            mk_prompt_window(file, n)
-        else
-            warning("cannot edit goal, the cursor is not in the goal")
-        end
-    end, file)
+    goal_command(file, nil, "edit the goal", function (id)
+        mk_prompt_window(file, {id, goals[id]})
+    end)
 end
 
 -- Show or hide implicit (and irrelevant) arguments.  Agda forgets the
@@ -1790,11 +1770,12 @@ end
 -- mention (`findMentions` in Agda's Interaction/SearchAbout.hs).  So it
 -- is not a search by type: `ℕ → ℕ` fails, as `→` is not a name.  Agda
 -- searches in the scope at the top level of the file.
-function M.agda_search_about(file)
+function M.agda_search_about(file, rewrite)
     wrap_goal_action(function ()
         local s = vim.fn.input('Search about (names, "name parts"): ')
         if s ~= "" then
-            agda_feed(file, "(Cmd_search_about_toplevel Simplified " .. haskell.string(s) .. ")")
+            agda_feed(file, "(Cmd_search_about_toplevel " .. (rewrite or "Simplified") .. " "
+                            .. haskell.string(s) .. ")")
         end
     end, file)
 end

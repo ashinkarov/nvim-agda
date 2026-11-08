@@ -63,62 +63,9 @@ function! AgdaTagfunc(pattern, flags, info)
 endfunction
 setlocal tagfunc=AgdaTagfunc
 
-" Vim commands
-command! -buffer AgdaStart :call b:AgdaMod.agda_start()
-command! -buffer AgdaStop :call b:AgdaMod.agda_stop()
-command! -buffer AgdaVersion :call b:AgdaMod.agda_version(expand("%:p"))
-command! -buffer AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
-command! -buffer AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
-command! -buffer AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
-command! -buffer AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
-command! -buffer AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(expand("%:p"))
-command! -buffer AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
-command! -buffer AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
-command! -buffer AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
-command! -buffer AgdaElaborateGive :call b:AgdaMod.agda_elaborate_give(expand("%:p"))
-command! -buffer AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
-command! -buffer AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
-command! -buffer AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
-command! -buffer AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
-command! -buffer AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
-command! -buffer AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
-command! -buffer AgdaSearchAbout :call b:AgdaMod.agda_search_about(expand("%:p"))
-command! -buffer AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
-
-command! -buffer ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
-command! -buffer HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
-command! -buffer ShowIrrelevant :call b:AgdaMod.show_irrelevant(expand("%:p"))
-command! -buffer HideIrrelevant :call b:AgdaMod.hide_irrelevant(expand("%:p"))
-
-command! -buffer MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
-command! -buffer PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
-command! -buffer GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
-command! -buffer GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
-
-command! -buffer AgdaCloseMsg :call b:AgdaMod.close_msg_win()
-
-
-" Key mappings
-nnoremap <buffer> <nowait> <LocalLeader>l :<c-u>AgdaLoad<cr>
-nnoremap <buffer> <nowait> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
-nnoremap <buffer> <nowait> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
-nnoremap <buffer> <nowait> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
-nnoremap <buffer> <nowait> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
-nnoremap <buffer> <nowait> <LocalLeader>d :<c-u>AgdaInfer<cr>
-nnoremap <buffer> <nowait> <LocalLeader>r :<c-u>AgdaRefine<cr>
-nnoremap <buffer> <nowait> <LocalLeader>m :<c-u>AgdaElaborateGive<cr>
-nnoremap <buffer> <nowait> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
-nnoremap <buffer> <nowait> <LocalLeader>n :<c-u>AgdaCompute<cr>
-nnoremap <buffer> <nowait> <LocalLeader>a :<c-u>AgdaAuto<cr>
-nnoremap <buffer> <nowait> <LocalLeader>s :<c-u>AgdaSolve<cr>
-nnoremap <buffer> <nowait> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
-nnoremap <buffer> <nowait> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
-nnoremap <buffer> <nowait> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
-nnoremap <buffer> <nowait> <LocalLeader>z :<c-u>AgdaSearchAbout<cr>
-nnoremap <buffer> <nowait> <LocalLeader>e :<c-u>MkPrompt<cr>
-nnoremap <buffer> <nowait> <LocalLeader>? :<c-u>PrintGoals<cr>
-nnoremap <buffer> <nowait> <LocalLeader>f :<c-u>GoalNext<cr>
-nnoremap <buffer> <nowait> <LocalLeader>b :<c-u>GoalPrev<cr>
+" The commands and the <LocalLeader> mappings (see `commands` in
+" lua/agda/init.lua).
+call b:AgdaMod.define_commands()
 
 
 " mappings

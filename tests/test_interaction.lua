@@ -322,7 +322,7 @@ t.test("give edits the agda buffer when another window is current", function()
     vim.cmd("MkPrompt")
     vim.api.nvim_buf_set_lines(0, 0, -1, true, { "x" })
     -- Send the command, then move to another window before Agda replies.
-    vim.fn.getbufvar(agda_buf, "AgdaMod").agda_refine(h.ctx.file, 0)
+    vim.fn.getbufvar(agda_buf, "AgdaMod").agda_refine(h.ctx.file, nil, 0)
     vim.cmd("new")
     local other = vim.api.nvim_get_current_buf()
     h.wait_idle()
@@ -664,6 +664,43 @@ t.test("the goal-edit window's text is not used after closing it", function()
     vim.cmd("AgdaInfer")
     h.wait_idle()
     t.eq({ "Warning: The goal is empty" }, h.messages)
+end)
+
+-- A number after <LocalLeader> (or after the command) selects the
+-- normalisation level, or for compute the mode and for refine the
+-- pattern-matching lambda, also in the goal-edit window.
+t.test("numbers select the normalisation level and modes", function()
+    load("modes")
+    local function keys(k)
+        vim.api.nvim_feedkeys(vim.keycode("<LocalLeader>" .. k), "x", false)
+        h.wait_idle()
+    end
+    h.cursor_at("{! x !}", 1, 3)
+    keys(",")
+    keys("5,")
+    keys("1d")
+    vim.cmd("AgdaInfer 3")
+    h.wait_idle()
+    keys("3n")
+    keys("u,")
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { "not x" })
+    keys("4d")
+    vim.cmd("q")
+    h.cursor_at("→ ?", 1, 4)
+    keys("1r")
+    h.messages = {}
+    vim.cmd("AgdaInfer 9")
+    t.eq({ "Warning: AgdaInfer takes a number from 1 to 5" }, h.messages)
+    local cmds = vim.tbl_map(function(c) return c:match("Direct (.*)$") end, h.sent_commands())
+    t.eq({ "(Cmd_goal_type_context Simplified 0 noRange \"\")",
+           "(Cmd_goal_type_context Normalised 0 noRange \"\")",
+           "(Cmd_infer AsIs 0 noRange \"x\")",
+           "(Cmd_infer HeadNormal 0 noRange \"x\")",
+           "(Cmd_compute HeadCompute 0 noRange \"x\")",
+           "(Cmd_goal_type_context Normalised 0 noRange \"\")",
+           "(Cmd_infer Simplified 0 noRange \"not x\")",
+           "(Cmd_refine_or_intro True 1 noRange \"\")" }, vim.list_slice(cmds, 2))
 end)
 
 t.test("showing implicit arguments survives reloads", function()

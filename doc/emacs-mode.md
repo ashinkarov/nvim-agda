@@ -31,7 +31,7 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Give | `C-c C-SPC` | **Works, differently:** give through refine: `\r` on a goal with content, or `\e` to edit the goal in a window and `\r` there.  Refine (`Cmd_refine_or_intro`) gives the expression when it fits the goal. |
 | Give with force | `C-u C-c C-SPC` | **Won't implement:** force (`WithForce`) only skips two checks after the term is put into the goal (`give_` in `Interaction/BasicOps.hs`): re-running the termination check of the surrounding function, whose failure is only a warning and which the next load does anyway, and a double check with the internal type checker, a safety net that should not fail for a term that was just checked.  It does not let one give ill-typed terms. |
 | Elaborate and give | `C-c C-m` | **Works:** `\m`, `:AgdaElaborateGive`, with `Simplified` (the Emacs default): `not tt` becomes `ff`. |
-| Refine | `C-c C-r` | **Works:** `\r`; an empty goal of function type gets `λ x → ?`.  **Missing:** the pattern-matching lambda (`λ { x → ? }`) that Emacs introduces with a prefix argument. |
+| Refine | `C-c C-r` | **Works:** `\r`; an empty goal of function type gets `λ x → ?`, and with `\1r` the pattern-matching lambda `λ { x → ? }` (Emacs: with a prefix argument). |
 | Auto | `C-c C-a` | **Works:** `\a`, in a goal or for all goals. |
 | Case split | `C-c C-c` | **Works, with limits:** `\c`.  Like in Emacs, clauses are assumed to be on the lines of the goal; clauses whose left- or right-hand side spans several lines are not replaced properly.  See [make-case.md](make-case.md) for a fix in Agda. |
 | Goal type | `C-c C-t` | **Won't implement:** only the goal type, without the context; `\,` shows both, and the type comes first. |
@@ -39,12 +39,12 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Helper function type | `C-c C-h` | **Works:** `\h`; the type is also copied to the clipboard. |
 | Infer type | `C-c C-d` | **Works:** `\d`, in a goal or for an expression asked for. |
 | Why in scope | `C-c C-w` | **Works:** `\w`.  In a goal, for its content; otherwise for the name under the cursor, found in Agda's highlighting, with operator parts completed (`∧` asks about `_∧_`; for operators renamed on import this gives the old name), or for a name asked for. |
-| Goal type and context | `C-c C-,` | **Works:** `\,`, and `\u,` normalised, followed by the constraints that mention the goal. |
+| Goal type and context | `C-c C-,` | **Works:** `\,` (`\5,` or `\u,` normalised), followed by the constraints that mention the goal. |
 | Goal type, context and inferred type | `C-c C-.` | **Works:** `\.`. |
 | Goal type, context and checked type | `C-c C-;` | **Won't implement:** like `\.`, but shows the goal's content checked against the goal type and normalised instead of its type, i.e. what elaborate and give (`\m`) would put in; `\m` and `\n` cover this. |
 | Search about | `C-c C-z` | **Works:** `\z`, `:AgdaSearchAbout`.  Like in Emacs, the input is a list of names that the types must mention and `"quoted"` parts of the definitions' names (e.g. `ℕ _+_ "comm"`); it is not a search by type, so `ℕ → ℕ` gives a parse error (`→` is not a name). |
 | Module contents | `C-c C-o` | **Works:** `\o`.  In a goal, for the module named by its content; an empty name stands for the current module.  Types are shown below the names, as long names would push aligned types far to the right. |
-| Compute normal form | `C-c C-n` | **Works:** `\n`; the normal form is also copied to the clipboard.  **Missing:** the other compute modes, see below. |
+| Compute normal form | `C-c C-n` | **Works:** `\n`, and `\1n` to `\3n` for the other compute modes (see below); the normal form is also copied to the clipboard. |
 | Version | | **Works:** `:AgdaVersion`. |
 | Switch Agda version | `C-c C-x C-s` | **Works, differently:** the binary is set in `g:nvim_agda_settings`. |
 | Describe character | | **Works, by Neovim:** `ga` shows the character's code; the input sequence is not shown. |
@@ -59,18 +59,21 @@ Commands the plugin has that the Emacs mode does not: `\e` edits the
 goal's content in a window, where the goal commands work on it; `\q`
 closes the popup.
 
-## Arguments the plugin does not use
+## Arguments
 
 * **Normalisation** (`AsIs`, `Instantiated`, `HeadNormal`, `Simplified`,
-  `Normalised`): **Missing.**  The level is fixed for every command:
-  context `HeadNormal`, infer `Normalised`, helper function and auto
-  `AsIs`, module contents, search about, solve and elaborate and give
-  `Simplified`, goal type and context `Simplified` (`\u,` for
-  `Normalised`).  The Emacs mode chooses with the prefix argument (none,
-  `C-u`, `C-u C-u`).
-* **Compute mode**: **Missing.**  Always `DefaultCompute`; Emacs offers
-  `IgnoreAbstract` (`C-u`), `UseShowInstance` (`C-u C-u`) and
-  `HeadCompute` (`C-u C-u C-u`).
+  `Normalised`): **Works, differently.**  The Emacs mode chooses with
+  the prefix argument (none, `C-u`, `C-u C-u`, other), and which level
+  each prefix stands for differs between commands.  The plugin numbers
+  the levels in Agda's order, from `\1` (`AsIs`) to `\5` (`Normalised`),
+  for every command that takes one (`\5,`, `:AgdaInfer 5`); without a
+  number each command has a default: context `HeadNormal`, infer
+  `Normalised`, helper function and auto `AsIs`, the others
+  `Simplified` (without a prefix the Emacs mode uses `Simplified`, or
+  `AsIs` for the helper function and auto).
+* **Compute mode**: **Works.**  `DefaultCompute` without a number, and
+  as in the Emacs mode's order of prefixes, `\1n` `IgnoreAbstract`,
+  `\2n` `UseShowInstance` and `\3n` `HeadCompute`.
 * **Ranges**: **Missing.**  All goal commands send `noRange`, so Agda
   never uses the text of the goal as written (and `GiveAction` always
   has `str`, never `paren`).  The Emacs mode sends the goal's range when
