@@ -94,6 +94,8 @@
 
 #### Goals
 
+- After the goal-edit window (`\e`) was closed, its text was still used
+  as the content of goals, also of other goals.
 - `:AgdaShowConstraints` showed nothing, and neither did refine on an
   empty goal when Agda cannot introduce a constructor; both are shown
   now.  Any other information from Agda that the plugin cannot show is

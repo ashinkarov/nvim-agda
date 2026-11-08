@@ -62,6 +62,8 @@ local main_lines = {}
 -- Prompt window and buffer
 local pwin = nil
 local pbuf = nil
+-- The goal that the goal-edit window edits.
+local pgoal = nil
 local pmin_width = 25
 
 -- Whether to print debug information
@@ -216,6 +218,7 @@ end
 -- goal is a pair <id:int, {start:Loc, end:Loc}>
 local function mk_prompt_window(file, goal)
     M.close_prompt_win()
+    pgoal = goal[1]
     if pbuf == nil then
         pbuf = vim.api.nvim_create_buf(false, true)
         -- load unicode mappings.
@@ -1248,8 +1251,9 @@ end
 -- goal, in case the prompt is empty.
 local function get_trimmed_content(id)
     local content = ""
-    -- Try getting content from the prompt window
-    if pbuf ~= nil then
+    -- Try getting content from the prompt window, if it is open for this
+    -- goal (after it is closed, its buffer keeps the text).
+    if pwin ~= nil and vim.api.nvim_win_is_valid(pwin) and pgoal == id then
         content = table.concat(vim.api.nvim_buf_get_lines(pbuf, 0, -1, true), "\n")
         content = vim.trim(content)
     end

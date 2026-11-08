@@ -651,6 +651,21 @@ t.test("a file changed on disk is reloaded before loading it", function()
     t.ok(vim.tbl_contains(h.highlights(), "1:0-6 Keyword module"), vim.inspect(h.highlights()))
 end)
 
+-- The text of the goal-edit window is for its goal only, and only while
+-- the window is open.
+t.test("the goal-edit window's text is not used after closing it", function()
+    load("prompt_closed")
+    h.cursor_at("{! x !}", 1, 3)
+    vim.cmd("MkPrompt")
+    vim.api.nvim_buf_set_lines(0, 0, -1, true, { "not x" })
+    vim.cmd("q")
+    h.cursor_at("→ ?", 1, 4)
+    h.messages = {}
+    vim.cmd("AgdaInfer")
+    h.wait_idle()
+    t.eq({ "Warning: The goal is empty" }, h.messages)
+end)
+
 t.test("showing implicit arguments survives reloads", function()
     load("implicit_args")
     vim.cmd("ShowImplicit")
