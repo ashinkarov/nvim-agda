@@ -255,8 +255,8 @@ t.test("module contents with submodules and of the current module", function()
     t.eq({ "Module Contents", "Modules", "  A", "  B", "Names" },
          vim.tbl_filter(function(l) return not l:find("^─") end, lines))
     lines = module_contents("")
-    t.ok(vim.tbl_contains(lines, "  Only") and vim.tbl_contains(lines, "  top : M.T"),
-         vim.inspect(lines))
+    local i = vim.fn.index(lines, "  top") + 1
+    t.ok(vim.tbl_contains(lines, "  Only") and lines[i + 1] == "     : M.T", vim.inspect(lines))
 end)
 
 t.test("module contents in a goal", function()
@@ -267,7 +267,7 @@ t.test("module contents in a goal", function()
     local lines, cmd = module_contents("unused")
     t.eq('Cmd_show_module_contents Simplified 0 noRange "M"', cmd)
     t.eq({}, h.prompts)
-    t.ok(vim.tbl_contains(lines, "  T : Set"), vim.inspect(lines))
+    t.eq("     : Set", lines[vim.fn.index(lines, "Names") + 3], vim.inspect(lines))
 end)
 
 -- Tests of the edits that Agda's responses make to the buffer; see the

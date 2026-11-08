@@ -570,19 +570,20 @@ local function handle_displayinfo(msg)
     elseif inf.kind == "Auto" then
         display(string.format("Auto: %s", inf.info))
     elseif inf.kind == "ModuleContents" then
-        -- Like the Emacs mode: the submodules (`names`), then the other
-        -- names with their types.  The Emacs mode does not show the
-        -- `telescope` either, which Agda uses as the context of the types.
+        -- The submodules (`names`), then the other names with their
+        -- types.  The types go on the lines after the names, as long names
+        -- would push aligned types far to the right.  Like the Emacs mode
+        -- we do not show the `telescope`, which Agda uses as the context
+        -- of the types.
         local indent = "  "
         local p = {"Modules"}
         for _,v in ipairs(inf.names) do
             table.insert(p, indent .. v)
         end
         table.insert(p, "Names")
-        local max_name_len = max_width(inf.contents, "name")
         for _,v in ipairs(inf.contents) do
-            local name = indent .. v.name .. string.rep(" ", max_name_len - width(v.name))
-            table_append(p, mk_decl(name, split_lines(v.term), " : "))
+            table.insert(p, indent .. v.name)
+            table_append(p, mk_decl(indent .. indent, split_lines(v.term), " : "))
         end
         mk_window(add_sep(p, "Module Contents"))
     elseif inf.kind == "WhyInScope" then

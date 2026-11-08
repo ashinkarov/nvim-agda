@@ -4,6 +4,9 @@ Module Contents
 Modules
   T
 Names
-  T : Set
-  a : M.T
-  b : M.T
+  T
+     : Set
+  a
+     : M.T
+  b
+     : M.T
