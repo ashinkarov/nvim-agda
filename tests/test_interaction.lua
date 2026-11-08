@@ -54,6 +54,21 @@ t.test("goal type and context", function()
     t.golden("type_context", fs[1].lines)
 end)
 
+-- Constraints that mention the goal follow the context.
+t.test("goal type and context with constraints", function()
+    h.open("type_context_constraints", { fixture = "Blocked.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.take_errors()
+    h.cursor_at("{! !}", 1, 3)
+    vim.cmd("AgdaTypeContext")
+    h.wait_idle()
+    local lines = h.floats()[1].lines
+    local i = vim.fn.index(lines, "Constraints:")
+    t.ok(i > 0, vim.inspect(lines))
+    t.eq("G ?0 = tt : 𝔹", lines[i + 2])
+end)
+
 -- The outer x is shadowed: Agda prints it as x₁, and it is not in scope.
 t.test("shadowed names in the context", function()
     h.open("context_shadowed", { fixture = "Shadow.agda" })

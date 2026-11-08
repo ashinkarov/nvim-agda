@@ -692,7 +692,8 @@ local function handle_displayinfo(msg)
             p = add_sep(split_lines(g.expr), "Normal Form (" .. where .. ")", " : ")
         elseif g.kind == "GoalType" then
             -- The goal type and the type of the goal's content, then
-            -- the boundary (in Cubical Agda) and the context.
+            -- the boundary (in Cubical Agda), the context and the
+            -- constraints on the goal.
             p = mk_decl("Goal Type", split_lines(g.type), " : ")
             table.insert(p, 1, SEP)
             if g.typeAux.kind == "GoalAndHave" then
@@ -707,6 +708,14 @@ local function handle_displayinfo(msg)
                 table.insert(p, SEP)
             end
             table_append(p, context_lines(g.entries))
+            -- The constraints that mention the goal, as Agda prints them.
+            if g.outputForms and #g.outputForms > 0 then
+                table.insert(p, SEP)
+                table.insert(p, "Constraints:")
+                for _,v in ipairs(g.outputForms) do
+                    table_append(p, split_lines(v))
+                end
+            end
         elseif g.kind == "HelperFunction" then
             local where = copy(g.signature)
             p = add_sep(split_lines(g.signature), "Helper Function (" .. where .. ")")

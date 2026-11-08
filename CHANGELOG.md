@@ -33,6 +33,8 @@
 
 ### Added
 
+- Goal type and context (`\,`, `\.`) also show the constraints that
+  mention the goal, like the Emacs mode.
 - Search about (`\z`, `:AgdaSearchAbout`) lists the definitions whose
   types mention the given names, like `C-c C-z` in the Emacs mode.
 - `:AgdaVersion` shows the version of the running Agda.

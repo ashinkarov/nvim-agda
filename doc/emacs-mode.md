@@ -39,7 +39,7 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Helper function type | `C-c C-h` | **Works:** `\h`; the type is also copied to the clipboard. |
 | Infer type | `C-c C-d` | **Works:** `\d`, in a goal or for an expression asked for. |
 | Why in scope | `C-c C-w` | **Works:** `\w`.  In a goal, for its content; otherwise for the name under the cursor, found in Agda's highlighting, with operator parts completed (`∧` asks about `_∧_`; for operators renamed on import this gives the old name), or for a name asked for. |
-| Goal type and context | `C-c C-,` | **Works:** `\,`, and `\u,` normalised. |
+| Goal type and context | `C-c C-,` | **Works:** `\,`, and `\u,` normalised, followed by the constraints that mention the goal. |
 | Goal type, context and inferred type | `C-c C-.` | **Works:** `\.`. |
 | Goal type, context and checked type | `C-c C-;` | **Won't implement:** like `\.`, but shows the goal's content checked against the goal type and normalised instead of its type, i.e. what elaborate and give (`\m`) would put in; `\m` and `\n` cover this. |
 | Search about | `C-c C-z` | **Works:** `\z`, `:AgdaSearchAbout`.  Like in Emacs, the input is a list of names that the types must mention and `"quoted"` parts of the definitions' names (e.g. `ℕ _+_ "comm"`); it is not a search by type, so `ℕ → ℕ` gives a parse error (`→` is not a name). |
@@ -99,8 +99,7 @@ uses interactively: `Cmd_load_no_metas`, `Cmd_highlight`,
   of `ClearHighlighting`.  The plugin never removes highlighting for a
   range and clears all of it, whereas Agda distinguishes token-based
   highlighting.
-* **Goal type and context**: `outputForms` (constraints that mention the
-  goal) and `rewrite`.
+* **Goal type and context**: `rewrite` (the level that was asked for).
 * **Constraints**: `problems` and `unblocker` (what a constraint is
   blocked on).
 * **Smaller things**: the `debugLevel` of `RunningInfo`; `time`,
