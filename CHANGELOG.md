@@ -29,6 +29,8 @@
 
 ### Added
 
+- `CTRL-]` jumps to the definition of the name under the cursor, and
+  `CTRL-T` back (see "Going to definitions" in the README).
 - A failed load moves the cursor to the error, like the Emacs mode
   (errors in other files are only reported).
 - `\^0`…`\^9`, `\^-`, `\^+`, `\^=`, `\^(` and `\^)` insert superscripts.

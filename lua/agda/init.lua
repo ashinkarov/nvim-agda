@@ -66,8 +66,9 @@ local hl_ns = vim.api.nvim_create_namespace("agda-hl-ns")
 -- offsets as sent by Agda), a list for every range.
 local hl_marks = {}
 -- The names in the highlighting, by the first extmark of their range:
--- {site = {filepath, position}, atoms = {...}} with the definition site
--- of the name as Agda sends it.  The extmarks move with edits, so the
+-- {filepath, position, operator} with the definition site of the name as
+-- Agda sends it, and whether it is (part of) an operator.  A flat table,
+-- as there are many: about 10000 in a 2500-line file.  The extmarks move with edits, so the
 -- name under the cursor can be found after the buffer was changed.
 local hl_names = {}
 -- The first extmark of the range that starts at an offset, for the names
@@ -413,7 +414,8 @@ local function handle_hl(msg)
         end
         hl_marks[key] = ids
         if v then
-            hl_names[ids[1]] = {site = v.definitionSite, atoms = v.atoms}
+            hl_names[ids[1]] = {v.definitionSite.filepath, v.definitionSite.position,
+                                vim.tbl_contains(v.atoms, "operator")}
             hl_name_at[v.range[1]] = ids[1]
         end
     end
@@ -1524,6 +1526,87 @@ function M.agda_module_contents(file)
         local cmd = "(Cmd_show_module_contents_toplevel Simplified " .. e .. ")"
         agda_feed(file,cmd)
     end, file)
+end
+
+------ Names and definitions ------
+-----------------------------------
+
+-- The name under the cursor in the main buffer, from the names in
+-- Agda's highlighting: {text, data, start, end} where `data` is the
+-- entry in `hl_names` and start and end are {0-based line, byte
+-- column}, or nil.
+local function name_at_cursor()
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local row, col = cursor[1] - 1, cursor[2]
+    local marks = vim.api.nvim_buf_get_extmarks(main_buf, hl_ns, {row, col}, {row, col},
+                                                {details = true, overlap = true})
+    for _, m in ipairs(marks) do
+        local data = hl_names[m[1]]
+        local erow, ecol = m[4].end_row, m[4].end_col
+        if data and (erow > row or ecol > col) then
+            local text = vim.api.nvim_buf_get_text(main_buf, m[2], m[3], erow, ecol, {})
+            return {text = table.concat(text, "\n"), data = data,
+                    start = {m[2], m[3]}, ["end"] = {erow, ecol}}
+        end
+    end
+end
+
+-- The lines of `file`: of its buffer if it is loaded, otherwise as on
+-- disk.
+local function file_lines(file)
+    local buf = vim.fn.bufnr(file)
+    if buf ~= -1 and vim.api.nvim_buf_is_loaded(buf) then
+        return vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+    end
+    local ok, lines = pcall(vim.fn.readfile, file)
+    return ok and lines or nil
+end
+
+-- The position of a definition site (`filepath` and `position`) as
+-- {1-based line, byte column}, or nil.  Agda counts the position in code points from the start of the
+-- file.  In the main buffer we take the extmark of the name at the
+-- definition, which moved with any edits since the load.
+local function site_pos(filepath, position)
+    if main_file ~= nil and vim.uv.fs_realpath(filepath) == vim.uv.fs_realpath(main_file) then
+        local id = hl_name_at[position]
+        local p = id and vim.api.nvim_buf_get_extmark_by_id(main_buf, hl_ns, id, {})
+        if p and #p > 0 then
+            return {p[1] + 1, p[2]}
+        end
+        p = offset_pos(position)
+        return p and {p[1] + 1, p[2]}
+    end
+    local lines = file_lines(filepath)
+    local offset = 1
+    for i, l in ipairs(lines or {}) do
+        local len = utf8.len(l)
+        if position <= offset + len then
+            return {i, utf8.offset(l, position - offset + 1) - 1}
+        end
+        offset = offset + len + 1
+    end
+end
+
+-- 'tagfunc' (set by the ftplugin): CTRL-] and the like jump to the
+-- definition of the name under the cursor, and CTRL-T jumps back, like
+-- M-. and M-* in the Emacs mode.  Only the cursor counts ("c" in
+-- `flags`), not the word that Vim passes in `pattern`, which does not
+-- know Agda's names.  For :tag with a name, or if there is no name under
+-- the cursor, we return v:null, so that Vim uses tags files.
+function M.tagfunc(pattern, flags)
+    if not flags:find("c", 1, true) then
+        return vim.NIL
+    end
+    local name = name_at_cursor()
+    local pos = name and site_pos(name.data[1], name.data[2])
+    if pos == nil then
+        return vim.NIL
+    end
+    return {{
+        name = name.text,
+        filename = name.data[1],
+        cmd = string.format([[/\%%%dl\%%%dc/]], pos[1], pos[2] + 1),
+    }}
 end
 
 function M.agda_why_inscope(file)

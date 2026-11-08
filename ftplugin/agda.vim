@@ -56,6 +56,13 @@ endif
 call b:AgdaMod.setup(g:nvim_agda_settings)
 
 
+" CTRL-] jumps to the definition of the name under the cursor and CTRL-T
+" back, using the definition sites in Agda's highlighting.
+function! AgdaTagfunc(pattern, flags, info)
+    return b:AgdaMod.tagfunc(a:pattern, a:flags)
+endfunction
+setlocal tagfunc=AgdaTagfunc
+
 " Vim commands
 command! -buffer AgdaStart :call b:AgdaMod.agda_start()
 command! -buffer AgdaStop :call b:AgdaMod.agda_stop()

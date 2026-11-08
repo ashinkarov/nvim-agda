@@ -88,6 +88,15 @@ commands have to do with management of the popups and goal editing.
 Within the goal-edit window, `q` is mapped to close the window.
 The regular `:q` command would work as well.
 
+### Going to definitions
+After the file has been loaded, `CTRL-]` jumps to the definition of the
+name under the cursor, also in other files such as imported modules or
+the standard library, and `CTRL-T` jumps back, as with tags (the plugin
+sets `'tagfunc'`).  `CTRL-W ]` opens the definition in a new window.
+The definitions come from Agda's highlighting, as in the Emacs mode
+(`M-.`), so they are those of the last load; names added since then are
+not found.
+
 ### Highlighting
 Agda's highlighting uses the standard highlight groups (`Keyword`,
 `Type`, ...) and groups of its own, which you can set in your colour

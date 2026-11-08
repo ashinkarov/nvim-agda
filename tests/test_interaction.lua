@@ -477,6 +477,56 @@ t.test("highlighting of records, fields and problems", function()
     t.golden("highlight_problems", h.highlights())
 end)
 
+-- Definitions.agda imports Lib, which the tests write next to it.
+local function load_definitions(name)
+    h.open(name, { fixture = "Definitions.agda" })
+    vim.fn.writefile({ "module Lib where", "", "data Unit : Set where", "  unit : Unit" },
+                     h.ctx.dir .. "/Lib.agda")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+end
+
+local function jump()
+    vim.cmd("normal! \29")    -- CTRL-]
+    return vim.api.nvim_win_get_cursor(0)
+end
+
+t.test("CTRL-] jumps to the definition and CTRL-T back", function()
+    load_definitions("definition_same_file")
+    h.cursor_at("x ∧ tt", 1, 2)    -- on ∧
+    t.eq({ 8, 0 }, jump())         -- _∧_
+    vim.cmd("normal! \20")    -- CTRL-T
+    t.eq({ 13, 8 }, vim.api.nvim_win_get_cursor(0))
+    h.cursor_at("∧ tt", 1, 4)      -- on tt
+    t.eq({ 6, 2 }, jump())
+end)
+
+t.test("CTRL-] finds definitions after edits", function()
+    load_definitions("definition_after_edit")
+    vim.api.nvim_buf_set_lines(0, 1, 1, true, { "-- added", "-- lines" })
+    h.cursor_at("x ∧ tt", 1, 2)
+    t.eq({ 10, 0 }, jump())
+end)
+
+t.test("CTRL-] jumps to definitions in other files", function()
+    load_definitions("definition_other_file")
+    h.cursor_at("unit", 1)     -- in `u = unit`
+    t.eq({ 4, 2 }, jump())
+    t.eq(h.ctx.dir .. "/Lib.agda", vim.api.nvim_buf_get_name(0))
+    local lib = vim.api.nvim_get_current_buf()
+    vim.cmd("normal! \20")
+    t.eq(h.ctx.buf, vim.api.nvim_get_current_buf())
+    vim.cmd("bwipeout " .. lib)
+end)
+
+t.test("CTRL-] outside names leaves the cursor alone", function()
+    load_definitions("definition_none")
+    h.cursor_at("comment", 1)
+    local before = vim.api.nvim_win_get_cursor(0)
+    pcall(vim.cmd, "normal! \29")
+    t.eq(before, vim.api.nvim_win_get_cursor(0))
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")
