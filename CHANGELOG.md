@@ -43,6 +43,8 @@
 - A configuration for the Lua language server (`.luarc.json`).
 - `doc/make-case.md` describes the problems of case splitting and a
   proposed fix in Agda.
+- `doc/agda-upstream.md` collects other places where Agda's interaction
+  interface could be improved.
 
 ### Fixed
 
