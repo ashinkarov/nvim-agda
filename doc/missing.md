@@ -29,7 +29,7 @@ Emacs commands (with their keys) that the plugin does not have:
 | Version | | `Cmd_show_version` | **Implemented:** `:AgdaVersion`. |
 | Switch Agda version | `C-c C-x C-s` | | The binary is set in `g:nvim_agda_settings`. |
 | Comment the rest of the buffer | `C-c C-x M-;` | | **Implemented** by Neovim: `gcG` (un)comments to the end of the buffer, using the `'commentstring'` that the plugin sets. |
-| Go to definition with the mouse | `mouse-2` | | `CTRL-]` works with the keyboard. |
+| Go to definition with the mouse | `mouse-2` | | **Implemented** by Neovim: `CTRL-LeftMouse` and `g<LeftMouse>` move the cursor and do `CTRL-]`, which uses the plugin's `'tagfunc'`. |
 
 Commands of the interface that the plugin never sends and Emacs does not
 use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,

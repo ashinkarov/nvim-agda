@@ -103,7 +103,9 @@ the goal.
 After the file has been loaded, `CTRL-]` jumps to the definition of the
 name under the cursor, also in other files such as imported modules or
 the standard library, and `CTRL-T` jumps back, as with tags (the plugin
-sets `'tagfunc'`).  `CTRL-W ]` opens the definition in a new window.
+sets `'tagfunc'`).  `CTRL-W ]` opens the definition in a new window,
+and with the mouse, `CTRL-LeftMouse` and `g<LeftMouse>` jump to the
+definition of the name clicked on.
 The definitions come from Agda's highlighting, as in the Emacs mode
 (`M-.`), so they are those of the last load; names added since then are
 not found.
