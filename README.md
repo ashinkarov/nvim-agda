@@ -139,10 +139,11 @@ for example a name keeps its colour in a clause with missing cases.
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not yet have aborting a
 command, compiling, or backend commands.  The normalisation and compute
-modes are fixed (Emacs chooses them with a prefix argument), the messages that Agda attaches to highlighted ranges
-(such as errors) are not shown, and typing an input sequence such as
-`\alpha` gives no feedback until it is complete.  See
-[doc/missing.md](doc/missing.md) for the full list.
+modes are fixed (Emacs chooses them with a prefix argument), the
+messages that Agda attaches to highlighted ranges (such as errors) are
+not shown, and typing an input sequence such as `\alpha` gives no
+feedback until it is complete.  See [doc/emacs-mode.md](doc/emacs-mode.md)
+for a comparison with the Emacs mode.
 
 # Development
 

@@ -41,7 +41,8 @@
 - Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with
   its content checked and simplified, like `C-c C-m` in the Emacs mode.
 - `CTRL-]` jumps to the definition of the name under the cursor, and
-  `CTRL-T` back (see "Going to definitions" in the README).
+  `CTRL-T` back (see "Going to definitions" in the README); so do
+  `CTRL-LeftMouse` and `g<LeftMouse>`.
 - A failed load moves the cursor to the error, like the Emacs mode
   (errors in other files are only reported).
 - `\^0`…`\^9`, `\^-`, `\^+`, `\^=`, `\^(` and `\^)` insert superscripts.
@@ -56,8 +57,9 @@
   proposed fix in Agda.
 - `doc/agda-upstream.md` collects other places where Agda's interaction
   interface could be improved.
-- `doc/missing.md` lists what the plugin does not do yet compared with
-  the Emacs mode and Agda's interface; the README's todo list is gone.
+- `doc/emacs-mode.md` compares the plugin with the Emacs mode: what
+  works, what is missing and what we decided against, and why; the
+  README's todo list is gone.
 
 ### Fixed
 
