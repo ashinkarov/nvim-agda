@@ -1620,8 +1620,13 @@ local not_name = "%s%.;{}()@\""
 -- (see `name_at_cursor`), or nil.  A part of an operator, such as `∧` in
 -- `x ∧ y` or `then` in `if b then x else y`, is not in scope by itself,
 -- so we take the name at its definition (`_∧_`, `if_then_else_`), with
--- the qualifier of the part, if any.  If the operator was renamed when
--- it was imported, this gives the old name.
+-- the qualifier of the part, if any.
+--
+-- Limitation: if the operator was renamed when it was imported, e.g.
+-- with `renaming (_∧_ to _and_)`, the definition has the old name, so
+-- for `and` we ask about `_∧_`, which may not be in scope under that
+-- name, and Agda answers that it is not.  The new name could only be
+-- rebuilt from the parts at the use site, whose shape we do not know.
 local function scope_name()
     local name = name_at_cursor()
     if name == nil or not name.data[3] then
