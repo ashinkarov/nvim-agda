@@ -42,7 +42,7 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Goal type and context | `C-c C-,` | **Works:** `\,`, and `\u,` normalised. |
 | Goal type, context and inferred type | `C-c C-.` | **Works:** `\.`. |
 | Goal type, context and checked type | `C-c C-;` | **Won't implement:** like `\.`, but shows the goal's content checked against the goal type and normalised instead of its type, i.e. what elaborate and give (`\m`) would put in; `\m` and `\n` cover this. |
-| Search about | `C-c C-z` | **Works:** `\z`, `:AgdaSearchAbout`. |
+| Search about | `C-c C-z` | **Works:** `\z`, `:AgdaSearchAbout`.  Like in Emacs, the input is a list of names that the types must mention and `"quoted"` parts of the definitions' names (e.g. `ℕ _+_ "comm"`); it is not a search by type, so `ℕ → ℕ` gives a parse error (`→` is not a name). |
 | Module contents | `C-c C-o` | **Works:** `\o`.  In a goal, for the module named by its content; an empty name stands for the current module.  Types are shown below the names, as long names would push aligned types far to the right. |
 | Compute normal form | `C-c C-n` | **Works:** `\n`; the normal form is also copied to the clipboard.  **Missing:** the other compute modes, see below. |
 | Version | | **Works:** `:AgdaVersion`. |

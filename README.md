@@ -76,7 +76,7 @@ commands have to do with management of the popups and goal editing.
 | h | Helper function for the goal |
 | o | Show the content of the module |
 | w | Explain why a name is in scope: the goal's content in a goal, otherwise the name under the cursor (an operator part such as `∧` stands for `_∧_`) |
-| z | Search about: the definitions whose types mention the given names |
+| z | Search about: the definitions whose types mention all the given names, and whose names contain the given `"quoted"` parts (e.g. `ℕ _+_ "comm"`); not a search by type |
 | ? | Show the goals with their types, and warnings and errors |
 | f | Go to the next goal |
 | b | Go to the previous goal |

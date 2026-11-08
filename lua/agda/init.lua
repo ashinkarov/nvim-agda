@@ -1771,12 +1771,15 @@ function M.hide_implicit(file)
     agda_feed(file, "(ShowImplicitArgs False)")
 end
 
--- Search for the definitions whose types mention the given names, like
--- the Emacs mode's search about.  Agda searches in the scope at the top
--- level of the file.
+-- Search for definitions, like the Emacs mode's search about.  Agda
+-- splits the input into words: a word in double quotes must be part of
+-- the definition's name, any other word is a name that its type must
+-- mention (`findMentions` in Agda's Interaction/SearchAbout.hs).  So it
+-- is not a search by type: `ℕ → ℕ` fails, as `→` is not a name.  Agda
+-- searches in the scope at the top level of the file.
 function M.agda_search_about(file)
     wrap_goal_action(function ()
-        local s = vim.fn.input("Search about: ")
+        local s = vim.fn.input('Search about (names, "name parts"): ')
         if s ~= "" then
             agda_feed(file, "(Cmd_search_about_toplevel Simplified " .. haskell.string(s) .. ")")
         end
