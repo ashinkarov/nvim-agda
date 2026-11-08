@@ -68,6 +68,7 @@ commands have to do with management of the popups and goal editing.
 | , | Show type and context |
 | d | Infer type |
 | r | Refine the goal |
+| m | Elaborate and give: fill the goal with its content, checked and simplified (e.g. `not tt` becomes `ff`) |
 | c | Case split on a variable(s) |
 | n | Compute the goal content or toplevel expression |
 | a | Automatically solve a goal (or all goals in the file) |
@@ -129,10 +130,10 @@ Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
 
 ### Missing functionality
-Compared with the Emacs mode, the plugin does not yet have give with
-force, elaborate and give, search about, the goal type alone or with
-the checked type, aborting a command, compiling, backend commands,
-removing annotations, or showing irrelevant arguments.  The
+Compared with the Emacs mode, the plugin does not yet have search
+about, the goal type alone or with the checked type, aborting a command,
+compiling, backend commands, removing annotations, or showing irrelevant
+arguments.  The
 normalisation and compute modes are fixed (Emacs chooses them with a
 prefix argument), the messages that Agda attaches to highlighted ranges
 (such as errors) are not shown, and typing an input sequence such as

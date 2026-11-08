@@ -74,6 +74,7 @@ command! -buffer AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(ex
 command! -buffer AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
 command! -buffer AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
 command! -buffer AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
+command! -buffer AgdaElaborateGive :call b:AgdaMod.agda_elaborate_give(expand("%:p"))
 command! -buffer AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
 command! -buffer AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
 command! -buffer AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
@@ -101,6 +102,7 @@ nnoremap <buffer> <nowait> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
 nnoremap <buffer> <nowait> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
 nnoremap <buffer> <nowait> <LocalLeader>d :<c-u>AgdaInfer<cr>
 nnoremap <buffer> <nowait> <LocalLeader>r :<c-u>AgdaRefine<cr>
+nnoremap <buffer> <nowait> <LocalLeader>m :<c-u>AgdaElaborateGive<cr>
 nnoremap <buffer> <nowait> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
 nnoremap <buffer> <nowait> <LocalLeader>n :<c-u>AgdaCompute<cr>
 nnoremap <buffer> <nowait> <LocalLeader>a :<c-u>AgdaAuto<cr>

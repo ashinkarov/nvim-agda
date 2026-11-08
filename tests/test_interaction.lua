@@ -664,6 +664,16 @@ t.test("refine on an empty goal of function type introduces a lambda", function(
     t.eq("f = λ x → ?", h.lines()[7])
 end)
 
+t.test("elaborate and give", function()
+    h.open("elaborate_give", { fixture = "Elaborate.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at("{! not tt !}", 1, 3)
+    vim.cmd("AgdaElaborateGive")
+    h.wait_idle()
+    t.eq("x = ff", h.lines()[11])
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")

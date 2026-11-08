@@ -4,7 +4,9 @@ Compared with Agda's Emacs mode and with what Agda's interaction
 interface offers (Agda 2.8.0: commands in `Interaction/Base.hs`,
 responses in `Interaction/JSONTop.hs`, the Emacs mode in
 `src/data/emacs-mode/agda2-mode.el`).  For coming back to later; the
-README lists the main missing features.
+README lists the main missing features.  Items that have been done since
+are marked **Implemented**, those we decided against **Won't
+implement**.
 
 ## Commands
 
@@ -12,8 +14,8 @@ Emacs commands (with their keys) that the plugin does not have:
 
 | Emacs command | Key | Agda command | Notes |
 |---|---|---|---|
-| Give | `C-c C-SPC` | `Cmd_give` | The plugin gives through refine (`Cmd_refine_or_intro`), which behaves the same when the expression fits the goal; there is no give with force (`WithForce`, `C-u C-c C-SPC`). |
-| Elaborate and give | `C-c C-m` | `Cmd_elaborate_give` | Gives the elaborated (normalised) expression. |
+| Give | `C-c C-SPC` | `Cmd_give` | The plugin gives through refine (`Cmd_refine_or_intro`), which behaves the same when the expression fits the goal. |
+| Elaborate and give | `C-c C-m` | `Cmd_elaborate_give` | **Implemented:** `\m`, `:AgdaElaborateGive`, with `Simplified` (the Emacs default). |
 | Goal type | `C-c C-t` | `Cmd_goal_type` | Only the goal type, without the context (the plugin has goal type and context). |
 | Goal type, context and checked type | `C-c C-;` | `Cmd_goal_type_context_check` | Would also need the `GoalAndElaboration` answer. |
 | Search about | `C-c C-z` | `Cmd_search_about_toplevel` | Would also need the `SearchAbout` answer. |
@@ -49,7 +51,13 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
   False`, so refining an empty goal of function type introduces a plain
   lambda (`λ x → ?`), like the Emacs mode; Emacs introduces a
   pattern-matching lambda (`λ { x → ? }`) with a prefix argument.
-* **Force** (`UseForce`) for give, see above.
+* **Force** (`UseForce`) for give: **won't implement.**  It only skips
+  two checks after the term is put into the goal (`give_` in
+  `Interaction/BasicOps.hs`): re-running the termination check of the
+  surrounding function, whose failure is only a warning and which the
+  next load does anyway, and a double check of the term with the
+  internal type checker, a safety net that should not fail for a term
+  that was just checked.  It does not let one give ill-typed terms.
 * **Ranges**: all goal commands send `noRange`, so Agda never uses the
   text of the goal as written (and `GiveAction` always has `str`, never
   `paren`).  The Emacs mode sends the goal's range when the input comes

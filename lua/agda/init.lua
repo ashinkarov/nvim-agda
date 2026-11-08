@@ -234,6 +234,7 @@ local function mk_prompt_window(file, goal)
     mk_mapping("<LocalLeader>d", "agda_infer",              string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>c", "agda_make_case",          string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>r", "agda_refine",             string.format("'%s', %d", file, goal[1]))
+    mk_mapping("<LocalLeader>m", "agda_elaborate_give",     string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>n", "agda_compute",            string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>a", "agda_auto",               string.format("'%s', %d", file, goal[1]))
     mk_mapping("<LocalLeader>s", "agda_solve",              string.format("'%s', %d", file, goal[1]))
@@ -1404,6 +1405,26 @@ function M.agda_refine(file,id)
         local g = haskell.string(content)
         local cmd = "(Cmd_refine_or_intro False " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
+    end, file)
+end
+
+-- Give the goal's content, elaborated and simplified, like the Emacs
+-- mode's elaborate and give (without a prefix argument): Agda checks the
+-- expression and fills the goal with the result, e.g. with `ff` for
+-- `not tt`.
+function M.agda_elaborate_give(file,id)
+    local loc = get_current_loc()
+    wrap_goal_action(function ()
+        local id = id_or_current_goal(id, loc)
+        if id == nil then
+            return warning("cannot elaborate and give, the cursor is not in the goal")
+        end
+        local content = get_trimmed_content(id)
+        if content == "" then
+            return warning("The goal is empty")
+        end
+        agda_feed(file, "(Cmd_elaborate_give Simplified " .. id .. " noRange "
+                        .. haskell.string(content) .. ")")
     end, file)
 end
 

@@ -31,6 +31,8 @@
 
 ### Added
 
+- Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with
+  its content checked and simplified, like `C-c C-m` in the Emacs mode.
 - `CTRL-]` jumps to the definition of the name under the cursor, and
   `CTRL-T` back (see "Going to definitions" in the README).
 - A failed load moves the cursor to the error, like the Emacs mode
