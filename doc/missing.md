@@ -45,10 +45,10 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
 * **Compute mode** (`ComputeMode`) is always `DefaultCompute`; Emacs
   offers `IgnoreAbstract` (`C-u`), `UseShowInstance` (`C-u C-u`) and
   `HeadCompute` (`C-u C-u C-u`).
-* **Pattern-matching lambdas**: refine always sends
-  `Cmd_refine_or_intro True`, so refining an empty goal of function type
-  introduces a pattern-matching lambda (`λ { x → ? }`).  The Emacs mode
-  sends `False` (a plain `λ x → ?`) unless given a prefix argument.
+* **Pattern-matching lambdas**: refine sends `Cmd_refine_or_intro
+  False`, so refining an empty goal of function type introduces a plain
+  lambda (`λ x → ?`), like the Emacs mode; Emacs introduces a
+  pattern-matching lambda (`λ { x → ? }`) with a prefix argument.
 * **Force** (`UseForce`) for give, see above.
 * **Ranges**: all goal commands send `noRange`, so Agda never uses the
   text of the goal as written (and `GiveAction` always has `str`, never

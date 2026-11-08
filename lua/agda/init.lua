@@ -1401,7 +1401,7 @@ function M.agda_refine(file,id)
 
         local content = get_trimmed_content(id)
         local g = haskell.string(content)
-        local cmd = "(Cmd_refine_or_intro True " .. id .. " noRange " .. g .. ")"
+        local cmd = "(Cmd_refine_or_intro False " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
     end, file)
 end

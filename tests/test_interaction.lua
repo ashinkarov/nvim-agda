@@ -652,6 +652,18 @@ t.test("showing implicit arguments survives reloads", function()
            "(Cmd_load " .. file .. " [])" }, cmds)
 end)
 
+-- Like the Emacs mode without a prefix argument: a plain lambda, not a
+-- pattern-matching one.
+t.test("refine on an empty goal of function type introduces a lambda", function()
+    h.open("refine_lambda", { fixture = "Lambda.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at("?", 1)
+    vim.cmd("AgdaRefine")
+    h.wait_idle()
+    t.eq("f = λ x → ?", h.lines()[7])
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")

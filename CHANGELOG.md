@@ -108,6 +108,9 @@
   with only submodules looked empty), with aligned names and types like
   the Emacs mode.  An empty module name shows the current module, and in
   a goal the goal's content names the module, in the goal's scope.
+- Refine on an empty goal of function type introduced a pattern-matching
+  lambda (`λ { x → ? }`); it now introduces `λ x → ?`, like the Emacs
+  mode.
 - Moving between goals follows the order of the file and no longer
   fails once goal 0 has been filled, or after a case split.
 
