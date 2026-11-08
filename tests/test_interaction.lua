@@ -703,6 +703,19 @@ t.test("version", function()
     t.ok(h.messages[1]:match("^Agda version %d+%.%d+"), h.messages[1])
 end)
 
+-- The termination problem of `f` comes only with the error of `g`.
+t.test("warnings that come with an error are shown", function()
+    h.open("error_warnings", { fixture = "Warnings.agda" })
+    h.messages = {}
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.eq(1, #h.take_errors())
+    local warnings = vim.tbl_filter(function(m) return m:find("^Warnings\n") end, h.messages)
+    t.eq(1, #warnings, vim.inspect(h.messages))
+    t.ok(warnings[1]:find("    Termination checking failed for the following functions:", 1, true),
+         warnings[1])
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")

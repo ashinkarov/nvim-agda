@@ -80,6 +80,9 @@
   than the buffer shows.
 - The Agda process is stopped when its buffer is reloaded (`:edit`) or
   unloaded, rather than left running.
+- When a load fails, the warnings found before the error (such as
+  termination problems), which Agda sends with the error, are shown;
+  they were dropped.
 - After a failed reload, goal commands no longer report "an operation
   on the goal in progress" until Agda is restarted.
 

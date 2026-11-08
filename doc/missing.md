@@ -86,7 +86,8 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
     the plugin never removes highlighting for a range and clears all of
     it, whereas Agda distinguishes token-based highlighting.
 * `RunningInfo`: the `debugLevel`.
-* `Error`: the `warnings` that come with an error.
+* `Error`: the `warnings` that come with an error. **Implemented:** they
+  are shown after the error.
 * Goal type and context: `outputForms` (constraints that mention the
   goal) and `rewrite`.
 * Normal form and inferred type: `time`, `commandState`, `computeMode`.

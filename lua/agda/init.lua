@@ -561,6 +561,15 @@ local function handle_displayinfo(msg)
             sargs = nil
         end
         show_error(text)
+        -- The warnings found before the error (e.g. termination problems),
+        -- which Agda sends only here when a load fails.
+        local ws = inf.warnings
+        if type(ws) == "table" then
+            ws = table.concat(vim.tbl_map(function (w) return w.message end, ws), "\n")
+        end
+        if type(ws) == "string" and ws ~= "" then
+            display("Warnings\n    " .. ws:gsub("\n", "\n    "))
+        end
     elseif inf.kind == "Context" then
         mk_window(add_sep(context_lines(inf.context), "Context"))
     elseif inf.kind == "InferredType" then
