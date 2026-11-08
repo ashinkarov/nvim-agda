@@ -84,8 +84,6 @@ command! -buffer GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
 command! -buffer GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
 
 command! -buffer AgdaCloseMsg :call b:AgdaMod.close_msg_win()
-command! -buffer GoalContent :call b:AgdaMod.gc()
-command! -buffer GetEvbuf :call b:AgdaMod.getevbuf()
 
 
 " Key mappings

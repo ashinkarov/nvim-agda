@@ -115,13 +115,7 @@ for example a name keeps its colour in a clause with missing cases.
 
 ### Todo
   * Implement remaining commands from the original `agda-mode`
-  * Goal actions on a modified buffer reload the file and postpone the
-    action via continuation.  Ensure that this is "thread safe" (does not
-    have race conditions).
   * Asynchronous communication quirks:
-    - Highlighting information uses offsets (number of characters from the
-      beginning of file), whereas nvim interface expects line and byte-offset
-      in that line to set the hilighting.  This conversion is expensive.
     - Errors are printed on `stdout` (not `stderr`)
   * If highlighting information arrives, and the file is modified --- should we
     attempt to colorise all but modified pieces?  This is a typical case whe

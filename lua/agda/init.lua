@@ -41,8 +41,6 @@ local sargs = nil
 
 local error_count = 0
 
-local showImplicitArgs = false
-
 -- The buffer of the Agda file.  There is one instance of this module
 -- per buffer, created by the ftplugin.
 local main_buf = vim.api.nvim_get_current_buf()
@@ -306,10 +304,6 @@ local function mk_window(lines,loc)
 
     --print("mk_win: l="..(l or "nil")..", ".."c="..(c or "nil").."; "..vim.inspect(state))
     msg_win = vim.api.nvim_open_win(msg_buf, false, state)
-
-    --FIXME figure out a good way to give a message window a better color.
-    --vim.cmd('hi Active ctermbg=DarkYellow ctermfg=Black')
-    --vim.api.nvim_win_set_option(msg_win, 'winhl', "Normal:Active")
 end
 
 function M.close_msg_win()
@@ -705,18 +699,13 @@ end
 
 
 -- Goals
-local function print_goals()
-    for k,v in pairs(goals) do
-        display(k .. " : " .. vim.inspect(v.start) .. vim.inspect(v["end"]))
-    end
-end
 
 -- This function runs continuations that might have been set by
 -- goal commands in case the buffer was modified.
 local function handle_interpoints(msg)
     goals = {}
     for _,v in pairs(msg.interactionPoints) do
-        -- FIXME sometimes there is no range in the output... wtf...
+        -- Interaction points can come without a range.
         if #v.range > 0 then
             local s = v.range[1].start
             local e = v.range[1]["end"]
@@ -779,16 +768,6 @@ local function get_goal_content(id)
         content[l] = utf8.sub(content[l], 1, ec-3)
     end
     return table.concat(content, "\n")
-end
-
--- XXX deprecated function.
-function M.gc()
-    local n = get_current_goal()
-    if n ~= nil then
-      display("'" .. get_goal_content(n[1]) .. "'")
-    else
-      display("<empty-goal>")
-    end
 end
 
 -- Close the prompt window and forget its content, which was sent to
@@ -955,12 +934,6 @@ local function handle_jump_to_error(msg)
     end)
 end
 
-local function handle_status(msg)
-    local a = msg.status.showImplicitArgs
-    if a ~= nil then
-        showImplicitArgs = a
-    end
-end
 --
 -- Do the actual work depending on the returned messagess
 local function handle_msg(msg)
@@ -979,8 +952,8 @@ local function handle_msg(msg)
         end
     elseif msg.kind == "MakeCase" then
         handle_make_case(msg)
-    elseif msg.kind == "Status" then
-        handle_status(msg)
+    elseif msg.kind == "Status" or msg.kind == "ClearRunningInfo" then
+        -- Not shown.
     elseif msg.kind == "RunningInfo" then
         display(msg.message)
     elseif msg.kind == "JumpToError" then
@@ -992,11 +965,6 @@ local function handle_msg(msg)
         dprint("Don't know how to handle " .. msg["kind"]
               .. " :: " .. vim.inspect(msg))
     end
-end
-
--- XXX deprecated function
-function M.getevbuf()
-    display("evbuf length is: " .. evbuf)
 end
 
 -- Handle one line of Agda's output.
@@ -1160,8 +1128,6 @@ local function agda_feed (file, cmd)
 end
 
 function M.agda_load (file)
-    -- XXX should we kill evbuf in case we are stuck with an
-    -- annoying error, or should it be done by a separate command?
     error_count = 0
     main_file = file
     -- if the main buffer changed, save it before issuing agda (re)load.
@@ -1317,15 +1283,6 @@ function M.agda_goal_prev(file)
     goto_loc(pos)
 end
 
--- XXX weird name of the function
-local function toggle_implicit(file, b)
-    if b then
-        agda_feed(file, "(ShowImplicitArgs True)")
-    else
-        agda_feed(file, "(ShowImplicitArgs False)")
-    end
-end
-
 function M.agda_type_context(file,prec,id)
     -- Get the location of the cursor at the time we called `agda_type_context`.
     local loc = get_current_loc()
@@ -1340,15 +1297,6 @@ function M.agda_type_context(file,prec,id)
         end
 
         local cmd = "(Cmd_goal_type_context " .. prec .. " " .. id .. " noRange \"\")"
-        -- XXX not sure whether we can avoid this, it
-        -- seems that agda_load sets the this flag to false.
-        -- if not showImplicitArgs then
-        --     toggle_implicit(file,true)
-        --     agda_feed(file, cmd)
-        --     toggle_implicit(file,false)
-        -- else
-        --     agda_feed(file, cmd)
-        -- end
         agda_feed(file, cmd)
     end, file)
 end
@@ -1429,10 +1377,6 @@ function M.agda_refine(file,id)
         end
 
         local content = get_trimmed_content(id)
-        -- TODO handle IntroConstructorUnknown DisplayInfo
-        --if content == "" then
-        --    return warning("cannot refine empty goal")
-        --end
         local g = haskell.string(content)
         local cmd = "(Cmd_refine_or_intro True " .. id .. " noRange " .. g .. ")"
         agda_feed(file, cmd)
@@ -1565,10 +1509,6 @@ function M.agda_why_inscope(file)
         agda_feed(file,cmd)
     end, file)
 end
-
--- TODO add show-constraints
--- NonInteractive Indirect ( Cmd_constraints ) function
--- Should be rather straight-forward
 
 function M.agda_show_constraints(file)
     wrap_goal_action(function ()
