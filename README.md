@@ -117,6 +117,24 @@ opens or imports are not in scope there.  To ask in the scope of a
 place inside a module, put a goal (`?`) there and use the command in
 the goal.
 
+### Typing Unicode
+In insert and command-line mode, `<LocalLeader>` (`\` by default)
+starts an input sequence, mostly as in the Emacs mode: `\to` gives `→`,
+`\ga` `α`, `\bN` `ℕ`, `\1` `₁`; see `agda-input.vim` for the full
+list.  While you type a sequence Neovim shows the keys typed so far, but
+not how the sequence can continue.  A plugin that shows the possible
+continuations of a mapping can do that, as the sequences are ordinary
+buffer-local mappings.  We have not tried these, but they should work:
+
+* [which-key.nvim](https://github.com/folke/which-key.nvim): its
+  automatic triggers include insert mode, so after `\` it lists the next
+  keys with the characters they give.
+* [mini.clue](https://github.com/nvim-mini/mini.nvim) needs a trigger
+  for `<LocalLeader>` in insert mode:
+  ```lua
+  require('mini.clue').setup({ triggers = { { mode = 'i', keys = '<LocalLeader>' } } })
+  ```
+
 ### Status line
 The plugin does not change your status line, but keeps a short
 description of what Agda is doing in `b:agda_status`, e.g.
@@ -180,9 +198,11 @@ warning says how many places were left out until the next load.
 Compared with the Emacs mode, the plugin does not have aborting a
 command (use `:AgdaStop`, which has the same effect), compiling, or
 backend commands.  The messages that Agda attaches to highlighted
-ranges (such as errors) are not shown, and typing an input sequence such as `\alpha` gives no
-feedback until it is complete.  See [doc/emacs-mode.md](doc/emacs-mode.md)
-for a comparison with the Emacs mode.
+ranges (such as errors) are not shown, and while typing an input
+sequence such as `\ga` the possible continuations are shown only with
+a plugin (see "Typing Unicode").  See
+[doc/emacs-mode.md](doc/emacs-mode.md) for a comparison with the Emacs
+mode.
 
 # Development
 

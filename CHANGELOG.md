@@ -33,6 +33,8 @@
 
 ### Added
 
+- The README describes the input sequences and how which-key.nvim or
+  mini.clue can show their continuations while typing.
 - `b:agda_status` and `AgdaStatus()` describe what Agda is doing (e.g.
   `Agda: checking…`, `Agda: 2 goals`), for the status line; see "Status
   line" in the README.
