@@ -14,6 +14,7 @@ vim.opt.rtp:prepend(root)
 vim.cmd("filetype plugin on")
 -- Filetype detection already ran before `root` was on the runtimepath.
 vim.cmd("augroup filetypedetect | runtime! ftdetect/*.vim | augroup END")
+vim.cmd("runtime! plugin/agda.vim")
 package.path = root .. "/tests/?.lua;" .. package.path
 
 -- Make lua-utf8 available when installed with

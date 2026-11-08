@@ -33,6 +33,9 @@
 
 ### Added
 
+- `b:agda_status` and `AgdaStatus()` describe what Agda is doing (e.g.
+  `Agda: checking…`, `Agda: 2 goals`), for the status line; see "Status
+  line" in the README.
 - A number between `<LocalLeader>` and the key (`\5,`), or after the
   command (`:AgdaInfer 5`), chooses the normalisation level, from 1 (as
   is) to 5 (normalised), for every command that takes one; for compute

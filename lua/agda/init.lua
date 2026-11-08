@@ -44,6 +44,15 @@ local sargs = nil
 
 local error_count = 0
 
+-- The state of Agda for the statusline (see `update_status`): what Agda
+-- said in its last Status message, the number of commands that Agda has
+-- not finished (it prints a prompt when it is ready for the next one,
+-- and once at the start), and the state of the last load: nil before the
+-- first, "loading", "failed" or "done".
+local agda_status = {}
+local pending = 0
+local load_state = nil
+
 -- The scope of the last why-in-scope command ("at the top level" or "in
 -- goal ?n"), for the header of the answer, which does not say.
 local why_scope = nil
@@ -124,6 +133,38 @@ local function dprint(...)
 end
 
 -- Display width of a string in screen cells.
+-- Set b:agda_status to a short description of the state of Agda for
+-- the statusline, e.g. "Agda: 2 goals (implicit)", or "" if Agda is not
+-- running, and tell statuslines that it changed (the User AgdaStatus
+-- autocommand, for statusline plugins, and a redraw).
+local function update_status()
+    local s = ""
+    if agda_job ~= nil then
+        if pending > 0 then
+            s = load_state == "loading" and "checking…" or "working…"
+        elseif load_state == nil then
+            s = "not loaded"
+        elseif load_state == "failed" then
+            s = "error"
+        elseif agda_status.checked then
+            s = "checked"
+        else
+            local n = len(goals)
+            s = n == 0 and "unsolved metas" or n == 1 and "1 goal" or (n .. " goals")
+        end
+        local shown = {}
+        if agda_status.showImplicitArguments then table.insert(shown, "implicit") end
+        if agda_status.showIrrelevantArguments then table.insert(shown, "irrelevant") end
+        s = "Agda: " .. s .. (#shown > 0 and (" (" .. table.concat(shown, ", ") .. ")") or "")
+    end
+    if not vim.api.nvim_buf_is_valid(main_buf) or vim.b[main_buf].agda_status == s then
+        return
+    end
+    vim.b[main_buf].agda_status = s
+    vim.api.nvim_exec_autocmds("User", {pattern = "AgdaStatus", modeline = false})
+    vim.cmd.redrawstatus({bang = true})
+end
+
 local function width(s)
     return vim.api.nvim_strwidth(s)
 end
@@ -645,6 +686,9 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
+        if load_state == "loading" then
+            load_state = "failed"
+        end
         show_error(text)
         -- The warnings found before the error (e.g. termination problems),
         -- which Agda sends only here when a load fails.
@@ -837,7 +881,7 @@ local function handle_interpoints(msg)
             }
         end
     end
-    --print("hanle interpoints, got: " .. len(goals) .. " goals")
+    update_status()
     if sfunc ~= nil then
         -- Reset sfunc and sargs before running the continuation, so that
         -- they are reset even if it fails.
@@ -1074,7 +1118,10 @@ local function handle_msg(msg)
         end
     elseif msg.kind == "MakeCase" then
         handle_make_case(msg)
-    elseif msg.kind == "Status" or msg.kind == "ClearRunningInfo" then
+    elseif msg.kind == "Status" then
+        agda_status = msg.status
+        update_status()
+    elseif msg.kind == "ClearRunningInfo" then
         -- Not shown.
     elseif msg.kind == "RunningInfo" then
         display(msg.message)
@@ -1108,10 +1155,24 @@ end
 --     Commands are read with `getLine`, so these are single lines too.
 --   * Debug messages (-v) are sent as RunningInfo messages through the
 --     same callback.
-local function handle_line(line)
-    while prefix("JSON> ", line) do
-        line = string.sub(line, 7)
+-- Remove the prompts at the start of `s`: each one says that Agda
+-- finished a command (or started).
+local function take_prompts(s)
+    while prefix("JSON> ", s) do
+        s = string.sub(s, 7)
+        pending = math.max(0, pending - 1)
+        if pending == 0 then
+            if load_state == "loading" then
+                load_state = "done"
+            end
+            update_status()
+        end
     end
+    return s
+end
+
+local function handle_line(line)
+    line = take_prompts(line)
     if line == "" then
         return
     end
@@ -1145,6 +1206,9 @@ local function on_event(job_id, data, event)
         for _, line in ipairs(data) do
             handle_line(line)
         end
+        -- The prompt after the last command has no newline after it, so
+        -- it stays in `evbuf` until the next response.
+        evbuf = take_prompts(evbuf)
     elseif event == "stderr" then
         -- At the end of the stream we get {""}.
         local text = table.concat(data, "\n")
@@ -1154,6 +1218,9 @@ local function on_event(job_id, data, event)
     elseif event == "exit" then
         agda_job = nil
         evbuf = ""
+        pending = 0
+        load_state = nil
+        update_status()
         sfunc = nil
         sargs = nil
         -- The goals refer to the old process; force a reload before the
@@ -1223,6 +1290,9 @@ function M.agda_start()
     end
     agda_job = job
     evbuf = ""
+    -- Until the first prompt.
+    pending = 1
+    agda_status = {}
     return true
 end
 
@@ -1235,8 +1305,11 @@ function M.agda_stop()
         evbuf = ""
         sfunc = nil
         sargs = nil
+        pending = 0
+        load_state = nil
         vim.fn.chanclose(job, "stdin")
         vim.fn.jobstop(job)
+        update_status()
     end
 end
 
@@ -1249,6 +1322,8 @@ local function agda_feed (file, cmd)
     end
     local msg = "IOTCM " .. haskell.string(file) .. " Interactive Direct " .. cmd
     vim.fn.chansend(agda_job, {msg, ""})
+    pending = pending + 1
+    update_status()
 end
 
 function M.agda_load (file)
@@ -1295,6 +1370,7 @@ function M.agda_load (file)
     if vim.b[main_buf].agda_show_irrelevant then
         table.insert(opts, haskell.string("--show-irrelevant"))
     end
+    load_state = "loading"
     agda_feed(file, "(Cmd_load " .. haskell.string(file) .. " ["
                     .. table.concat(opts, ",") .. "])")
 end

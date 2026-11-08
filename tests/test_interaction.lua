@@ -703,6 +703,42 @@ t.test("numbers select the normalisation level and modes", function()
            "(Cmd_refine_or_intro True 1 noRange \"\")" }, vim.list_slice(cmds, 2))
 end)
 
+-- b:agda_status (and AgdaStatus()) say what Agda is doing, and the User
+-- AgdaStatus autocommand tells statuslines when it changes.
+t.test("the status of Agda for the statusline", function()
+    h.open("status")
+    local seen = {}
+    local group = vim.api.nvim_create_augroup("test_status", {})
+    vim.api.nvim_create_autocmd("User", { group = group, pattern = "AgdaStatus", callback = function()
+        table.insert(seen, vim.b.agda_status)
+    end })
+    t.eq("", vim.fn.AgdaStatus())
+    vim.cmd("AgdaLoad")
+    t.eq("Agda: checking…", vim.b.agda_status)
+    h.wait_idle()
+    t.eq("Agda: 3 goals", vim.fn.AgdaStatus())
+    vim.cmd("ShowImplicit")
+    h.wait_idle()
+    t.eq("Agda: 3 goals (implicit)", vim.b.agda_status)
+    vim.cmd("AgdaStop")
+    t.eq("", vim.b.agda_status)
+    vim.api.nvim_del_augroup_by_id(group)
+    t.eq({ "Agda: checking…", "Agda: 3 goals", "Agda: working…", "Agda: working… (implicit)",
+           "Agda: 3 goals (implicit)", "" }, seen)
+end)
+
+for fixture, status in pairs({ ["Checked.agda"] = "Agda: checked",
+                               ["Meta.agda"] = "Agda: unsolved metas",
+                               ["Error.agda"] = "Agda: error" }) do
+    t.test("the status after loading " .. fixture, function()
+        h.open("status_" .. fixture, { fixture = fixture })
+        vim.cmd("AgdaLoad")
+        h.wait_idle()
+        h.take_errors()
+        t.eq(status, vim.b.agda_status)
+    end)
+end
+
 t.test("showing implicit arguments survives reloads", function()
     load("implicit_args")
     vim.cmd("ShowImplicit")

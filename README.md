@@ -117,6 +117,25 @@ opens or imports are not in scope there.  To ask in the scope of a
 place inside a module, put a goal (`?`) there and use the command in
 the goal.
 
+### Status line
+The plugin does not change your status line, but keeps a short
+description of what Agda is doing in `b:agda_status`, e.g.
+`Agda: checking…`, `Agda: 2 goals`, `Agda: checked` (no goals or
+unsolved metas left) or `Agda: error`, followed by `(implicit)` or
+`(irrelevant)` when those arguments are shown.  It is empty in other
+buffers and when Agda is not running.  To show it, add `AgdaStatus()`
+to your status line:
+```vim
+set statusline+=%{AgdaStatus()}
+```
+With a statusline plugin, use a component that returns
+`vim.b.agda_status`, e.g. for lualine:
+```lua
+sections = { lualine_x = { function() return vim.b.agda_status or "" end } }
+```
+The `User AgdaStatus` autocommand runs whenever the status changes, for
+status lines that need to be told to refresh.
+
 ### Going to definitions
 After the file has been loaded, `CTRL-]` jumps to the definition of the
 name under the cursor, also in other files such as imported modules or

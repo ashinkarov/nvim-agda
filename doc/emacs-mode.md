@@ -93,8 +93,10 @@ uses interactively: `Cmd_load_no_metas`, `Cmd_highlight`,
 ## Information from Agda that is not shown
 
 * **Status** (whether the file is checked, whether implicit and
-  irrelevant arguments are shown): **Missing.**  The Emacs mode shows it
-  in the mode line.
+  irrelevant arguments are shown): **Works, differently.**  The Emacs
+  mode shows it in the mode line; the plugin puts it, with whether Agda
+  is busy and the number of goals, in `b:agda_status` for the user's
+  status line (see the README).
 * **Messages on highlighted ranges** (`note`, e.g. the text of the error
   at its range): **Missing.**  The Emacs mode shows them when the mouse
   is over the range; they could become Neovim diagnostics.
