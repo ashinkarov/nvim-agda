@@ -23,8 +23,8 @@ Emacs commands (with their keys) that the plugin does not have:
 | Abort | `C-c C-x C-a` | `Cmd_abort` | Stops a running command without stopping Agda; would also need `DoneAborting`. |
 | Compile | `C-c C-x C-c` | `Cmd_compile` | Would also need the `CompilationOk` answer. |
 | Backend interaction | `C-c C-i` | `Cmd_backend_top`, `Cmd_backend_hole` | |
-| Restart | `C-c C-x C-r` | | `:AgdaStop`, then any command starts a new Agda. |
-| Remove annotations | `C-c C-x C-d` | | Remove the goals and the highlighting. |
+| Restart | `C-c C-x C-r` | | **Won't implement:** `:AgdaStop` followed by `\l` (or any command) does the same, e.g. for an Agda that is stuck or after upgrading it; a command would only save a step. |
+| Remove annotations | `C-c C-x C-d` | | **Won't implement:** in Emacs goals are overlays that get in the way of editing, and this turns them back into text and removes the highlighting.  Here goals are plain text and highlighting is only colour, and misplaced highlighting after edits is better fixed by reloading. |
 | Toggle irrelevant arguments | `C-c C-x C-i` | `ShowIrrelevantArgs` | **Implemented:** `:ShowIrrelevant`, `:HideIrrelevant`, kept across reloads like the implicit ones. |
 | Version | | `Cmd_show_version` | **Implemented:** `:AgdaVersion`. |
 | Switch Agda version | `C-c C-x C-s` | | The binary is set in `g:nvim_agda_settings`. |

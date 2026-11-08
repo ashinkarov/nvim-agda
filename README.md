@@ -138,7 +138,7 @@ for example a name keeps its colour in a clause with missing cases.
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not yet have search
 about, the goal type alone or with the checked type, aborting a command,
-compiling, backend commands, or removing annotations.  The
+compiling, or backend commands.  The
 normalisation and compute modes are fixed (Emacs chooses them with a
 prefix argument), the messages that Agda attaches to highlighted ranges
 (such as errors) are not shown, and typing an input sequence such as
