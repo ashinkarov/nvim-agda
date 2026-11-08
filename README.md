@@ -172,6 +172,10 @@ scheme or configuration:
 Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
 
+If you edit the file while Agda checks it, the highlighting that
+arrives afterwards is applied to the lines that you did not edit, and a
+warning says how many places were left out until the next load.
+
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not have aborting a
 command (use `:AgdaStop`, which has the same effect), compiling, or

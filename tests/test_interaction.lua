@@ -739,6 +739,29 @@ for fixture, status in pairs({ ["Checked.agda"] = "Agda: checked",
     end)
 end
 
+-- Highlighting that arrives after the buffer was edited moves with the
+-- lines that were not edited and leaves out the edited ones.
+t.test("highlighting after edits during the load", function()
+    h.open("edit_during_load", { transcript = "load" })
+    vim.cmd("AgdaLoad")
+    vim.api.nvim_buf_set_lines(0, 0, 0, true, { "-- one", "-- two" })
+    vim.api.nvim_buf_set_lines(0, 8, 10, true, { "not x = ?" })
+    h.wait_idle()
+    -- Two lines above, line 6 changed and the empty line 7 removed.
+    local expected = {}
+    for _, l in ipairs(vim.fn.readfile(t.root .. "/tests/golden/load_highlights.txt")) do
+        local row, rest = l:match("^(%d+)(:.*)$")
+        row = tonumber(row)
+        if row ~= 6 then
+            table.insert(expected, (row < 6 and row + 2 or row + 1) .. rest)
+        end
+    end
+    t.eq(expected, h.highlights())
+    t.ok(vim.tbl_contains(h.messages, "Warning: the highlighting of 3 places edited since the "
+                                      .. "load was not updated, load again to update it"),
+         vim.inspect(h.messages))
+end)
+
 t.test("showing implicit arguments survives reloads", function()
     load("implicit_args")
     vim.cmd("ShowImplicit")

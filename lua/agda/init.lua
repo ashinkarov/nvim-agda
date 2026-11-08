@@ -67,6 +67,13 @@ local main_file = nil
 -- highlighting.
 local main_content = ""
 local main_lines = {}
+-- The changedtick of the buffer when we loaded it, the differences
+-- between the loaded text and the buffer ({changedtick, hunks of
+-- vim.diff}), and the ranges that we could not highlight because they
+-- were edited since the load (see `pos_now`), as keys.
+local main_tick = nil
+local main_diff = nil
+local skipped = {}
 
 -- Prompt window and buffer
 local pwin = nil
@@ -526,6 +533,51 @@ local hl_groups = {
     confluenceproblem = "AgdaConfluenceProblem",
 }
 
+-- The line (0-based) in the buffer now of line `l` (0-based) of the text
+-- that Agda loaded, or nil if it was edited since.  Agda's positions
+-- refer to the text it loaded, which is the buffer when we sent the
+-- load, but the buffer may be edited before the answers arrive.  We
+-- compare the lines of the two (once per change of the buffer): lines
+-- that were not edited move by the number of lines added and removed
+-- above them.
+local function line_now(l)
+    local tick = vim.api.nvim_buf_get_changedtick(main_buf)
+    if tick == main_tick then
+        return l
+    end
+    if main_diff == nil or main_diff[1] ~= tick then
+        local now = vim.api.nvim_buf_get_lines(main_buf, 0, -1, true)
+        main_diff = {tick, vim.diff(table.concat(main_content, "\n") .. "\n",
+                                    table.concat(now, "\n") .. "\n",
+                                    {result_type = "indices"})}
+    end
+    -- Hunks are {start, count} in the old and in the new lines, 1-based;
+    -- an empty side starts with the line before it.
+    local line, shift = l + 1, 0
+    for _, h in ipairs(main_diff[2]) do
+        local sa, ca, sb, cb = unpack(h)
+        local after_a = ca == 0 and sa + 1 or sa + ca
+        local after_b = cb == 0 and sb + 1 or sb + cb
+        if line < after_a then
+            if ca > 0 and line >= sa then
+                return nil
+            end
+            break
+        end
+        shift = after_b - after_a
+    end
+    return l + shift
+end
+
+-- The position {0-based line, byte column} in the buffer now of the
+-- position `offset` that Agda sent, or nil if it is outside the text
+-- that Agda loaded or on a line edited since.
+local function pos_now(offset)
+    local p = offset_pos(offset)
+    local l = p and line_now(p[1])
+    return l and {l, p[2]}
+end
+
 local function handle_hl(msg)
     -- Highlight the text from `s` to `e` (exclusive), which is the range
     -- `key`, with `groups`.  During a load Agda sends the same ranges
@@ -566,24 +618,30 @@ local function handle_hl(msg)
     if msg.info then
     for _, v in pairs(msg.info.payload) do
         local r = v.range
-        local s = offset_pos(r[1])
-        local e = offset_pos(r[2])
+        local key = r[1] .. "-" .. r[2]
         local groups = {}
         for _, atom in ipairs(v.atoms) do
             table.insert(groups, hl_groups[atom])
         end
-
-        if s == nil or e == nil then
-            -- Only if the file that Agda loaded differs from the buffer.
-            dprint("handle_hl: range outside the buffer " .. vim.inspect(v))
-        else
-            -- Agda sends `"definitionSite": null` for ranges that are not
-            -- names.
-            local name = v.definitionSite ~= nil and v.definitionSite ~= vim.NIL
-            -- Updates without groups (e.g. only `typechecks`) keep the
-            -- earlier highlighting.
-            if #groups > 0 or name then
-                set_hl(r[1] .. "-" .. r[2], s, e, groups, name and v)
+        -- Agda sends `"definitionSite": null` for ranges that are not
+        -- names.
+        local name = v.definitionSite ~= nil and v.definitionSite ~= vim.NIL
+        -- Updates without groups (e.g. only `typechecks`) keep the
+        -- earlier highlighting.
+        if #groups > 0 or name then
+            local s, e = pos_now(r[1]), pos_now(r[2])
+            -- The lines in between must not have been edited either.
+            if s and e and e[1] - s[1] ~= offset_pos(r[2])[1] - offset_pos(r[1])[1] then
+                s = nil
+            end
+            if s == nil or e == nil then
+                -- Edited since the load (or outside the text, which
+                -- happens only if Agda loaded another text than the
+                -- buffer).
+                skipped[key] = true
+                dprint("handle_hl: range edited since the load " .. vim.inspect(v))
+            else
+                set_hl(key, s, e, groups, name and v)
             end
         end
     end
@@ -1090,9 +1148,9 @@ local function handle_jump_to_error(msg)
        or vim.uv.fs_realpath(msg.filepath) ~= vim.uv.fs_realpath(main_file) then
         return
     end
-    local pos = offset_pos(msg.position)
+    local pos = pos_now(msg.position)
     if pos == nil then
-        return dprint("handle_jump_to_error: position outside the file " .. vim.inspect(msg))
+        return dprint("handle_jump_to_error: position edited since the load " .. vim.inspect(msg))
     end
     vim.api.nvim_win_call(win, function ()
         vim.cmd("normal! m'")
@@ -1164,6 +1222,13 @@ local function take_prompts(s)
         if pending == 0 then
             if load_state == "loading" then
                 load_state = "done"
+            end
+            local n = len(skipped)
+            if n > 0 then
+                warning(string.format("the highlighting of %d place%s edited since the "
+                                      .. "load was not updated, load again to update it",
+                                      n, n == 1 and "" or "s"))
+                skipped = {}
             end
             update_status()
         end
@@ -1349,6 +1414,9 @@ function M.agda_load (file)
     end
     -- Update the variable holding the content of the buffer
     main_content = vim.api.nvim_buf_get_lines(main_buf, 0, -1, true)
+    main_tick = vim.api.nvim_buf_get_changedtick(main_buf)
+    main_diff = nil
+    skipped = {}
 
     -- Precompute offset positions for the beginning and end of
     -- each line.  This will be used in the highlighting procedures.
@@ -1699,7 +1767,7 @@ local function site_pos(filepath, position)
         if p and #p > 0 then
             return {p[1] + 1, p[2]}
         end
-        p = offset_pos(position)
+        p = pos_now(position)
         return p and {p[1] + 1, p[2]}
     end
     local lines = file_lines(filepath)

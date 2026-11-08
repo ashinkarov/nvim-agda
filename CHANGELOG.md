@@ -142,6 +142,11 @@
 
 #### Windows and highlighting
 
+- Highlighting that arrived after the buffer was edited during a load
+  was put at the positions of the text that Agda loaded, so it was off
+  below the edits.  It now moves with the lines that were not edited and
+  leaves out the edited ones, with a warning; the same goes for jumping
+  to an error and to definitions.
 - Popups are placed at the goal also after wide characters, with a
   number column and with folds, and work in windows created after the
   file was loaded (e.g. with `:split`).

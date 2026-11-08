@@ -128,7 +128,11 @@ uses interactively: `Cmd_load_no_metas`, `Cmd_highlight`,
   use the scope at the top level of the file, as in the Emacs mode, so
   names that a nested module opens are not in scope there.  Asking in a
   goal uses the goal's scope.  See [agda-upstream.md](agda-upstream.md).
-* **Highlighting after edits**: **Missing.**  When Agda's highlighting
-  arrives after the file was edited, its offsets refer to the text that
-  Agda loaded, so the highlighting of edited parts is off until the next
-  load; the plugin could skip ranges in edited parts.
+* **Highlighting after edits**: **Works.**  When Agda's highlighting
+  arrives after the buffer was edited (during a long load), its
+  positions refer to the text that Agda loaded.  The plugin compares
+  that text with the buffer: lines that were not edited get their
+  highlighting where they are now, edited lines keep their old
+  highlighting, and a warning says how many places were not updated.
+  The same goes for jumping to an error and to definitions.  (Goals
+  found in a load still refer to the loaded text.)
