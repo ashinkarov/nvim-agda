@@ -544,11 +544,15 @@ t.test("why in scope asks about the name under the cursor", function()
     t.eq('Cmd_why_in_scope_toplevel "if_then_else_"', why_in_scope("then ff", 1, 0))
     t.eq('Cmd_why_in_scope_toplevel "M.if_then_else_"', why_in_scope("M.if_", 1, 3))
     t.eq('Cmd_why_in_scope_toplevel "unit"', why_in_scope("u = unit", 1, 4))
+    t.ok(vim.tbl_contains(h.floats()[1].lines, "Why `unit' is in scope at the top level"),
+         vim.inspect(h.floats()[1].lines))
 end)
 
 t.test("why in scope in a goal uses the goal", function()
     load_definitions("why_in_scope_goal")
     t.eq('Cmd_why_in_scope 0 noRange "x"', why_in_scope("{! x !}", 1, 3))
+    t.ok(vim.tbl_contains(h.floats()[1].lines, "Why `x' is in scope in goal ?0"),
+         vim.inspect(h.floats()[1].lines))
 end)
 
 t.test("why in scope outside names asks with a guess", function()

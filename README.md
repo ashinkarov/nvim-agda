@@ -88,6 +88,12 @@ commands have to do with management of the popups and goal editing.
 Within the goal-edit window, `q` is mapped to close the window.
 The regular `:q` command would work as well.
 
+Outside goals, why in scope, infer and compute work in the scope at the
+top level of the file, as in the Emacs mode: names that a nested module
+opens or imports are not in scope there.  To ask in the scope of a
+place inside a module, put a goal (`?`) there and use the command in
+the goal.
+
 ### Going to definitions
 After the file has been loaded, `CTRL-]` jumps to the definition of the
 name under the cursor, also in other files such as imported modules or

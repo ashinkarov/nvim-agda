@@ -41,6 +41,10 @@ local sargs = nil
 
 local error_count = 0
 
+-- The scope of the last why-in-scope command ("at the top level" or "in
+-- goal ?n"), for the header of the answer, which does not say.
+local why_scope = nil
+
 -- The buffer of the Agda file.  There is one instance of this module
 -- per buffer, created by the ftplugin.
 local main_buf = vim.api.nvim_get_current_buf()
@@ -570,7 +574,8 @@ local function handle_displayinfo(msg)
         mk_window(add_sep(p, "Module Content"))
     elseif inf.kind == "WhyInScope" then
         mk_window(add_sep(split_lines(inf.message),
-                      "Why `" .. inf.thing .. "' is in scope"))
+                      "Why `" .. inf.thing .. "' is in scope"
+                      .. (why_scope and (" " .. why_scope) or "")))
     elseif inf.kind == "AllGoalsWarnings" then
         local m = {}
         local indent = "    "
@@ -1666,6 +1671,13 @@ end
 -- Explain why a name is in scope, like the Emacs mode: in a goal with
 -- contents, the contents in the context of the goal; otherwise the name
 -- under the cursor, or a name from the user.
+--
+-- Outside goals Agda answers in the scope at the top level of the file
+-- (Cmd_why_in_scope_toplevel uses the inside scope of the top-level
+-- module), so names opened in a nested module are not in scope there.
+-- Agda has no command for the scope at a position; see
+-- doc/agda-upstream.md.  The header of the answer says which scope it
+-- is for.
 function M.agda_why_inscope(file)
     local loc = get_current_loc()
     wrap_goal_action(function ()
@@ -1676,6 +1688,7 @@ function M.agda_why_inscope(file)
                 content = vim.fn.input("Name: ")
             end
             if content ~= "" then
+                why_scope = "in goal ?" .. id
                 agda_feed(file, "(Cmd_why_in_scope " .. id .. " noRange "
                                 .. haskell.string(content) .. ")")
             end
@@ -1683,6 +1696,7 @@ function M.agda_why_inscope(file)
         end
         local name = scope_name() or vim.fn.input("Name: ", guess_name())
         if name ~= "" then
+            why_scope = "at the top level"
             agda_feed(file, "(Cmd_why_in_scope_toplevel " .. haskell.string(name) .. ")")
         end
     end, file)
