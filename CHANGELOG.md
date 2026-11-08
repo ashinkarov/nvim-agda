@@ -83,6 +83,10 @@
   module) and handles extended lambdas (`λ { … ; … }` and `λ where`)
   like the Emacs mode.  Clauses whose left-hand side or right-hand side
   spans several lines are still not handled; see `doc/make-case.md`.
+- The context showed shadowed variables with their original name, so
+  that `x` appeared twice; they are now shown as Agda prints them
+  (`x₁`), and names that are not in scope are marked, like in the
+  Emacs mode.
 - Moving between goals follows the order of the file and no longer
   fails once goal 0 has been filled, or after a case split.
 

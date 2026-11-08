@@ -491,6 +491,26 @@ local function handle_displayinfo(msg)
         end
     end
 
+    -- The lines of a context.  Like the Emacs mode, we show the names
+    -- as Agda prints them in types (`reifiedName`, e.g. x₁ for a shadowed
+    -- x) and mark those that are not in scope.  (Emacs also shows
+    -- "x = x₁" if the original name is in scope, but the json does not
+    -- say whether it is.)
+    local function context_lines(entries)
+        local p = {}
+        local max_name_len = max_width(entries, "reifiedName")
+        for _,v in ipairs(entries) do
+            local name = v.reifiedName
+            name = name .. string.rep(" ", max_name_len - width(name))
+            local decl = mk_decl(name, split_lines(v.binding), " : ")
+            if v.inScope == false then
+                decl[#decl] = decl[#decl] .. "  (not in scope)"
+            end
+            table_append(p, decl)
+        end
+        return p
+    end
+
     local inf = msg.info
     --dprint(inf)
     if (inf.kind == "Error") then
@@ -508,15 +528,7 @@ local function handle_displayinfo(msg)
         end
         show_error(text)
     elseif inf.kind == "Context" then
-        local p = {}
-        local max_name_len = max_width(inf.context, "originalName")
-        for _,v in ipairs(inf.context) do
-            -- FIXME we want reifiedName here, as it may differ.
-            local name = v.originalName
-            name = name .. string.rep(" ", max_name_len - width(name))
-            table_append(p, mk_decl(name, split_lines(v.binding), " : "))
-        end
-        mk_window(add_sep(p,"Context"))
+        mk_window(add_sep(context_lines(inf.context), "Context"))
     elseif inf.kind == "InferredType" then
         mk_window(add_sep(split_lines(inf.expr), "Inferred Type", " : "))
     elseif inf.kind == "NormalForm" then
@@ -626,13 +638,7 @@ local function handle_displayinfo(msg)
                 end
                 table_append(p, { mk_delim(max_b_len) })
             end
-            local max_name_len = max_width(g.entries, "reifiedName")
-
-            for _,v in ipairs(g.entries) do
-                local name = v.reifiedName
-                name = name .. string.rep(" ", max_name_len - width(name))
-                table_append(p, mk_decl(name, split_lines(v.binding), " : "))
-            end
+            table_append(p, context_lines(g.entries))
             local ty = split_lines(g.type)
             local gt = "Goal Type : "
             local ht = "Have Type : "

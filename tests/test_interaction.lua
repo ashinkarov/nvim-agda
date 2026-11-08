@@ -52,6 +52,23 @@ t.test("goal type and context", function()
     t.golden("type_context", fs[1].lines)
 end)
 
+-- The outer x is shadowed: Agda prints it as x₁, and it is not in scope.
+t.test("shadowed names in the context", function()
+    h.open("context_shadowed", { fixture = "Shadow.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.cursor_at("?", 1)
+    vim.cmd("AgdaContext")
+    h.wait_idle()
+    local lines = h.floats()[1].lines
+    t.eq({ "x₁ : 𝔹  (not in scope)", "x  : 𝔹" }, vim.list_slice(lines, #lines - 1))
+    vim.cmd("AgdaCloseMsg")
+    vim.cmd("AgdaTypeContext")
+    h.wait_idle()
+    lines = h.floats()[1].lines
+    t.ok(vim.tbl_contains(lines, "x₁ : 𝔹  (not in scope)"), vim.inspect(lines))
+end)
+
 t.test("goal type and context after wide characters", function()
     load("type_context_wide")
     h.cursor_at("?", 2)        -- the goal in `pick`
