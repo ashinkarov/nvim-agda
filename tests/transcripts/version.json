@@ -1,0 +1,4 @@
+{"agda":"Agda version 2.8.0","exchanges":[
+["","JSON> "],
+["IOTCM \"$DIR/Basic.agda\" Interactive Direct Cmd_show_version","{\"kind\":\"Status\",\"status\":{\"checked\":false,\"showImplicitArguments\":false,\"showIrrelevantArguments\":false}}\n{\"info\":{\"kind\":\"Version\",\"version\":\"2.8.0\"},\"kind\":\"DisplayInfo\"}\nJSON> "]
+]}

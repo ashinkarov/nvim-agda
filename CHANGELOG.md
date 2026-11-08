@@ -33,6 +33,7 @@
 
 ### Added
 
+- `:AgdaVersion` shows the version of the running Agda.
 - `:ShowIrrelevant` and `:HideIrrelevant` show or hide irrelevant
   arguments, and the choice lasts across reloads.
 - Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with

@@ -26,9 +26,9 @@ Emacs commands (with their keys) that the plugin does not have:
 | Restart | `C-c C-x C-r` | | `:AgdaStop`, then any command starts a new Agda. |
 | Remove annotations | `C-c C-x C-d` | | Remove the goals and the highlighting. |
 | Toggle irrelevant arguments | `C-c C-x C-i` | `ShowIrrelevantArgs` | **Implemented:** `:ShowIrrelevant`, `:HideIrrelevant`, kept across reloads like the implicit ones. |
-| Version | | `Cmd_show_version` | Would also need the `Version` answer. |
+| Version | | `Cmd_show_version` | **Implemented:** `:AgdaVersion`. |
 | Switch Agda version | `C-c C-x C-s` | | The binary is set in `g:nvim_agda_settings`. |
-| Comment the rest of the buffer | `C-c C-x M-;` | | |
+| Comment the rest of the buffer | `C-c C-x M-;` | | **Implemented** by Neovim: `gcG` (un)comments to the end of the buffer, using the `'commentstring'` that the plugin sets. |
 | Go to definition with the mouse | `mouse-2` | | `CTRL-]` works with the keyboard. |
 
 Commands of the interface that the plugin never sends and Emacs does not
@@ -74,7 +74,7 @@ use interactively either: `Cmd_load_no_metas`, `Cmd_highlight`,
 * `Mimer`, `DoneAborting`, `DoneExiting`: not sent for the commands the
   plugin uses.
 * `DisplayInfo` kinds for commands the plugin does not send:
-  `CompilationOk`, `Time`, `SearchAbout`, `Version`, the goal-specific
+  `CompilationOk`, `Time`, `SearchAbout`, the goal-specific
   `CurrentGoal`, and the `GoalAndElaboration` part of a goal type.  If
   they arrive, the plugin says that it cannot show them.
 * Highlighting:

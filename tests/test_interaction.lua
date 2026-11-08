@@ -694,6 +694,15 @@ t.test("elaborate and give", function()
     t.eq("x = ff", h.lines()[11])
 end)
 
+t.test("version", function()
+    h.open("version")
+    h.messages = {}
+    vim.cmd("AgdaVersion")
+    h.wait_idle()
+    t.eq(1, #h.messages, vim.inspect(h.messages))
+    t.ok(h.messages[1]:match("^Agda version %d+%.%d+"), h.messages[1])
+end)
+
 t.test("unsolved metas have their own highlight group", function()
     h.open("unsolved_meta", { fixture = "Meta.agda" })
     vim.cmd("AgdaLoad")

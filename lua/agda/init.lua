@@ -651,6 +651,8 @@ local function handle_displayinfo(msg)
             end
         end
         display(table.concat(m, "\n"))
+    elseif inf.kind == "Version" then
+        display("Agda version " .. inf.version)
     elseif inf.kind == "IntroNotFound" then
         display("No introduction forms found.")
     elseif inf.kind == "IntroConstructorUnknown" then
@@ -1747,6 +1749,12 @@ end
 function M.hide_implicit(file)
     vim.b[main_buf].agda_show_implicit = false
     agda_feed(file, "(ShowImplicitArgs False)")
+end
+
+-- Show the version of the running Agda, with the commit it was built
+-- from if it knows it.
+function M.agda_version(file)
+    agda_feed(file, "Cmd_show_version")
 end
 
 function M.show_irrelevant(file)

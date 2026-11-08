@@ -66,6 +66,7 @@ setlocal tagfunc=AgdaTagfunc
 " Vim commands
 command! -buffer AgdaStart :call b:AgdaMod.agda_start()
 command! -buffer AgdaStop :call b:AgdaMod.agda_stop()
+command! -buffer AgdaVersion :call b:AgdaMod.agda_version(expand("%:p"))
 command! -buffer AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
 command! -buffer AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
 command! -buffer AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
