@@ -41,7 +41,7 @@ function M.golden(name, lines)
     end
     local expected = vim.fn.readfile(path)
     if not vim.deep_equal(expected, lines) then
-        local diff = vim.text.diff(table.concat(expected, "\n") .. "\n",
+        local diff = (vim.text.diff or vim.diff)(table.concat(expected, "\n") .. "\n",
                                    table.concat(lines, "\n") .. "\n")
         fail("output differs from golden/" .. name .. ".txt:\n" .. diff)
     end

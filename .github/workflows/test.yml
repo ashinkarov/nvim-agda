@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}, Neovim ${{ matrix.nvim }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Neovim
         run: |
           curl -fsSL https://github.com/neovim/neovim/releases/download/${{ matrix.nvim }}/${{ matrix.build }}.tar.gz \

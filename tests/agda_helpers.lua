@@ -152,20 +152,31 @@ function M.agda_job()
     end
 end
 
+-- Whether the plugin waits for answers of Agda that it has not read
+-- yet (its status, see `update_status`), which may come after Agda's
+-- output is in the logs.
+local function plugin_busy()
+    local buf = M.ctx.buf
+    local s = vim.api.nvim_buf_is_valid(buf) and vim.b[buf].agda_status or ""
+    return s:find("checking…", 1, true) ~= nil or s:find("working…", 1, true) ~= nil
+end
+
 -- Wait until Agda has answered all commands, including the ones the
--- plugin sends in response to Agda's output.
+-- plugin sends in response to Agda's output, and the plugin has read
+-- the answers.
 function M.wait_idle()
     while true do
         local ok = vim.wait(timeout, function()
             if mode == "replay" then check_replay_error() end
             local n, p = state()
-            return p >= n + M.ctx.sessions
+            return p >= n + M.ctx.sessions and not plugin_busy()
         end, 10)
         if not ok then
             local n, p = state()
             local out = read(M.ctx.dir .. "/stdout.log") or ""
-            error(string.format("timeout waiting for Agda (%d commands, %d prompts)\n"
+            error(string.format("timeout waiting for Agda (%d commands, %d prompts, status %q)\n"
                 .. "stdin.log:\n%s\nend of stdout.log:\n%s", n, p,
+                vim.api.nvim_buf_is_valid(M.ctx.buf) and vim.b[M.ctx.buf].agda_status or "",
                 read(M.ctx.dir .. "/stdin.log") or "", out:sub(-300)), 2)
         end
         local n0, p0 = state()
