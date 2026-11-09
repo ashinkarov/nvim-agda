@@ -57,3 +57,9 @@ end)
 t.test("corner and half black triangles", function()
     t.eq("◢◿◣◺◤◸◥◹◭◮", typed("\\tdrb\\tdrw\\tdlb\\tdlw\\tulb\\tulw\\turb\\turw\\Tuhl\\Tuhr"))
 end)
+
+-- Subscript digits as in the Emacs mode, and without the underscore.
+t.test("subscripts", function()
+    t.eq("x₁₂₀₋₊₌₍₎", typed("x\\_1\\_2\\_0\\_-\\_+\\_=\\_(\\_)"))
+    t.eq("x₁", typed("x\\1"))
+end)
