@@ -34,76 +34,93 @@ $ git clone https://github.com/ashinkarov/nvim-agda.git --depth=1 ~/.local/share
 
 ## Configuration
 
-The plugin can be configured by defining a global variable named
-`g:nvim_agda_settings` of type dictionary.  So far the following options
-are supported (I use lua syntax, but you can define this in vimscript too).
+The plugin is configured with the global dictionary
+`g:nvim_agda_settings`, for example in Lua:
 ```lua
-{
-  agda : "/usr/local/bin/agda",            -- Location of Agda binary
-  agda_args : { "--arg1", "--arg2"  },     -- Default arguments to Agda binary
-  diagnostics : "all",                     -- "all", "structured" or "none" (see Diagnostics)
-  debug_p : true                           -- Turn debug prints on or off
+vim.g.nvim_agda_settings = {
+  agda = "/usr/local/bin/agda",      -- the Agda binary (default: agda)
+  agda_args = { "--arg1", "--arg2" },  -- arguments to pass to Agda
+  diagnostics = "all",               -- "all", "structured" or "none" (see Diagnostics)
+  debug_p = true,                    -- print debug messages
 }
 ```
-All the fields of the dictionary may be omitted, as well as the
-definition of `g:nvim_agda_settings`.  In this case hard-coded
-defaults would be used.
+or in Vimscript, `let g:nvim_agda_settings = {'agda': '/usr/local/bin/agda'}`.
+Every entry may be omitted, as may the variable itself.  The settings
+are read when an Agda buffer is opened.
 
 # Details
 
-[NeoVim](https://neovim.io/) comes with built-in [Lua](https://www.lua.org/) support
-which dramatically simplifies development of complex plugins.  This plugin is written
-almost entirely in Lua, which handles asynchronous interaction and editor state
-manipulation.
+[Neovim](https://neovim.io/) comes with built-in [Lua](https://www.lua.org/)
+support, which makes it much simpler to write complex plugins.  This
+plugin is written almost entirely in Lua, which handles the asynchronous
+interaction with Agda and the state of the editor.
 
 ## Design principles
   * Use asynchronous communication so that we can use the editor when Agda is working.
   * Avoid goal commands when the file has not been typechecked.
   * Use popup windows to show location-specific information.
-  * Don't treat Agda as a black box; change the way it interacts in case it makses sense.
+  * Don't treat Agda as a black box; change the way it interacts in case it makes sense.
   * Try to be efficient.
 
 ## Status
 
-Minimal functionality including communication with Agda process, basic utf8
-input, and basic commands are implemented.  Goal specific information such as
-context, goal type, etc. is shown in a popup window appearing at the goal location.
-The goal content is edited in a separate window, so that it does not alter the
-state of the file.  Goal actions on a modified file reload the file and synchronise
-the goal list. Both `?` and `{! !}` goals are supported, however the latter
-is discouraged, as every edit would modify the file and trigger file reload.
+The plugin covers most of the interaction of Agda's Emacs mode: loading
+and highlighting, the goal commands, case splitting, going to
+definitions and the input of Unicode characters.  It does not try to
+copy the Emacs mode exactly; [doc/emacs-mode.md](doc/emacs-mode.md)
+compares the two command by command, with what is missing, what works
+differently and what we decided against.
 
-### Implemented commands and shortcuts.
-Mostly we implement the same commands as agda-mode in emacs.  Several new
-commands have to do with management of the popups and goal editing.
+Information about a goal (its type and context, inferred types, normal
+forms) is shown in a popup at the goal; other messages go to the
+message area, with the full text in `:messages`.  The content of a goal
+can be edited in a separate window (`\e`), so that the file does not
+change, and the goal commands work there too.  Goal commands on a file
+that was changed reload it first, so that the goals are up to date.
+Both `?` and `{! !}` goals work; typing into a `{! !}` goal changes the
+file, so the next goal command reloads it.
 
-| `<LocalLeader>` Key      |  Agda mode Command       |
-|:--------:| -------------- |
-| l | Load file |
-| , | Show type and context |
-| d | Infer type |
-| r | Refine the goal |
-| m | Elaborate and give: fill the goal with its content, checked and simplified (e.g. `not tt` becomes `ff`) |
-| c | Case split on a variable(s) |
-| n | Compute the goal content or toplevel expression |
-| a | Automatically solve a goal (or all goals in the file) |
-| s | Automatically solve constraints in a goal (or in all goals in the file) |
-| h | Helper function for the goal |
-| o | Show the content of the module |
-| w | Explain why a name is in scope: the goal's content in a goal, otherwise the name under the cursor (an operator part such as `∧` stands for `_∧_`) |
-| z | Search about: the definitions whose types mention all the given names, and whose names contain the given `"quoted"` parts (e.g. `ℕ _+_ "comm"`); not a search by type |
-| ? | Show the goals with their types, and warnings and errors |
-| f | Go to the next goal |
-| b | Go to the previous goal |
+### Commands and keys
+The keys are `<LocalLeader>` mappings (`\` by default) in Agda buffers.
 
+| Key | Command | What it does |
+|:---:| ------- | ------------ |
+| l | `:AgdaLoad` | Load (type-check) the file |
+| , | `:AgdaTypeContext` | Show the goal type and context, and the constraints on the goal |
+| . | `:AgdaTypeContextInfer` | The same, with the type of the goal's content |
+| d | `:AgdaInfer` | Infer the type of the goal's content, or of an expression |
+| n | `:AgdaCompute` | Compute the normal form of the goal's content, or of an expression (also copied to the clipboard) |
+| r | `:AgdaRefine` | Refine the goal: give its content if it fits, otherwise apply it, or introduce a constructor or lambda in an empty goal |
+| m | `:AgdaElaborateGive` | Elaborate and give: fill the goal with its content, checked and simplified (e.g. `not tt` becomes `ff`) |
+| c | `:AgdaMakeCase` | Case split on the variables in the goal |
+| a | `:AgdaAuto` | Search for a solution of the goal (or of all goals in the file) |
+| s | `:AgdaSolve` | Solve the constraints of the goal (or of all goals in the file) |
+| h | `:AgdaHelperFun` | Show the type of a helper function for the goal's content (also copied to the clipboard) |
+| o | `:AgdaModuleContents` | Show the contents of a module |
+| w | `:AgdaWhyInscope` | Explain why a name is in scope: the goal's content in a goal, otherwise the name under the cursor (an operator part such as `∧` stands for `_∧_`) |
+| z | `:AgdaSearchAbout` | Search about: the definitions whose types mention all the given names, and whose names contain the given `"quoted"` parts (e.g. `ℕ _+_ "comm"`); not a search by type |
+| ? | `:PrintGoals` | Show the goals with their types, and the warnings and errors |
+| f | `:GoalNext` | Go to the next goal |
+| b | `:GoalPrev` | Go to the previous goal |
+| e | `:MkPrompt` | Edit the goal's content in a window |
+| q | `:AgdaCloseMsg` | Close the popup |
 
-| `<LocalLeader>` Key      |  Agda mode Command       |
-|:--------:| -------------- |
-| q | Close the message box |
-| e | Edit the goal content |
+In the goal-edit window, the keys `, . d n r m c a s h` work on the
+goal with the content of the window, `\q` closes the popup and `q`
+closes the window (as does `:q`).
 
-Within the goal-edit window, `q` is mapped to close the window.
-The regular `:q` command would work as well.
+Commands without keys: `:AgdaContext` (the context of the goal alone),
+`:AgdaShowConstraints`, `:ShowImplicit` and `:HideImplicit`,
+`:ShowIrrelevant` and `:HideIrrelevant` (show or hide implicit or
+irrelevant arguments; the choice lasts across reloads), `:AgdaVersion`,
+and `:AgdaStart` and `:AgdaStop` (start or stop the Agda process; any
+command starts it when needed).
+
+Outside goals, why in scope, search about, module contents, infer and
+compute work in the scope at the top level of the file, as in the Emacs
+mode: names that a nested module opens or imports are not in scope
+there.  To ask in the scope of a place inside a module, put a goal (`?`)
+there and use the command in the goal.
 
 ### Normalisation and modes
 A number between `<LocalLeader>` and the key chooses how far Agda
@@ -121,16 +138,6 @@ For compute (`n`) the number chooses the mode instead: `\1n` ignores
 result, and `\3n` computes only the head normal form.  `\1r` refines an
 empty goal of function type with a pattern-matching lambda
 (`λ { x → ? }`) rather than `λ x → ?`.
-
-`:ShowImplicit` and `:HideImplicit` show or hide implicit arguments,
-and `:ShowIrrelevant` and `:HideIrrelevant` irrelevant ones; the choice
-lasts across reloads.
-
-Outside goals, why in scope, search about, infer and compute work in
-the scope at the top level of the file, as in the Emacs mode: names that a nested module
-opens or imports are not in scope there.  To ask in the scope of a
-place inside a module, put a goal (`?`) there and use the command in
-the goal.
 
 ### Diagnostics
 After a load, the error, the warnings (termination and coverage
@@ -150,9 +157,10 @@ the error and unsolved metas, or to `"none"` for no diagnostics.
 
 ### Typing Unicode
 In insert and command-line mode, `<LocalLeader>` (`\` by default)
-starts an input sequence, mostly as in the Emacs mode: `\to` gives `→`,
-`\ga` `α`, `\bN` `ℕ`, `\McC` `𝒞`, `\1` `₁`; see `lua/agda/input.lua` for the
-full list.  In other buffers, `:runtime agda-input.vim` sets them too.
+starts an input sequence, many of them as in the Emacs mode: `\to`
+gives `→`, `\ga` `α`, `\bN` `ℕ`, `\McC` `𝒞`, `\1` `₁`; see
+`lua/agda/input.lua` for the full list.  In other buffers,
+`:runtime agda-input.vim` sets them too.
 On the command line, where some sequences are also Vim's regex syntax
 (`\<`, `\.`, `\1`, ...), type `CTRL-V` before the backslash to get the
 backslash itself: `/` `CTRL-V` `\<foo` searches for `\<foo`.
