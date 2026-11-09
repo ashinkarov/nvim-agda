@@ -816,6 +816,30 @@ t.test("diagnostics for unsolved metas", function()
          diagnostics())
 end)
 
+-- With diagnostics = "structured" only the places that Agda sends as
+-- data make diagnostics (the error and unsolved metas, not the warnings,
+-- whose places are in their text), and with "none" nothing does.
+t.test("diagnostics settings", function()
+    if h.skip_when_recording() then return end
+    local function load_with(transcript, fixture, setting)
+        h.open("diagnostics_" .. setting, { transcript = transcript, fixture = fixture,
+                                            settings = { diagnostics = setting } })
+        vim.cmd("AgdaLoad")
+        h.wait_idle()
+        h.take_errors()
+        return diagnostics()
+    end
+    t.eq({ { 9, 4, 9, 6, "ERROR", "-", "$DIR/Warnings.agda:10.5-7: error: [CannotApply]" } },
+         load_with("error_warnings", "Warnings.agda", "structured"))
+    t.eq({}, load_with("diagnostics_warnings", "Problems.agda", "structured"))
+    t.eq(2, #load_with("diagnostics_metas", "Constraints.agda", "structured"))
+    t.eq({}, load_with("diagnostics_metas", "Constraints.agda", "none"))
+    h.messages = {}
+    load_with("diagnostics_metas", "Constraints.agda", "some")
+    t.eq('Warning: the setting diagnostics must be "all", "structured" or "none", not "some"',
+         h.messages[1])
+end)
+
 t.test("showing implicit arguments survives reloads", function()
     load("implicit_args")
     vim.cmd("ShowImplicit")

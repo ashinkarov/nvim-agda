@@ -18,8 +18,9 @@
 --     Only `parse_location` knows this format.  If it does not recognise
 --     a message, the message gets no diagnostic (it is still shown in
 --     the message area), so a change of the format can only make
---     diagnostics go missing.  doc/agda-upstream.md proposes that Agda
---     send the range with every warning.
+--     diagnostics go missing.  The setting `diagnostics = "structured"`
+--     turns the mining off (see the README), and doc/agda-upstream.md
+--     proposes that Agda send the range with every warning.
 --
 -- The messages are shown as Agda sends them.
 

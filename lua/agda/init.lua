@@ -16,6 +16,10 @@ M.instance = tostring(M)
 -- Agda Process Handle.  Created by `agda_start`.
 local agda_bin = "agda"
 local agda_args = {}
+-- Which diagnostics to make (the `diagnostics` setting): "all",
+-- "structured" (not from the text of messages) or "none"; see
+-- lua/agda/diagnostics.lua.
+local diag_mode = "all"
 
 local agda_job = nil
 
@@ -255,6 +259,16 @@ function M.setup(config)
     if config.agda then   agda_bin = config.agda  end
     if config.agda_args then agda_args = config.agda_args end
     if config.debug_p then debug_p = config.debug_p end
+    local d = config.diagnostics
+    if d == true or d == false then
+        d = d and "all" or "none"
+    end
+    if d == "all" or d == "structured" or d == "none" then
+        diag_mode = d
+    elseif d ~= nil then
+        warning("the setting diagnostics must be \"all\", \"structured\" or \"none\", not "
+                .. vim.inspect(d))
+    end
 end
 
 ------ Commands ------
@@ -600,7 +614,7 @@ local diag_ctx = {
 }
 
 local function add_diagnostic(d)
-    if d ~= nil then
+    if d ~= nil and diag_mode ~= "none" then
         table.insert(diagnostics, d)
     end
 end
@@ -801,7 +815,7 @@ local function handle_displayinfo(msg)
             load_state = "failed"
             -- The error itself comes with its highlighting.
             for _, w in ipairs(type(inf.warnings) == "table" and inf.warnings or ws) do
-                add_diagnostic(diag.from_warning(w, diag_ctx, true))
+                add_diagnostic(diag.from_warning(w, diag_ctx, diag_mode == "all"))
             end
             show_diagnostics()
         end
@@ -885,7 +899,7 @@ local function handle_displayinfo(msg)
         diagnostics = {}
         for _, ws in ipairs({inf.errors, inf.warnings}) do
             for _, w in ipairs(type(ws) == "table" and ws or messages_of(ws)) do
-                add_diagnostic(diag.from_warning(w, diag_ctx, true))
+                add_diagnostic(diag.from_warning(w, diag_ctx, diag_mode == "all"))
             end
         end
         for _, v in ipairs(inf.invisibleGoals) do

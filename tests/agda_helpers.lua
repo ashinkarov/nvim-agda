@@ -97,6 +97,7 @@ end
 --   agda        the Agda binary the plugin uses (default tests/bin/agda)
 --   version     the version the replayed Agda reports (default 2.8.0)
 --   subdir      put the file in this subdirectory of the test directory
+--   settings    more entries of g:nvim_agda_settings
 function M.open(name, opts)
     opts = opts or {}
     local fixture = opts.fixture or "Basic.agda"
@@ -111,7 +112,8 @@ function M.open(name, opts)
     vim.env.AGDA_TEST_SEED = tostring(seed)
     vim.env.AGDA_TRANSCRIPT = transcript_path(opts.transcript or name)
     vim.env.AGDA_TEST_VERSION = opts.version
-    vim.g.nvim_agda_settings = { agda = opts.agda or (t.root .. "/tests/bin/agda") }
+    vim.g.nvim_agda_settings = vim.tbl_extend("force", opts.settings or {},
+        { agda = opts.agda or (t.root .. "/tests/bin/agda") })
     vim.v.errmsg = ""
 
     vim.cmd.edit(vim.fn.fnameescape(file))

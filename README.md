@@ -27,6 +27,7 @@ are supported (I use lua syntax, but you can define this in vimscript too).
 {
   agda : "/usr/local/bin/agda",            -- Location of Agda binary
   agda_args : { "--arg1", "--arg2"  },     -- Default arguments to Agda binary
+  diagnostics : "all",                     -- "all", "structured" or "none" (see Diagnostics)
   debug_p : true                           -- Turn debug prints on or off
 }
 ```
@@ -126,6 +127,12 @@ at the cursor, `]d` and `[d` go to the next and previous one, and
 as the highlighting marks these places already; virtual text and signs
 follow your `vim.diagnostic.config()`.  Unsolved constraints have no
 diagnostics, as Agda does not say where they are.
+
+Agda sends the places of the error and of unsolved metas as data, but
+those of warnings only at the start of their messages, in a format that
+may change.  If the diagnostics of warnings ever go wrong, set
+`diagnostics` to `"structured"` in `g:nvim_agda_settings` to keep only
+the error and unsolved metas, or to `"none"` for no diagnostics.
 
 ### Typing Unicode
 In insert and command-line mode, `<LocalLeader>` (`\` by default)
