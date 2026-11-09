@@ -802,7 +802,7 @@ t.test("diagnostics for warnings", function()
     h.wait_idle()
     t.eq({ { 11, 0, 11, 13, "ERROR", "CoverageIssue",
              "$DIR/Problems.agda:12.1-14: error: [CoverageIssue]" },
-           { 16, 0, 16, 19, "WARN", "-W[no]UnreachableClauses",
+           { 16, 0, 16, 19, "WARN", "UnreachableClauses",
              "$DIR/Problems.agda:17.1-20: warning: -W[no]UnreachableClauses" } },
          diagnostics())
 end)
@@ -816,6 +816,22 @@ t.test("diagnostics for unsolved metas", function()
     t.eq({ { 7, 8, 7, 9, "WARN", "UnsolvedMeta", "Unsolved meta _5 : 𝔹" },
            { 18, 4, 18, 5, "WARN", "UnsolvedMeta", "Unsolved meta _x_13 : 𝔹" } },
          diagnostics())
+end)
+
+-- Agda reports missing definitions as errors, but they are hints, and
+-- the sign of a line is that of its most severe diagnostic.
+t.test("diagnostics for missing definitions", function()
+    h.open("diagnostics_missing", { fixture = "Missing.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.take_errors()
+    t.eq({ { 11, 0, 11, 3, "HINT", "MissingDefinitions",
+             "$DIR/Missing.agda:12.1-4: error: [MissingDefinitions]" },
+           { 11, 35, 11, 39, "WARN", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
+         diagnostics())
+    local signs = vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true, type = "sign" })
+    table.sort(signs, function(a, b) return a[4].priority > b[4].priority end)
+    t.eq("W", vim.trim(signs[1][4].sign_text))
 end)
 
 -- With diagnostics = "structured" only the places that Agda sends as
@@ -840,6 +856,17 @@ t.test("diagnostics settings", function()
     load_with("diagnostics_metas", "Constraints.agda", "some")
     t.eq('Warning: the setting diagnostics must be "all", "structured" or "none", not "some"',
          h.messages[1])
+end)
+
+t.test("diagnostic severity setting", function()
+    if h.skip_when_recording() then return end
+    h.open("diagnostic_severity", { transcript = "diagnostics_missing", fixture = "Missing.agda",
+        settings = { diagnostic_severity = { MissingDefinitions = false, UnsolvedMeta = "error" } } })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.take_errors()
+    t.eq({ { 11, 35, 11, 39, "ERROR", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
+         diagnostics())
 end)
 
 t.test("showing implicit arguments survives reloads", function()

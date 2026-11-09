@@ -23,6 +23,9 @@ local agda_args = {}
 -- "structured" (not from the text of messages) or "none"; see
 -- lua/agda/diagnostics.lua.
 local diag_mode = "all"
+-- The severities of diagnostics by Agda's names of warnings (the
+-- `diagnostic_severity` setting over the defaults).
+local diag_severities = diag.severities(nil)
 
 local agda_job = nil
 
@@ -272,6 +275,9 @@ function M.setup(config)
         warning("the setting diagnostics must be \"all\", \"structured\" or \"none\", not "
                 .. vim.inspect(d))
     end
+    local problem
+    diag_severities, problem = diag.severities(config.diagnostic_severity)
+    if problem then warning(problem) end
 end
 
 ------ Commands ------
@@ -617,6 +623,7 @@ local diag_ctx = {
 }
 
 local function add_diagnostic(d)
+    d = diag.adjust(d, diag_severities)
     if d ~= nil and diag_mode ~= "none" then
         table.insert(diagnostics, d)
     end

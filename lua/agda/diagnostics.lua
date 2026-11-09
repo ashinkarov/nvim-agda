@@ -27,10 +27,68 @@
 local M = {}
 
 M.ns = vim.api.nvim_create_namespace("agda-diagnostics")
--- Agda's highlighting marks the places already.
-vim.diagnostic.config({underline = false}, M.ns)
+-- Agda's highlighting marks the places already.  With severity_sort,
+-- the sign of a line is that of its most severe diagnostic rather than
+-- of the last one.
+vim.diagnostic.config({underline = false, severity_sort = true}, M.ns)
 
 local severity = vim.diagnostic.severity
+
+-- The severities of diagnostics by their code (Agda's name of the
+-- warning, or "UnsolvedMeta"), or false for no diagnostic; the others
+-- have Agda's level.  The setting `diagnostic_severity` changes them
+-- (see `M.severities`).  Agda reports missing definitions as errors,
+-- which they are not while a module is being written.
+M.default_severities = {MissingDefinitions = "hint"}
+
+local severity_names = {error = severity.ERROR, warn = severity.WARN,
+                        info = severity.INFO, hint = severity.HINT}
+
+-- The severities of the setting `user` (a table {code = "error",
+-- "warn", "info", "hint" or false}) over the defaults, as {code =
+-- severity or false}, and a message about the entries of `user` that
+-- are not severities (which are left out), or nil.
+function M.severities(user)
+    local result = {}
+    for code, s in pairs(M.default_severities) do
+        result[code] = severity_names[s]
+    end
+    if user == nil then
+        return result
+    end
+    if type(user) ~= "table" then
+        return result, "the setting diagnostic_severity must be a table, not " .. vim.inspect(user)
+    end
+    local bad = {}
+    for code, s in pairs(user) do
+        if s == false then
+            result[code] = false
+        elseif type(code) == "string" and severity_names[s] then
+            result[code] = severity_names[s]
+        else
+            table.insert(bad, vim.inspect(code) .. " = " .. vim.inspect(s))
+        end
+    end
+    if #bad > 0 then
+        table.sort(bad)
+        return result, "the setting diagnostic_severity takes \"error\", \"warn\", \"info\", "
+                       .. "\"hint\" or false for the names of warnings, not " .. table.concat(bad, ", ")
+    end
+    return result
+end
+
+-- `d` with the severity that `severities` (from `M.severities`) gives
+-- its code, or nil if it gives false (or `d` is nil).
+function M.adjust(d, severities)
+    if d == nil or d.code == nil or severities[d.code] == nil then
+        return d
+    end
+    if severities[d.code] == false then
+        return nil
+    end
+    d.severity = severities[d.code]
+    return d
+end
 
 -- The place and kind of an error or warning message of Agda, or nil if
 -- the message does not start with a place that we recognise: {file =,
@@ -41,8 +99,8 @@ local severity = vim.diagnostic.severity
 --     file:line.col-line.col: ...
 --     file:line.col-col: ...
 --     file:line.col: ...
--- and is followed by "error: [Name]" or "warning: -W[no]Name" (a file name may
--- contain colons, e.g. C:\x.agda).
+-- and is followed by "error: [Name]" or "warning: -W[no]Name", whose
+-- name is "Name" (a file name may contain colons, e.g. C:\x.agda).
 function M.parse_location(text)
     local first = text:match("^[^\n]*")
     local file, l1, c1, l2, c2, rest = first:match("^(.+):(%d+)%.(%d+)%-(%d+)%.(%d+): (.*)$")
@@ -65,7 +123,7 @@ function M.parse_location(text)
             start = {tonumber(l1), tonumber(c1)},
             ["end"] = {tonumber(l2), tonumber(c2)},
             level = level,
-            name = name and (name:match("^%[(.*)%]$") or name)}
+            name = name and (name:match("^%[(.*)%]$") or name:match("^%-W%[no%](.*)$") or name)}
 end
 
 -- A diagnostic from `start` to `end_` ({0-based line, byte column} in

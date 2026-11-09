@@ -50,6 +50,7 @@ vim.g.nvim_agda_settings = {
   agda = "/usr/local/bin/agda",      -- the Agda binary (default: agda)
   agda_args = { "--arg1", "--arg2" },  -- arguments to pass to Agda
   diagnostics = "all",               -- "all", "structured" or "none" (see Diagnostics)
+  diagnostic_severity = { MissingDefinitions = false },  -- (see Diagnostics)
   debug_p = true,                    -- print debug messages
 }
 ```
@@ -157,13 +158,38 @@ at the cursor, `]d` and `[d` go to the next and previous one, and
 `:lua vim.diagnostic.setloclist()` lists them.  They are not underlined,
 as the highlighting marks these places already; virtual text and signs
 follow your `vim.diagnostic.config()`.  Unsolved constraints have no
-diagnostics, as Agda does not say where they are.
+diagnostics, as Agda does not say where they are.  Where a line has
+several diagnostics, its sign is that of the most severe one.
+
+The diagnostics have Agda's level, error or warning, except missing
+definitions: Agda reports them as errors, but they are hints, as a
+module being written usually has some.  The setting
+`diagnostic_severity` sets the severity by the name of the warning,
+`"error"`, `"warn"`, `"info"`, `"hint"`, or `false` for no diagnostic:
+```lua
+vim.g.nvim_agda_settings = {
+  diagnostic_severity = { MissingDefinitions = false, UnsolvedMeta = "hint" },
+}
+```
+The names are those in Agda's messages, e.g. `[CoverageIssue]` or
+`-W[no]UnreachableClauses`, which are also the diagnostics' codes;
+`agda --help=warning` lists them.  Unsolved metas are `UnsolvedMeta`.
+The error that stops a load has no name and is always an error.
+Anything else that depends on the severity is set with Neovim's
+`vim.diagnostic.config()` for the plugin's namespace, for example to
+show signs only for warnings and errors:
+```lua
+vim.diagnostic.config({ signs = { severity = { min = vim.diagnostic.severity.WARN } } },
+                      require("agda.diagnostics").ns)
+```
 
 Agda sends the places of the error and of unsolved metas as data, but
 those of warnings only at the start of their messages, in a format that
 may change.  If the diagnostics of warnings ever go wrong, set
 `diagnostics` to `"structured"` in `g:nvim_agda_settings` to keep only
 the error and unsolved metas, or to `"none"` for no diagnostics.
+The names of warnings come from their messages too, so with
+`"structured"` only `UnsolvedMeta` in `diagnostic_severity` applies.
 
 ### Typing Unicode
 In insert and command-line mode, `<LocalLeader>` (`\` by default)

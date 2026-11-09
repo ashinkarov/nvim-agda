@@ -17,7 +17,7 @@ t.test("places in messages", function()
            level = "error", name = "TerminationIssue" },
          diag.parse_location("/m/M.agda:6.1-7.10: error: [TerminationIssue]\n..."))
     t.eq({ file = "/m/M.agda", start = { 17, 1 }, ["end"] = { 17, 20 },
-           level = "warning", name = "-W[no]UnreachableClauses" },
+           level = "warning", name = "UnreachableClauses" },
          diag.parse_location("/m/M.agda:17.1-20: warning: -W[no]UnreachableClauses\nUnreachable clause"))
     t.eq({ file = "/m/M.agda", start = { 3, 4 }, ["end"] = { 3, 5 } },
          diag.parse_location("/m/M.agda:3.4: something else"))
@@ -66,4 +66,25 @@ t.test("unsolved metas and edited places", function()
     local edited = { pos = function() return nil end, is_main = ctx.is_main }
     t.eq(nil, diag.from_meta(goal, "_5 : 𝔹", edited))
     t.eq(nil, diag.from_meta({ constraintObj = { name = "_6", range = {} } }, "_6 : 𝔹", ctx))
+end)
+
+t.test("severities by the names of warnings", function()
+    local S = vim.diagnostic.severity
+    t.eq({ MissingDefinitions = S.HINT }, diag.severities(nil))
+    t.eq({ MissingDefinitions = false, UnsolvedMeta = S.INFO },
+         diag.severities({ MissingDefinitions = false, UnsolvedMeta = "info" }))
+    -- Wrong entries are left out and reported.
+    local s, problem = diag.severities({ CoverageIssue = "warning", UnsolvedMeta = "error" })
+    t.eq({ MissingDefinitions = S.HINT, UnsolvedMeta = S.ERROR }, s)
+    t.eq('the setting diagnostic_severity takes "error", "warn", "info", "hint" or false '
+         .. 'for the names of warnings, not "CoverageIssue" = "warning"', problem)
+    t.eq('the setting diagnostic_severity must be a table, not "hint"',
+         select(2, diag.severities("hint")))
+
+    local function d(code) return { code = code, severity = S.ERROR } end
+    t.eq(S.HINT, diag.adjust(d("MissingDefinitions"), diag.severities(nil)).severity)
+    t.eq(S.ERROR, diag.adjust(d("CoverageIssue"), diag.severities(nil)).severity)
+    t.eq(S.ERROR, diag.adjust(d(nil), diag.severities(nil)).severity)
+    t.eq(nil, diag.adjust(d("UnsolvedMeta"), { UnsolvedMeta = false }))
+    t.eq(nil, diag.adjust(nil, {}))
 end)
