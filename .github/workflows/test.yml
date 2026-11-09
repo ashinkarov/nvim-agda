@@ -1,5 +1,6 @@
-# Runs `make test` (the recorded Agda sessions, without Agda) on the
-# oldest Neovim the plugin supports and on the latest release.
+# Runs `make test` (the recorded Agda sessions, without Agda) on Linux
+# and macOS, with the oldest Neovim the plugin supports and the latest
+# release.
 name: Tests
 
 on:
@@ -10,18 +11,24 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         nvim: [v0.11.0, stable]
-    name: Neovim ${{ matrix.nvim }}
+        include:
+          - os: ubuntu-latest
+            build: nvim-linux-x86_64
+          - os: macos-latest
+            build: nvim-macos-arm64
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}, Neovim ${{ matrix.nvim }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Neovim
         run: |
-          curl -fsSL https://github.com/neovim/neovim/releases/download/${{ matrix.nvim }}/nvim-linux-x86_64.tar.gz \
+          curl -fsSL https://github.com/neovim/neovim/releases/download/${{ matrix.nvim }}/${{ matrix.build }}.tar.gz \
             | tar xz -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/${{ matrix.build }}/bin" >> "$GITHUB_PATH"
       - run: nvim --version
       - run: make test

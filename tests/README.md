@@ -13,7 +13,8 @@ beyond Neovim.  If the `lua-utf8` library is installed (for instance with
 also checks that `lua/agda/utf8.lua` agrees with it.
 
 On GitHub, `make test` runs for every pull request and every push to
-master, with Neovim 0.11.0 (the oldest supported) and the latest release
+master, on Linux and macOS, with Neovim 0.11.0 (the oldest supported)
+and the latest release
 (`.github/workflows/test.yml`).  The live tests are not run there, as
 they need Agda; run `make test-live` before merging changes to the
 interaction.
