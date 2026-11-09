@@ -38,8 +38,9 @@ local severity = vim.diagnostic.severity
 -- warning, or "UnsolvedMeta"), or false for no diagnostic; the others
 -- have Agda's level.  The setting `diagnostic_severity` changes them
 -- (see `M.severities`).  Agda reports missing definitions as errors,
--- which they are not while a module is being written.
-M.default_severities = {MissingDefinitions = "hint"}
+-- but a module being written usually has some, so they get no
+-- diagnostics (they are in the message of the load and highlighted).
+M.default_severities = {MissingDefinitions = false}
 
 local severity_names = {error = severity.ERROR, warn = severity.WARN,
                         info = severity.INFO, hint = severity.HINT}
@@ -51,7 +52,7 @@ local severity_names = {error = severity.ERROR, warn = severity.WARN,
 function M.severities(user)
     local result = {}
     for code, s in pairs(M.default_severities) do
-        result[code] = severity_names[s]
+        result[code] = s and severity_names[s]
     end
     if user == nil then
         return result

@@ -69,10 +69,11 @@ are listed here.  Changes go under "Unreleased" until
   not say where they are).  The setting `diagnostics` (`"all"`,
   `"structured"` or `"none"`) turns off the diagnostics whose places are
   found in the text of Agda's messages, or all of them.  Missing
-  definitions, which Agda reports as errors, are hints, and the setting
+  definitions, which Agda reports as errors, have no diagnostics (they
+  are in the message of the load), and the setting
   `diagnostic_severity` sets the severity of the diagnostics by the name
-  of the warning (e.g. `{ MissingDefinitions = false, UnsolvedMeta =
-  "hint" }`).  The sign of a line is that of its most severe
+  of the warning (e.g. `{ MissingDefinitions = "hint", UnsolvedMeta =
+  "hint" }`, or `false` for none).  The sign of a line is that of its most severe
   diagnostic.
 - The README describes the input sequences and how which-key.nvim or
   mini.clue can show their continuations while typing.

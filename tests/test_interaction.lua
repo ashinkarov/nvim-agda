@@ -818,20 +818,17 @@ t.test("diagnostics for unsolved metas", function()
          diagnostics())
 end)
 
--- Agda reports missing definitions as errors, but they are hints, and
--- the sign of a line is that of its most severe diagnostic.
+-- Agda reports missing definitions as errors, but they get no
+-- diagnostics; they are in the message of the load.
 t.test("diagnostics for missing definitions", function()
     h.open("diagnostics_missing", { fixture = "Missing.agda" })
+    h.messages = {}
     vim.cmd("AgdaLoad")
     h.wait_idle()
     h.take_errors()
-    t.eq({ { 11, 0, 11, 3, "HINT", "MissingDefinitions",
-             "$DIR/Missing.agda:12.1-4: error: [MissingDefinitions]" },
-           { 11, 35, 11, 39, "WARN", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
+    t.eq({ { 11, 35, 11, 39, "WARN", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
          diagnostics())
-    local signs = vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true, type = "sign" })
-    table.sort(signs, function(a, b) return a[4].priority > b[4].priority end)
-    t.eq("W", vim.trim(signs[1][4].sign_text))
+    t.ok(h.messages[#h.messages]:find("error: [MissingDefinitions]", 1, true), vim.inspect(h.messages))
 end)
 
 -- With diagnostics = "structured" only the places that Agda sends as
@@ -858,15 +855,27 @@ t.test("diagnostics settings", function()
          h.messages[1])
 end)
 
+-- The setting changes severities, and the sign of a line is that of its
+-- most severe diagnostic.
 t.test("diagnostic severity setting", function()
     if h.skip_when_recording() then return end
-    h.open("diagnostic_severity", { transcript = "diagnostics_missing", fixture = "Missing.agda",
-        settings = { diagnostic_severity = { MissingDefinitions = false, UnsolvedMeta = "error" } } })
-    vim.cmd("AgdaLoad")
-    h.wait_idle()
-    h.take_errors()
-    t.eq({ { 11, 35, 11, 39, "ERROR", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
-         diagnostics())
+    local function load_with(severities)
+        h.open("diagnostic_severity", { transcript = "diagnostics_missing", fixture = "Missing.agda",
+                                        settings = { diagnostic_severity = severities } })
+        vim.cmd("AgdaLoad")
+        h.wait_idle()
+        h.take_errors()
+        return diagnostics()
+    end
+    t.eq({ { 11, 35, 11, 39, "HINT", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
+         load_with({ UnsolvedMeta = "hint" }))
+    t.eq({ { 11, 0, 11, 3, "ERROR", "MissingDefinitions",
+             "$DIR/Missing.agda:12.1-4: error: [MissingDefinitions]" },
+           { 11, 35, 11, 39, "WARN", "UnsolvedMeta", "Unsolved meta _n_10 : Nat" } },
+         load_with({ MissingDefinitions = "error" }))
+    local signs = vim.api.nvim_buf_get_extmarks(0, -1, 0, -1, { details = true, type = "sign" })
+    table.sort(signs, function(a, b) return a[4].priority > b[4].priority end)
+    t.eq("E", vim.trim(signs[1][4].sign_text))
 end)
 
 t.test("showing implicit arguments survives reloads", function()

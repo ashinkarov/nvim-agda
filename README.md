@@ -50,7 +50,7 @@ vim.g.nvim_agda_settings = {
   agda = "/usr/local/bin/agda",      -- the Agda binary (default: agda)
   agda_args = { "--arg1", "--arg2" },  -- arguments to pass to Agda
   diagnostics = "all",               -- "all", "structured" or "none" (see Diagnostics)
-  diagnostic_severity = { MissingDefinitions = false },  -- (see Diagnostics)
+  diagnostic_severity = { UnsolvedMeta = "hint" },  -- (see Diagnostics)
   debug_p = true,                    -- print debug messages
 }
 ```
@@ -161,14 +161,15 @@ follow your `vim.diagnostic.config()`.  Unsolved constraints have no
 diagnostics, as Agda does not say where they are.  Where a line has
 several diagnostics, its sign is that of the most severe one.
 
-The diagnostics have Agda's level, error or warning, except missing
-definitions: Agda reports them as errors, but they are hints, as a
-module being written usually has some.  The setting
+The diagnostics have Agda's level, error or warning.  Missing
+definitions have none: Agda reports them as errors, but a module being
+written usually has some, so they are only in the message of the load
+(and `:messages`) and highlighted with `NoDefinition`.  The setting
 `diagnostic_severity` sets the severity by the name of the warning,
 `"error"`, `"warn"`, `"info"`, `"hint"`, or `false` for no diagnostic:
 ```lua
 vim.g.nvim_agda_settings = {
-  diagnostic_severity = { MissingDefinitions = false, UnsolvedMeta = "hint" },
+  diagnostic_severity = { MissingDefinitions = "hint", UnsolvedMeta = "hint" },
 }
 ```
 The names are those in Agda's messages, e.g. `[CoverageIssue]` or

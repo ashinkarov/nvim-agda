@@ -70,19 +70,20 @@ end)
 
 t.test("severities by the names of warnings", function()
     local S = vim.diagnostic.severity
-    t.eq({ MissingDefinitions = S.HINT }, diag.severities(nil))
+    t.eq({ MissingDefinitions = false }, diag.severities(nil))
     t.eq({ MissingDefinitions = false, UnsolvedMeta = S.INFO },
          diag.severities({ MissingDefinitions = false, UnsolvedMeta = "info" }))
     -- Wrong entries are left out and reported.
     local s, problem = diag.severities({ CoverageIssue = "warning", UnsolvedMeta = "error" })
-    t.eq({ MissingDefinitions = S.HINT, UnsolvedMeta = S.ERROR }, s)
+    t.eq({ MissingDefinitions = false, UnsolvedMeta = S.ERROR }, s)
     t.eq('the setting diagnostic_severity takes "error", "warn", "info", "hint" or false '
          .. 'for the names of warnings, not "CoverageIssue" = "warning"', problem)
     t.eq('the setting diagnostic_severity must be a table, not "hint"',
          select(2, diag.severities("hint")))
 
     local function d(code) return { code = code, severity = S.ERROR } end
-    t.eq(S.HINT, diag.adjust(d("MissingDefinitions"), diag.severities(nil)).severity)
+    t.eq(nil, diag.adjust(d("MissingDefinitions"), diag.severities(nil)))
+    t.eq(S.HINT, diag.adjust(d("MissingDefinitions"), { MissingDefinitions = S.HINT }).severity)
     t.eq(S.ERROR, diag.adjust(d("CoverageIssue"), diag.severities(nil)).severity)
     t.eq(S.ERROR, diag.adjust(d(nil), diag.severities(nil)).severity)
     t.eq(nil, diag.adjust(d("UnsolvedMeta"), { UnsolvedMeta = false }))
