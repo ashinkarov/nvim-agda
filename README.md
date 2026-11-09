@@ -220,16 +220,18 @@ not found.
 
 ### Highlighting
 Agda's highlighting uses the standard highlight groups (`Keyword`,
-`Type`, ...) and groups of its own, which you can set in your colour
-scheme or configuration:
+`Type`, ...) and groups of its own.  By default these are links to
+standard groups, so that they take their colours from your colour
+scheme: goals have the background of `DiffAdd` (greenish in most colour
+schemes), and problems are underlined like diagnostics.
 
 | Group | Highlights | Default |
 |:-----:| ---------- | ------- |
-| `AgdaHole` | Goals | dark grey background |
-| `AgdaUnsolvedMeta` | Unsolved metas | `AgdaHole` |
+| `AgdaHole` | Goals | `DiffAdd` |
+| `AgdaUnsolvedMeta` | Unsolved metas | `DiagnosticUnderlineWarn` |
 | `AgdaUnsolvedConstraint` | Unsolved constraints | `AgdaUnsolvedMeta` |
-| `NonTerminating` | Termination problems | red background |
-| `NoDefinition` | Missing definitions | blue background |
+| `NonTerminating` | Termination problems | `DiagnosticUnderlineWarn` |
+| `NoDefinition` | Missing definitions | `DiagnosticUnderlineWarn` |
 | `AgdaCoverageProblem` | Missing cases | `DiagnosticUnderlineWarn` |
 | `AgdaIncompletePattern` | Incomplete patterns | `DiagnosticUnderlineWarn` |
 | `AgdaPositivityProblem` | Positivity problems | `DiagnosticUnderlineWarn` |
@@ -242,6 +244,31 @@ scheme or configuration:
 
 Problems are highlighted on top of the highlighting of names, so that
 for example a name keeps its colour in a clause with missing cases.
+
+You can set the groups in your colour scheme or configuration.
+`:colorscheme` clears them, so set them after it, or in a `ColorScheme`
+autocommand:
+```lua
+vim.api.nvim_create_autocmd("ColorScheme", {
+  callback = function()
+    vim.api.nvim_set_hl(0, "NonTerminating", { bg = "#5f2f2f" })
+  end,
+})
+```
+Some colour schemes have an option for this.  With
+[catppuccin](https://github.com/catppuccin/nvim), `custom_highlights`
+sets groups with the colours of the flavour in use:
+```lua
+require("catppuccin").setup({
+  custom_highlights = function(colors)
+    return {
+      AgdaHole = { bg = colors.surface1 },
+      NonTerminating = { bg = colors.maroon, fg = colors.base },
+      NoDefinition = { sp = colors.peach, undercurl = true },
+    }
+  end,
+})
+```
 
 If you edit the file while Agda checks it, the highlighting that
 arrives afterwards is applied to the lines that you did not edit, and a

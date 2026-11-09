@@ -19,12 +19,15 @@ let b:AgdaMod = luaeval("require'agda'")
 setlocal comments=s1fl:{-,mb:-,ex:-},:-- commentstring=--\ %s
 
 " The highlighting groups of the plugin, in addition to standard ones.
-" They are defaults, so that colour schemes and users can override them,
-" and we set them again when the colour scheme changes, as :colorscheme
-" clears them.
+" They are links to standard groups, so that they fit the colour scheme,
+" and defaults, so that colour schemes and users can override them.  We
+" set them again when the colour scheme changes, as :colorscheme clears
+" them.  Goals link to DiffAdd as it has a background in every colour
+" scheme (greenish in most, like goals in the Emacs mode); problems are
+" underlined like diagnostics.
 function! s:Highlights()
-    hi default AgdaHole ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
-    hi default link AgdaUnsolvedMeta AgdaHole
+    hi default link AgdaHole DiffAdd
+    hi default link AgdaUnsolvedMeta DiagnosticUnderlineWarn
     hi default link AgdaUnsolvedConstraint AgdaUnsolvedMeta
     hi default link AgdaErrorWarning DiagnosticUnderlineError
     hi default link AgdaPositivityProblem DiagnosticUnderlineWarn
@@ -35,8 +38,8 @@ function! s:Highlights()
     hi default link AgdaShadowingInTelescope DiagnosticUnderlineHint
     hi default link AgdaCosmeticProblem DiagnosticUnderlineHint
     hi default link AgdaDeadcode DiagnosticUnnecessary
-    hi default NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
-    hi default NoDefinition ctermbg=Brown gui=NONE guibg=#354657
+    hi default link NonTerminating DiagnosticUnderlineWarn
+    hi default link NoDefinition DiagnosticUnderlineWarn
 endfunction
 call s:Highlights()
 augroup agda_highlights

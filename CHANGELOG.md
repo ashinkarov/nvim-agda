@@ -23,10 +23,17 @@ are listed here.  Changes go under "Unreleased" until
 - Normal forms and helper functions are copied to the system clipboard
   (or to the unnamed register if there is no clipboard provider).
 - Goals and unsolved metas are highlighted with the new `AgdaHole` and
-  `AgdaUnsolvedMeta` (linked to `AgdaHole`) groups instead of `Todo`,
-  which the plugin no longer changes for all filetypes.  The plugin's
-  groups are defaults that colour schemes and users can override, and they
-  survive `:colorscheme`.
+  `AgdaUnsolvedMeta` groups instead of `Todo`, which the plugin no
+  longer changes for all filetypes.  The plugin's groups are defaults
+  that colour schemes and users can override, and they survive
+  `:colorscheme`.
+- The plugin's groups no longer have colours of their own, which could
+  clash with the colour scheme, but link to standard groups: goals
+  (`AgdaHole`) to `DiffAdd`, and unsolved metas (`AgdaUnsolvedMeta`),
+  termination problems (`NonTerminating`) and missing definitions
+  (`NoDefinition`) to `DiagnosticUnderlineWarn`, like the other
+  problems.  The README shows how to set them, also with catppuccin's
+  `custom_highlights`.
 - The commands are defined for Agda buffers only.
 - The key mappings are non-recursive and `<nowait>`: they no longer
   wait `'timeoutlen'` when a global mapping starts with the same keys
