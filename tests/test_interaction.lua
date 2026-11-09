@@ -764,13 +764,14 @@ end)
 
 -- The error, the warnings and the unsolved metas of a load become
 -- diagnostics: {line, col, end line, end col (0-based, bytes), severity,
--- code, first line of the message}.
+-- code ("-" for none), first line of the message (with $DIR for the
+-- test directory)}.
 local function diagnostics()
     local ds = {}
     for _, d in ipairs(vim.diagnostic.get(0)) do
         table.insert(ds, { d.lnum, d.col, d.end_lnum, d.end_col,
-                           vim.diagnostic.severity[d.severity], d.code,
-                           (d.message:match("^[^\n]*")) })
+                           vim.diagnostic.severity[d.severity], d.code or "-",
+                           (d.message:match("^[^\n]*"):gsub(vim.pesc(h.ctx.dir), "$DIR")) })
     end
     table.sort(ds, function(a, b) return a[1] < b[1] end)
     return ds
@@ -782,16 +783,15 @@ t.test("diagnostics for an error and the warnings before it", function()
     h.wait_idle()
     h.take_errors()
     t.eq({ { 5, 0, 6, 9, "ERROR", "TerminationIssue",
-             "Termination checking failed for the following functions:" },
-           { 9, 4, 9, 6, "ERROR", "CannotApply",
-             "Expression used as function but does not have function type:" } },
+             "$DIR/Warnings.agda:6.1-7.10: error: [TerminationIssue]" },
+           { 9, 4, 9, 6, "ERROR", "-", "$DIR/Warnings.agda:10.5-7: error: [CannotApply]" } },
          diagnostics())
     -- A load clears them.
     vim.api.nvim_buf_set_lines(0, 9, 10, true, { "g = tt" })
     vim.cmd("AgdaLoad")
     h.wait_idle()
     t.eq({ { 5, 0, 6, 9, "ERROR", "TerminationIssue",
-             "Termination checking failed for the following functions:" } }, diagnostics())
+             "$DIR/Warnings.agda:6.1-7.10: error: [TerminationIssue]" } }, diagnostics())
 end)
 
 t.test("diagnostics for warnings", function()
@@ -799,8 +799,9 @@ t.test("diagnostics for warnings", function()
     vim.cmd("AgdaLoad")
     h.wait_idle()
     t.eq({ { 11, 0, 11, 13, "ERROR", "CoverageIssue",
-             "Incomplete pattern matching for incomplete. Missing cases:" },
-           { 16, 0, 16, 19, "WARN", "-W[no]UnreachableClauses", "Unreachable clause" } },
+             "$DIR/Problems.agda:12.1-14: error: [CoverageIssue]" },
+           { 16, 0, 16, 19, "WARN", "-W[no]UnreachableClauses",
+             "$DIR/Problems.agda:17.1-20: warning: -W[no]UnreachableClauses" } },
          diagnostics())
 end)
 

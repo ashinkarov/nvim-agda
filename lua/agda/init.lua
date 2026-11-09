@@ -2,6 +2,7 @@ local utf8 = require('agda.utf8')
 local Loc = require('agda.loc')
 local haskell = require('agda.haskell')
 local constraint = require('agda.constraint')
+local diag = require('agda.diagnostics')
 local messages = require('agda.msg')
 
 local M = {}
@@ -580,83 +581,32 @@ end
 
 ------ Diagnostics ------
 
--- The error, the warnings and the unsolved metas of the last load as
--- Neovim diagnostics, so that their messages can be shown at their
--- places (CTRL-W d) and visited (]d, [d).  Agda's highlighting marks
--- the places already, so the diagnostics are not underlined.
--- Unsolved constraints are left out, as Agda does not say where they
--- are (see doc/agda-upstream.md).
-local diag_ns = vim.api.nvim_create_namespace("agda-diagnostics")
-vim.diagnostic.config({underline = false}, diag_ns)
+-- The diagnostics of the last load (see lua/agda/diagnostics.lua), and
+-- whether a load is running, whose error goes into them.
 local diagnostics = {}
+local collecting = false
 
--- The diagnostic for `line`.`col` to `end_line`.`end_col` (1-based, in
--- code points, the end exclusive, as Agda counts in the text it
--- loaded), or nil if the place was edited since the load.
-local function diagnostic(line, col, end_line, end_col, severity, code, message)
-    local function pos(l, c)
-        local text = main_content[l]
-        local now = text and line_now(l - 1)
-        local b = now and utf8.offset(text, c)
+-- How the diagnostics convert Agda's places (see `line_now`).
+local diag_ctx = {
+    pos = function (line, col)
+        local text = main_content[line]
+        local now = text and line_now(line - 1)
+        local b = now and utf8.offset(text, col)
         return b and {now, b - 1}
-    end
-    local s, e = pos(line, col), pos(end_line, end_col)
-    if s == nil or e == nil then
-        return nil
-    end
-    return {lnum = s[1], col = s[2], end_lnum = e[1], end_col = e[2],
-            severity = severity, code = code, message = message, source = "agda"}
-end
+    end,
+    is_main = function (file)
+        return main_file ~= nil and vim.uv.fs_realpath(file) == vim.uv.fs_realpath(main_file)
+    end,
+}
 
--- Add the diagnostic for an error or warning message of Agda, which
--- starts with its place in the file, as in
---     /path/Problems.agda:12.1-14: error: [CoverageIssue]
---     Incomplete pattern matching for incomplete. ...
--- Messages about other files, or without a place, are left out.
-local function add_message_diagnostic(text)
-    local first, rest = text:match("^([^\n]*)\n?(.*)$")
-    local file, l1, c1, l2, c2, tag
-    file, l1, c1, l2, c2, tag = first:match("^(.+):(%d+)%.(%d+)%-(%d+)%.(%d+): (.*)$")
-    if file == nil then
-        file, l1, c1, c2, tag = first:match("^(.+):(%d+)%.(%d+)%-(%d+): (.*)$")
-        l2 = l1
-    end
-    if file == nil then
-        file, l1, c1, tag = first:match("^(.+):(%d+)%.(%d+): (.*)$")
-        l2, c2 = l1, c1 and tonumber(c1) + 1
-    end
-    if file == nil or main_file == nil
-       or vim.uv.fs_realpath(file) ~= vim.uv.fs_realpath(main_file) then
-        return
-    end
-    local level, name = tag:match("^(%a+): *(.*)$")
-    local severity = level == "warning" and vim.diagnostic.severity.WARN
-                     or vim.diagnostic.severity.ERROR
-    local code = name and name:match("^%[(.*)%]$") or name
-    local d = diagnostic(tonumber(l1), tonumber(c1), tonumber(l2), tonumber(c2), severity,
-                         code, rest ~= "" and rest or tag)
-    if d then
+local function add_diagnostic(d)
+    if d ~= nil then
         table.insert(diagnostics, d)
     end
 end
 
--- Add the diagnostic of an unsolved meta from AllGoalsWarnings.
-local function add_meta_diagnostic(goal)
-    local r = goal.constraintObj.range
-    if r == nil or #r == 0 then
-        return
-    end
-    local s, e = r[1].start, r[#r]["end"]
-    local d = diagnostic(s.line, s.col, e.line, e.col, vim.diagnostic.severity.WARN,
-                         "UnsolvedMeta", "Unsolved meta " .. constraint.show(goal))
-    if d then
-        table.insert(diagnostics, d)
-    end
-end
-
--- Show the diagnostics collected in `diagnostics`.
-local function set_diagnostics()
-    vim.diagnostic.set(diag_ns, main_buf, diagnostics)
+local function show_diagnostics()
+    diag.set(main_buf, diagnostics)
 end
 
 -- The messages of Agda's warnings or errors, which are a list of
@@ -732,6 +682,12 @@ local function handle_hl(msg)
                 dprint("handle_hl: range edited since the load " .. vim.inspect(v))
             else
                 set_hl(key, s, e, groups, name and v)
+                -- The error of the load, with its message.
+                if collecting and vim.tbl_contains(v.atoms, "error")
+                   and type(v.note) == "string" and v.note ~= "" then
+                    add_diagnostic(diag.from_error(s, e, v.note))
+                    show_diagnostics()
+                end
             end
         end
     end
@@ -843,12 +799,11 @@ local function handle_displayinfo(msg)
         end
         if load_state == "loading" then
             load_state = "failed"
-            diagnostics = {}
-            add_message_diagnostic(text)
-            for _, w in ipairs(ws) do
-                add_message_diagnostic(w)
+            -- The error itself comes with its highlighting.
+            for _, w in ipairs(type(inf.warnings) == "table" and inf.warnings or ws) do
+                add_diagnostic(diag.from_warning(w, diag_ctx, true))
             end
-            set_diagnostics()
+            show_diagnostics()
         end
     elseif inf.kind == "Context" then
         mk_window(add_sep(context_lines(inf.context), "Context"))
@@ -928,16 +883,15 @@ local function handle_displayinfo(msg)
             end
         end
         diagnostics = {}
-        for _, w in ipairs(messages_of(inf.errors)) do
-            add_message_diagnostic(w)
-        end
-        for _, w in ipairs(messages_of(inf.warnings)) do
-            add_message_diagnostic(w)
+        for _, ws in ipairs({inf.errors, inf.warnings}) do
+            for _, w in ipairs(type(ws) == "table" and ws or messages_of(ws)) do
+                add_diagnostic(diag.from_warning(w, diag_ctx, true))
+            end
         end
         for _, v in ipairs(inf.invisibleGoals) do
-            add_meta_diagnostic(v)
+            add_diagnostic(diag.from_meta(v, constraint.show(v), diag_ctx))
         end
-        set_diagnostics()
+        show_diagnostics()
         display(#m > 0 and table.concat(m, "\n") or "No goals, warnings or errors")
     elseif inf.kind == "Constraints" then
         if #inf.constraints == 0 then
@@ -1325,6 +1279,7 @@ local function take_prompts(s)
         s = string.sub(s, 7)
         pending = math.max(0, pending - 1)
         if pending == 0 then
+            collecting = false
             if load_state == "loading" then
                 load_state = "done"
             end
@@ -1523,7 +1478,8 @@ function M.agda_load (file)
     main_diff = nil
     skipped = {}
     diagnostics = {}
-    set_diagnostics()
+    show_diagnostics()
+    collecting = true
 
     -- Precompute offset positions for the beginning and end of
     -- each line.  This will be used in the highlighting procedures.

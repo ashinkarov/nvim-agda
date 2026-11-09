@@ -173,3 +173,23 @@ highlighting, which has no text (doc/emacs-mode.md).
 *Proposal:* send the range that the highlighting uses with each
 constraint (the `range` field of `Constraints` entries), so that
 editors can show each constraint at its place.
+
+## 12. Warnings and errors come as text only
+
+Warnings and errors are sent as `{"message": ...}` with the
+pretty-printed text only (the `EncodeTCM TCWarning` and `EncodeTCM
+TCErr` instances in `Interaction/JSONTop.hs`), in `AllGoalsWarnings`,
+`CompilationOk` and `Error`.  Their place is only at the start of the
+text (`/path/M.agda:12.1-14: error: [CoverageIssue]`), together with
+their kind (error or warning) and name.
+
+*Plugin:* takes the error's place from its highlighting, which carries
+its range and message (`note`), and finds the places of warnings in
+their text, in one function (`parse_location` in
+`lua/agda/diagnostics.lua`) that gives up on anything it does not
+recognise.  If a warning comes with a `range`, that is used instead.
+
+*Proposal:* add the range, and the name and whether it is an error, to
+each warning and error, next to `message`, e.g.
+`"range" #= encodeTCM (getRange w)`.  Existing clients would not be
+affected.
