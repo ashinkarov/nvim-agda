@@ -561,8 +561,9 @@ local function load_definitions(name)
     h.wait_idle()
 end
 
-local function jump()
-    vim.cmd("normal! \29")    -- CTRL-]
+-- CTRL-] (or `keys`), with the mappings of the plugin.
+local function jump(keys)
+    vim.cmd("normal " .. (keys or "\29"))
     return vim.api.nvim_win_get_cursor(0)
 end
 
@@ -574,6 +575,28 @@ t.test("CTRL-] jumps to the definition and CTRL-T back", function()
     t.eq({ 13, 8 }, vim.api.nvim_win_get_cursor(0))
     h.cursor_at("∧ tt", 1, 4)      -- on tt
     t.eq({ 6, 2 }, jump())
+end)
+
+-- Vim's own CTRL-] needs an identifier under or after the cursor.
+t.test("CTRL-] on an operator at the end of a line", function()
+    if h.skip_when_recording() then return end
+    h.open("definition_operator", { transcript = "definition_same_file", fixture = "Definitions.agda" })
+    vim.fn.writefile({ "module Lib where", "", "data Unit : Set where", "  unit : Unit" },
+                     h.ctx.dir .. "/Lib.agda")
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    -- f x = x ∧ tt  -- like (Lib.unit)   becomes   f x = x ∧
+    local line = vim.api.nvim_buf_get_lines(0, 12, 13, true)[1]
+    vim.api.nvim_buf_set_text(0, 12, #"f x = x ∧", 12, #line, { "" })
+    t.eq("f x = x ∧", h.lines()[13])
+    h.cursor_at("x ∧", 1, 2)
+    t.eq({ 8, 0 }, jump())
+    vim.cmd("normal \20")
+    t.eq({ 13, 8 }, vim.api.nvim_win_get_cursor(0))
+    -- CTRL-W ] in a new window.
+    t.eq({ 8, 0 }, jump("\23]"))
+    t.eq(2, #vim.api.nvim_tabpage_list_wins(0))
+    vim.cmd("close")
 end)
 
 t.test("CTRL-] finds definitions after edits", function()
@@ -598,7 +621,7 @@ t.test("CTRL-] outside names leaves the cursor alone", function()
     load_definitions("definition_none")
     h.cursor_at("like", 1)
     local before = vim.api.nvim_win_get_cursor(0)
-    pcall(vim.cmd, "normal! \29")
+    pcall(vim.cmd, "normal \29")
     t.eq(before, vim.api.nvim_win_get_cursor(0))
 end)
 

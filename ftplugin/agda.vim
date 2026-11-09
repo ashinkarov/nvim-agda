@@ -65,6 +65,13 @@ function! AgdaTagfunc(pattern, flags, info)
     return b:AgdaMod.tagfunc(a:pattern, a:flags)
 endfunction
 setlocal tagfunc=AgdaTagfunc
+" Also on operators without an identifier after them on the line, where
+" Vim's own CTRL-] fails (see `jump_to_definition`).
+nnoremap <buffer> <nowait> <silent> <C-]> <Cmd>call b:AgdaMod.jump_to_definition("tag")<CR>
+nnoremap <buffer> <nowait> <silent> <C-W>] <Cmd>call b:AgdaMod.jump_to_definition("stag")<CR>
+nnoremap <buffer> <nowait> <silent> <C-W><C-]> <Cmd>call b:AgdaMod.jump_to_definition("stag")<CR>
+nnoremap <buffer> <nowait> <silent> <C-LeftMouse> <LeftMouse><Cmd>call b:AgdaMod.jump_to_definition("tag")<CR>
+nnoremap <buffer> <nowait> <silent> g<LeftMouse> <LeftMouse><Cmd>call b:AgdaMod.jump_to_definition("tag")<CR>
 
 " The commands and the <LocalLeader> mappings (see `commands` in
 " lua/agda/init.lua).

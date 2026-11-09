@@ -240,7 +240,10 @@ name under the cursor, also in other files such as imported modules or
 the standard library, and `CTRL-T` jumps back, as with tags (the plugin
 sets `'tagfunc'`).  `CTRL-W ]` opens the definition in a new window,
 and with the mouse, `CTRL-LeftMouse` and `g<LeftMouse>` jump to the
-definition of the name clicked on.
+definition of the name clicked on.  The plugin maps these keys in Agda
+buffers, so that they also work on operators such as `+` in `x + ?`,
+where Vim's own commands find no identifier; elsewhere they do what
+they do in Vim.
 The definitions come from Agda's highlighting, as in the Emacs mode
 (`M-.`), so they are those of the last load; names added since then are
 not found.

@@ -96,7 +96,8 @@ are listed here.  Changes go under "Unreleased" until
   its content checked and simplified, like `C-c C-m` in the Emacs mode.
 - `CTRL-]` jumps to the definition of the name under the cursor, and
   `CTRL-T` back (see "Going to definitions" in the README); so do
-  `CTRL-LeftMouse` and `g<LeftMouse>`.
+  `CTRL-LeftMouse` and `g<LeftMouse>`, and `CTRL-W ]` in a new window.
+  This also works on operators (`+` in `x + ?`).
 - A failed load moves the cursor to the error, like the Emacs mode
   (errors in other files are only reported).
 - `\^0`…`\^9`, `\^-`, `\^+`, `\^=`, `\^(` and `\^)` insert superscripts.

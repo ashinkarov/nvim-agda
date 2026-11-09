@@ -1868,14 +1868,18 @@ local function site_pos(filepath, position)
     end
 end
 
+-- Whether the tag command that `M.jump_to_definition` runs is running.
+local tag_at_cursor = false
+
 -- 'tagfunc' (set by the ftplugin): CTRL-] and the like jump to the
 -- definition of the name under the cursor, and CTRL-T jumps back, like
 -- M-. and M-* in the Emacs mode.  Only the cursor counts ("c" in
--- `flags`), not the word that Vim passes in `pattern`, which does not
--- know Agda's names.  For :tag with a name, or if there is no name under
--- the cursor, we return v:null, so that Vim uses tags files.
+-- `flags`, or `tag_at_cursor`), not the word that Vim passes in
+-- `pattern`, which does not know Agda's names.  For :tag with a name, or
+-- if there is no name under the cursor, we return v:null, so that Vim
+-- uses tags files.
 function M.tagfunc(pattern, flags)
-    if not flags:find("c", 1, true) then
+    if not (flags:find("c", 1, true) or tag_at_cursor) then
         return vim.NIL
     end
     local name = name_at_cursor()
@@ -1888,6 +1892,31 @@ function M.tagfunc(pattern, flags)
         filename = name.data[1],
         cmd = string.format([[/\%%%dl\%%%dc/]], pos[1], pos[2] + 1),
     }}
+end
+
+-- CTRL-] (`cmd` "tag") and CTRL-W ] ("stag"), mapped by the ftplugin.
+-- Vim's own commands need a keyword under or after the cursor, before
+-- they ask 'tagfunc', so on an operator with no identifier after it on
+-- the line (`x + ?`) they fail with "No identifier under cursor".  When
+-- Agda's highlighting has a name with a definition under the cursor, we
+-- run :tag (or :stag) with its text ourselves, which pushes the tag
+-- stack as CTRL-] does; otherwise Vim's command runs as usual.
+function M.jump_to_definition(cmd)
+    local name = name_at_cursor()
+    if name == nil or site_pos(name.data[1], name.data[2]) == nil then
+        local count = vim.v.count > 0 and tostring(vim.v.count) or ""
+        local ok, err = pcall(vim.cmd, "normal! " .. count .. (cmd == "stag" and "\23]" or "\29"))
+        if not ok then
+            vim.api.nvim_echo({{(err:gsub("^Vim[^:]*:", "")), "ErrorMsg"}}, true, {})
+        end
+        return
+    end
+    tag_at_cursor = true
+    local ok, err = pcall(vim.cmd[cmd], name.text)
+    tag_at_cursor = false
+    if not ok then
+        vim.api.nvim_echo({{(err:gsub("^Vim[^:]*:", "")), "ErrorMsg"}}, true, {})
+    end
 end
 
 -- Characters that cannot be part of a name, as in Agda's lexer.
