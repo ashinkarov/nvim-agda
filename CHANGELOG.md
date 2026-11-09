@@ -38,6 +38,11 @@
 
 ### Added
 
+- Input sequences for calligraphic letters (`\McA` 𝒜, `\McF` ℱ, …),
+  fraktur letters (`\MfA` 𝔄, …), bold digits (`\B0` 𝟎, …), superscript
+  capitals (`\^A` ᴬ, …), and `\inn` ∉, `\exn` ∄, `\||` ∥, `\inf` ∞,
+  `\z;` ⨟, `\z:` ⦂, `\((` `\))` ⦅⦆, `\(|` `\|)` ⦇⦈, `\Top` ⟙, `\Bot` ⟘ and
+  `\l-o` ⟜, taken from the Emacs mode.
 - `\_-`, `\_+`, `\_=`, `\_(` and `\_)` insert subscripts, like the
   superscripts (subscript digits are `\0`…`\9`).
 - Input sequences for the corner triangles (`\tdrb` ◢, `\tdrw` ◿,

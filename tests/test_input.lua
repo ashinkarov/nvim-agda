@@ -62,3 +62,10 @@ end)
 t.test("subscripts", function()
     t.eq("x₁₂₀₋₊₌₍₎", typed("x\\1\\2\\0\\_-\\_+\\_=\\_(\\_)"))
 end)
+
+t.test("more symbols, script, fraktur, bold digits and superscript capitals", function()
+    t.eq("∉∄∥∞⨟⦂⦅⦆⦇⦈⟙⟘⟜", typed("\\inn\\exn\\||\\inf\\z;\\z:\\((\\))\\(|\\|)\\Top\\Bot\\l-o"))
+    t.eq("𝒜ℬ𝒸ℱ𝔄ℭ𝔷𝟎𝟗ᴬᵂ", typed("\\McA\\McB\\Mcc\\McF\\MfA\\MfC\\Mfz\\B0\\B9\\^A\\^W"))
+    -- The shorter sequences still work.
+    t.eq("∈x∩x⊩←", (typed("\\in x\\i x\\||-\\l-"):gsub(" ", "")))
+end)
