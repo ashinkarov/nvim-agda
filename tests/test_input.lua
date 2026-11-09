@@ -69,3 +69,7 @@ t.test("more symbols, script, fraktur, bold digits and superscript capitals", fu
     -- The shorter sequences still work.
     t.eq("∈x∩x⊩←", (typed("\\in x\\i x\\||-\\l-"):gsub(" ", "")))
 end)
+
+t.test("primes", function()
+    t.eq("x′ x″ x‴ x⁗", typed("x\\' x\\'' x\\''' x\\''''"))
+end)

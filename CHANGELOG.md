@@ -38,6 +38,8 @@
 
 ### Added
 
+- `\''`, `\'''` and `\''''` insert the double, triple and quadruple
+  primes ″ ‴ ⁗ (`\'` is ′).
 - Input sequences for calligraphic letters (`\McA` 𝒜, `\McF` ℱ, …),
   fraktur letters (`\MfA` 𝔄, …), bold digits (`\B0` 𝟎, …), superscript
   capitals (`\^A` ᴬ, …), and `\inn` ∉, `\exn` ∄, `\||` ∥, `\inf` ∞,
