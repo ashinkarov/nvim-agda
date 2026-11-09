@@ -6,9 +6,9 @@ local diag = require('agda.diagnostics')
 local messages = require('agda.msg')
 
 local M = {}
--- The version of the plugin (https://semver.org); the first heading of
--- CHANGELOG.md names the same version.
-M.version = "0.2.0"
+-- The version of the plugin (https://semver.org): the last release, as
+-- in CHANGELOG.md.  scripts/release.sh sets it.
+M.version = "0.1.0"
 -- Different for every instance of the module (the ftplugin creates one
 -- per buffer, and a new one when it runs again).
 M.instance = tostring(M)

@@ -907,9 +907,9 @@ t.test("version", function()
     t.ok(h.messages[1]:match("^nvim%-agda %d+%.%d+%.%d+, Agda version %d+%.%d+"), h.messages[1])
 end)
 
-t.test("the version is the one of the changelog", function()
+t.test("the version is the last one in the changelog", function()
     local changelog = io.open(t.root .. "/CHANGELOG.md"):read("a")
-    t.eq(require("agda").version, changelog:match("\n## (%S+)"))
+    t.eq(require("agda").version, changelog:match("\n## (%d%S*)"))
     t.ok(require("agda").version:match("^%d+%.%d+%.%d+$"), "semantic version")
 end)
 

@@ -2,9 +2,10 @@
 
 The plugin follows [semantic versioning](https://semver.org).  Before
 1.0, a minor version may change commands, keys or settings; the changes
-are listed here.  Versions before 0.2.0 were not numbered.
+are listed here.  Changes go under "Unreleased" until
+`scripts/release.sh` makes them a version.
 
-## 0.2.0 (unreleased)
+## Unreleased
 
 ### Changed
 
@@ -201,3 +202,7 @@ are listed here.  Versions before 0.2.0 were not numbered.
   names.
 - Highlighting no longer creates duplicate extmarks for ranges that
   Agda sends several times during a load.
+
+## 0.1.0 (2024-10-10)
+
+The plugin as it was before versions were numbered (commit 9024909).

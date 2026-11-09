@@ -261,10 +261,13 @@ with the Emacs mode.
 `make test` runs the test-suite; see [tests/README.md](tests/README.md).
 GitHub runs it for every pull request.
 
-To release a version, set it in `M.version` in `lua/agda/init.lua` and
-in the first heading of CHANGELOG.md (a test checks that they agree,
-and the heading gets the date instead of "unreleased"), then tag the
-commit on master as `vX.Y.Z` and push the tag.
+Changes are listed under "Unreleased" in CHANGELOG.md.  To release them
+as version X.Y.Z, run `make release VERSION=X.Y.Z` on master (see
+[scripts/release.sh](scripts/release.sh)): it gives the section the
+version and the date, sets `M.version` in `lua/agda/init.lua`, runs the
+tests, commits, and tags the commit `vX.Y.Z` with the section as the
+message of the tag (for the release notes).  Then push the commit and
+the tag with `git push origin master vX.Y.Z`.
 
 # Credit
   * https://github.com/coot/vim-agda-integration
