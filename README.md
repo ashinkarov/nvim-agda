@@ -249,6 +249,7 @@ with the Emacs mode.
 # Development
 
 `make test` runs the test-suite; see [tests/README.md](tests/README.md).
+GitHub runs it for every pull request.
 
 # Credit
   * https://github.com/coot/vim-agda-integration

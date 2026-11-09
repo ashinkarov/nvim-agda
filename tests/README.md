@@ -5,11 +5,18 @@
     make test FILTER='stop|wipe' # ... or one of several patterns
     make test-live               # run against the real Agda
     make record                  # run against the real Agda, rewrite tests/transcripts/
+    make test NVIM=~/nvim-0.11/bin/nvim  # with another Neovim
 
 Tests run in `nvim --clean --headless -l tests/run.lua` and need nothing
 beyond Neovim.  If the `lua-utf8` library is installed (for instance with
 `luarocks install --local --lua-version=5.1 luautf8`), `tests/test_utf8.lua`
 also checks that `lua/agda/utf8.lua` agrees with it.
+
+On GitHub, `make test` runs for every pull request and every push to
+master, with Neovim 0.11.0 (the oldest supported) and the latest release
+(`.github/workflows/test.yml`).  The live tests are not run there, as
+they need Agda; run `make test-live` before merging changes to the
+interaction.
 
 ## How the Agda interaction is tested
 
