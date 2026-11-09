@@ -1,0 +1,221 @@
+# Changelog
+
+The plugin follows [semantic versioning](https://semver.org).  Before
+1.0, a minor version may change commands, keys or settings; the changes
+are listed here.  Changes go under "Unreleased" until
+`scripts/release.sh` makes them a version.
+
+## Unreleased
+
+### Changed
+
+- The input sequences are a table in `lua/agda/input.lua`;
+  `agda-input.vim` only sets them, e.g. for `:runtime agda-input.vim` in
+  other buffers.  Sequences that a later line replaced are gone (the
+  first `\bn`, `\bz`, `\bq`, `\br`, `\bc`, `\bp`, `\bb` and `\~`, which
+  were never in effect), and a test checks that none is defined twice.
+- The plugin no longer needs the `lua-utf8` library; it only needs
+  Neovim 0.11 or newer.
+- Messages from Agda no longer ask to press ENTER.  Long messages are
+  shown as their first line with a hint; the full text is in
+  `:messages`.  With the new message UI (`ui2`, Neovim 0.12) messages
+  are shown whole.
+- Normal forms and helper functions are copied to the system clipboard
+  (or to the unnamed register if there is no clipboard provider).
+- Goals and unsolved metas are highlighted with the new `AgdaHole` and
+  `AgdaUnsolvedMeta` groups instead of `Todo`, which the plugin no
+  longer changes for all filetypes.  The plugin's groups are defaults
+  that colour schemes and users can override, and they survive
+  `:colorscheme`.
+- The plugin's groups no longer have colours of their own, which could
+  clash with the colour scheme, but link to standard groups: goals
+  (`AgdaHole`) to `DiffAdd`, and unsolved metas (`AgdaUnsolvedMeta`),
+  termination problems (`NonTerminating`) and missing definitions
+  (`NoDefinition`) to `DiagnosticUnderlineWarn`, like the other
+  problems.  The README shows how to set them, also with catppuccin's
+  `custom_highlights`.
+- The commands are defined for Agda buffers only.
+- The key mappings are non-recursive and `<nowait>`: they no longer
+  wait `'timeoutlen'` when a global mapping starts with the same keys
+  (which made moving between goals slow), but such global mappings are
+  not reachable in Agda buffers.
+- `\bx` inserts `⊠`, as in Agda's Emacs mode; `𝕩` is `\bsx`.
+- The file is reloaded after a case split, like in the Emacs mode.
+- `:ShowImplicit` and `:HideImplicit` last until changed; Agda reset the
+  choice on every load.
+- `\?` (`:PrintGoals`) shows Agda's list of goals with their types, as
+  after a load, instead of the positions of the goals.
+- Goals are listed like Agda prints them (`?0 : 𝔹`, and invisible goals
+  with their position) rather than as `0 OfType 𝔹`.
+
+### Added
+
+- The README shows how to install the plugin with lazy.nvim (#12).
+- `\''`, `\'''` and `\''''` insert the double, triple and quadruple
+  primes ″ ‴ ⁗ (`\'` is ′).
+- Input sequences for calligraphic letters (`\McA` 𝒜, `\McF` ℱ, …),
+  fraktur letters (`\MfA` 𝔄, …), bold digits (`\B0` 𝟎, …), superscript
+  capitals (`\^A` ᴬ, …), and `\inn` ∉, `\exn` ∄, `\||` ∥, `\inf` ∞,
+  `\z;` ⨟, `\z:` ⦂, `\((` `\))` ⦅⦆, `\(|` `\|)` ⦇⦈, `\Top` ⟙, `\Bot` ⟘ and
+  `\l-o` ⟜, taken from the Emacs mode.
+- `\_-`, `\_+`, `\_=`, `\_(` and `\_)` insert subscripts, like the
+  superscripts (subscript digits are `\0`…`\9`).
+- Input sequences for the corner triangles (`\tdrb` ◢, `\tdrw` ◿,
+  `\tdlb` ◣, `\tdlw` ◺, `\tulb` ◤, `\tulw` ◸, `\turb` ◥, `\turw` ◹) and
+  the half black ones (`\Tuhl` ◭, `\Tuhr` ◮).
+- The error, the warnings and the unsolved metas of a load are Neovim
+  diagnostics, so `CTRL-W d` shows their messages at their places and
+  `]d`/`[d` go to them (unsolved constraints have none, as Agda does
+  not say where they are).  The setting `diagnostics` (`"all"`,
+  `"structured"` or `"none"`) turns off the diagnostics whose places are
+  found in the text of Agda's messages, or all of them.  Missing
+  definitions, which Agda reports as errors, have no diagnostics (they
+  are in the message of the load), and the setting
+  `diagnostic_severity` sets the severity of the diagnostics by the name
+  of the warning (e.g. `{ MissingDefinitions = "hint", UnsolvedMeta =
+  "hint" }`, or `false` for none).  The sign of a line is that of its most severe
+  diagnostic.
+- The README describes the input sequences and how which-key.nvim or
+  mini.clue can show their continuations while typing.
+- `b:agda_status` and `AgdaStatus()` describe what Agda is doing (e.g.
+  `Agda: checking…`, `Agda: 2 goals`), for the status line; see "Status
+  line" in the README.
+- A number between `<LocalLeader>` and the key (`\5,`), or after the
+  command (`:AgdaInfer 5`), chooses the normalisation level, from 1 (as
+  is) to 5 (normalised), for every command that takes one; for compute
+  it chooses the compute mode, and `\1r` introduces a pattern-matching
+  lambda.
+- Goal type and context (`\,`, `\.`) also show the constraints that
+  mention the goal, like the Emacs mode.
+- Search about (`\z`, `:AgdaSearchAbout`) lists the definitions whose
+  types mention the given names, like `C-c C-z` in the Emacs mode.
+- `:AgdaVersion` shows the version of the plugin and of the running Agda.
+- `:ShowIrrelevant` and `:HideIrrelevant` show or hide irrelevant
+  arguments, and the choice lasts across reloads.
+- Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with
+  its content checked and simplified, like `C-c C-m` in the Emacs mode.
+- `CTRL-]` jumps to the definition of the name under the cursor, and
+  `CTRL-T` back (see "Going to definitions" in the README); so do
+  `CTRL-LeftMouse` and `g<LeftMouse>`.
+- A failed load moves the cursor to the error, like the Emacs mode
+  (errors in other files are only reported).
+- `\^0`…`\^9`, `\^-`, `\^+`, `\^=`, `\^(` and `\^)` insert superscripts.
+- `'commentstring'` and `'comments'` are set for Agda's comments, so
+  Neovim's `gc` and commenting plugins work (#6).
+- `:AgdaStop` stops the Agda process.
+- A test suite (`make test`, `make test-live`, `make record`) that
+  replays recorded Agda sessions, so it needs no Agda; see
+  `tests/README.md`.
+- A configuration for the Lua language server (`.luarc.json`).
+- `doc/make-case.md` describes the problems of case splitting and a
+  proposed fix in Agda.
+- `doc/agda-upstream.md` collects other places where Agda's interaction
+  interface could be improved.
+- `doc/emacs-mode.md` compares the plugin with the Emacs mode: what
+  works, what is missing and what we decided against, and why; the
+  README's todo list is gone.
+
+### Fixed
+
+#### Communication with Agda
+
+- The plugin stopped reacting to Agda until Neovim was restarted when
+  a chunk of output ended inside the `JSON> ` prompt or Agda printed a
+  line that is not json.  Agda's output is now read line by line;
+  other lines are reported and do not affect later messages.
+- Strings in commands are quoted as Haskell string literals, which is
+  what Agda expects: goal contents with control characters and file
+  paths containing `"` or `\` were rejected.
+- The module contents command was missing a space.
+- `agda --version` is run without a shell (paths with spaces work),
+  failures to start Agda are reported, and Agda 3.x is no longer
+  treated as older than 2.7.
+- When Agda exits, the exit is reported and the next command starts a
+  new Agda; before, every command failed until Neovim was restarted.
+  The end of Agda's stderr is no longer reported as an empty error.
+- If the file changed on disk, loading it first lets Neovim reload the
+  buffer (`:checktime`), so that Agda does not check a different text
+  than the buffer shows.
+- The Agda process is stopped when its buffer is reloaded (`:edit`) or
+  unloaded, rather than left running.
+- When a load fails, the warnings found before the error (such as
+  termination problems), which Agda sends with the error, are shown;
+  they were dropped.
+- After a failed reload, goal commands no longer report "an operation
+  on the goal in progress" until Agda is restarted.
+
+#### Goals
+
+- After the goal-edit window (`\e`) was closed, its text was still used
+  as the content of goals, also of other goals.
+- `:AgdaShowConstraints` showed nothing, and neither did refine on an
+  empty goal when Agda cannot introduce a constructor; both are shown
+  now.  Any other information from Agda that the plugin cannot show is
+  reported instead of being ignored.
+
+- Goals after wide or composing characters (`pick 名前 y = ?`) were not
+  found under the cursor, as the column was counted in screen cells
+  rather than code points.
+- Give, refine, solve and auto edit the Agda buffer directly, so they
+  work when another window is current, user mappings do not interfere,
+  several goals on one line are filled correctly, and multi-line
+  results are indented to the column of the goal.
+- Case splitting keeps the indentation of the clause (e.g. inside a
+  module) and handles extended lambdas (`λ { … ; … }` and `λ where`)
+  like the Emacs mode.  Clauses whose left-hand side or right-hand side
+  spans several lines are still not handled; see `doc/make-case.md`.
+- The context showed shadowed variables with their original name, so
+  that `x` appeared twice; they are now shown as Agda prints them
+  (`x₁`), and names that are not in scope are marked, like in the
+  Emacs mode.
+- Why in scope asked about the WORD under the cursor, such as `(F.blah`.
+  It now takes the name from Agda's highlighting, completing operator
+  parts (`∧` becomes `_∧_`, `then` becomes `if_then_else_`); in a goal
+  it explains the goal's content in its context, like the Emacs mode,
+  and without a name it asks, suggesting the text under the cursor.
+  The answer says whether it is for the top level or for a goal.
+- Module contents show the submodules, which were left out (a module
+  with only submodules looked empty).  An empty module name shows the
+  current module, and in a goal the goal's content names the module, in
+  the goal's scope.
+- Refine on an empty goal of function type introduced a pattern-matching
+  lambda (`λ { x → ? }`); it now introduces `λ x → ?`, like the Emacs
+  mode.
+- Moving between goals follows the order of the file and no longer
+  fails once goal 0 has been filled, or after a case split.
+
+#### Input
+
+- `\~` gave `≋` instead of `∼` (a later line replaced it); `≋` is now
+  `\~~~`, as in the Emacs mode.
+- `\nin` inserted a space after `∉`.
+- `◬` needed a backslash in its sequence (`\T\.uw`); it is `\T.uw`.
+
+#### Windows and highlighting
+
+- Highlighting that arrived after the buffer was edited during a load
+  was put at the positions of the text that Agda loaded, so it was off
+  below the edits.  It now moves with the lines that were not edited and
+  leaves out the edited ones, with a warning; the same goes for jumping
+  to an error and to definitions.
+- Popups are placed at the goal also after wide characters, with a
+  number column and with folds, and work in windows created after the
+  file was loaded (e.g. with `:split`).
+- Autocommands and mappings were added again on every load or popup;
+  opening the goal-edit window twice leaked a window.
+- Popups wider than the screen are as wide as the screen, with their
+  separators drawn to that width and room for the wrapped lines.
+- Message windows are laid out by display width, so contexts with wide
+  characters are aligned.
+- Records, fields, coinductive constructors, macros, pragmas and
+  generalizable variables are highlighted, as are coverage, positivity,
+  instance and confluence problems, incomplete patterns, unreachable
+  clauses and shadowed names, with new groups linked to Neovim's
+  diagnostic groups.  Problems are shown on top of the highlighting of
+  names.
+- Highlighting no longer creates duplicate extmarks for ranges that
+  Agda sends several times during a load.
+
+## 0.1.0 (2024-10-10)
+
+The plugin as it was before versions were numbered (commit 9024909).

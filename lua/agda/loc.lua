@@ -1,5 +1,5 @@
 -- Loc class
-Loc = {}
+local Loc = {}
 Loc.__index = Loc
 
 function Loc:new(l,c)

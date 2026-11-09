@@ -1,4 +1,10 @@
 
+" When the ftplugin runs again for the buffer (e.g. on :edit), stop the
+" Agda process of the previous instance of the module.
+if exists("b:AgdaMod") && has_key(b:AgdaMod, "agda_stop")
+    call b:AgdaMod.agda_stop()
+endif
+
 " Kill the cache of previously loaded "agda" module.
 " Lua does this automatically, but we want a newly loaded
 " module per every buffer.
@@ -8,11 +14,38 @@ lua package.loaded.agda = nil
 " hardcoded in agda/init.lua when creating bindings for prompt windows.
 let b:AgdaMod = luaeval("require'agda'")
 
-hi Todo ctermbg=DarkGray ctermfg=Black gui=NONE guibg=#353535 guifg=#efefef
-" hi NonTerminating ctermbg=Red
-hi NonTerminating ctermbg=LightRed ctermfg=Black gui=NONE guibg=#994444
-hi NoDefinition ctermbg=Brown gui=NONE guibg=#354657
-"ctermbg=LightBlue ctermfg=Black
+" Comments, as in Vim's ftplugin for Haskell, which has the same syntax
+" for them.  'commentstring' is used by Neovim's gc and by plugins.
+setlocal comments=s1fl:{-,mb:-,ex:-},:-- commentstring=--\ %s
+
+" The highlighting groups of the plugin, in addition to standard ones.
+" They are links to standard groups, so that they fit the colour scheme,
+" and defaults, so that colour schemes and users can override them.  We
+" set them again when the colour scheme changes, as :colorscheme clears
+" them.  Goals link to DiffAdd as it has a background in every colour
+" scheme (greenish in most, like goals in the Emacs mode); problems are
+" underlined like diagnostics.
+function! s:Highlights()
+    hi default link AgdaHole DiffAdd
+    hi default link AgdaUnsolvedMeta DiagnosticUnderlineWarn
+    hi default link AgdaUnsolvedConstraint AgdaUnsolvedMeta
+    hi default link AgdaErrorWarning DiagnosticUnderlineError
+    hi default link AgdaPositivityProblem DiagnosticUnderlineWarn
+    hi default link AgdaCoverageProblem DiagnosticUnderlineWarn
+    hi default link AgdaIncompletePattern DiagnosticUnderlineWarn
+    hi default link AgdaInstanceProblem DiagnosticUnderlineWarn
+    hi default link AgdaConfluenceProblem DiagnosticUnderlineWarn
+    hi default link AgdaShadowingInTelescope DiagnosticUnderlineHint
+    hi default link AgdaCosmeticProblem DiagnosticUnderlineHint
+    hi default link AgdaDeadcode DiagnosticUnnecessary
+    hi default link NonTerminating DiagnosticUnderlineWarn
+    hi default link NoDefinition DiagnosticUnderlineWarn
+endfunction
+call s:Highlights()
+augroup agda_highlights
+    autocmd!
+    autocmd ColorScheme * call s:Highlights()
+augroup END
 
 if !exists("g:nvim_agda_settings")
     let g:nvim_agda_settings = {}
@@ -26,57 +59,17 @@ endif
 call b:AgdaMod.setup(g:nvim_agda_settings)
 
 
-" Vim commands
-command! AgdaStart :call b:AgdaMod.agda_start()
-command! AgdaLoad :call b:AgdaMod.agda_load(expand("%:p"))
-command! AgdaContext :call b:AgdaMod.agda_context(expand("%:p"))
-command! AgdaTypeContext :call b:AgdaMod.agda_type_context(expand("%:p"))
-command! AgdaTypeContextNorm :call b:AgdaMod.agda_type_context(expand("%:p"),"Normalised")
-command! AgdaTypeContextInfer :call b:AgdaMod.agda_type_context_infer(expand("%:p"))
-command! AgdaInfer :call b:AgdaMod.agda_infer(expand("%:p"))
-command! AgdaCompute :call b:AgdaMod.agda_compute(expand("%:p"))
-command! AgdaRefine :call b:AgdaMod.agda_refine(expand("%:p"))
-command! AgdaAuto :call b:AgdaMod.agda_auto(expand("%:p"))
-command! AgdaSolve :call b:AgdaMod.agda_solve(expand("%:p"))
-command! AgdaMakeCase :call b:AgdaMod.agda_make_case(expand("%:p"))
-command! AgdaHelperFun :call b:AgdaMod.agda_helper_fun(expand("%:p"))
-command! AgdaModuleContents :call b:AgdaMod.agda_module_contents(expand("%:p"))
-command! AgdaWhyInscope :call b:AgdaMod.agda_why_inscope(expand("%:p"))
-command! AgdaShowConstraints :call b:AgdaMod.agda_show_constraints(expand("%:p"))
+" CTRL-] jumps to the definition of the name under the cursor and CTRL-T
+" back, using the definition sites in Agda's highlighting.
+function! AgdaTagfunc(pattern, flags, info)
+    return b:AgdaMod.tagfunc(a:pattern, a:flags)
+endfunction
+setlocal tagfunc=AgdaTagfunc
 
-command! ShowImplicit :call b:AgdaMod.show_implicit(expand("%:p"))
-command! HideImplicit :call b:AgdaMod.hide_implicit(expand("%:p"))
-
-command! MkPrompt :call b:AgdaMod.edit_goal(expand("%:p"))
-command! PrintGoals :call b:AgdaMod.agda_show_goals(expand("%:p"))
-command! GoalNext :call b:AgdaMod.agda_goal_next(expand("%:p"))
-command! GoalPrev :call b:AgdaMod.agda_goal_prev(expand("%:p"))
-
-command! AgdaCloseMsg :call b:AgdaMod.close_msg_win()
-command! GoalContent :call b:AgdaMod.gc()
-command! GetEvbuf :call b:AgdaMod.getevbuf()
-
-
-" Key mappings
-nm <buffer> <LocalLeader>l :<c-u>AgdaLoad<cr>
-nm <buffer> <LocalLeader>q :<c-u>AgdaCloseMsg<cr>
-nm <buffer> <LocalLeader>, :<c-u>AgdaTypeContext<cr>
-nm <buffer> <LocalLeader>. :<c-u>AgdaTypeContextInfer<cr>
-nm <buffer> <LocalLeader>u, :<c-u>AgdaTypeContextNorm<cr>
-nm <buffer> <LocalLeader>d :<c-u>AgdaInfer<cr>
-nm <buffer> <LocalLeader>r :<c-u>AgdaRefine<cr>
-nm <buffer> <LocalLeader>c :<c-u>AgdaMakeCase<cr>
-nm <buffer> <LocalLeader>n :<c-u>AgdaCompute<cr>
-nm <buffer> <LocalLeader>a :<c-u>AgdaAuto<cr>
-nm <buffer> <LocalLeader>s :<c-u>AgdaSolve<cr>
-nm <buffer> <LocalLeader>h :<c-u>AgdaHelperFun<cr>
-nm <buffer> <LocalLeader>o :<c-u>AgdaModuleContents<cr>
-nm <buffer> <LocalLeader>w :<c-u>AgdaWhyInscope<cr>
-nm <buffer> <LocalLeader>e :<c-u>MkPrompt<cr>
-nm <buffer> <LocalLeader>? :<c-u>PrintGoals<cr>
-nm <buffer> <LocalLeader>f :<c-u>GoalNext<cr>
-nm <buffer> <LocalLeader>b :<c-u>GoalPrev<cr>
+" The commands and the <LocalLeader> mappings (see `commands` in
+" lua/agda/init.lua).
+call b:AgdaMod.define_commands()
 
 
 " mappings
-runtime agda-input.vim
+lua require('agda.input').map(0)
