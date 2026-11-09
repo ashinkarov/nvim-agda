@@ -69,4 +69,4 @@ call b:AgdaMod.define_commands()
 
 
 " mappings
-runtime agda-input.vim
+lua require('agda.input').map(0)

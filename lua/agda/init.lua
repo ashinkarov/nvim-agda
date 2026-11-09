@@ -379,7 +379,7 @@ local function mk_prompt_window(file, goal)
     if pbuf == nil then
         pbuf = vim.api.nvim_create_buf(false, true)
         -- load unicode mappings.
-        vim.api.nvim_buf_call(pbuf, function () vim.cmd("runtime agda-input.vim") end)
+        require('agda.input').map(pbuf)
     end
 
     -- The goal commands work on this goal, with the content of the window.

@@ -53,7 +53,7 @@ What changed when is in [CHANGELOG.md](../CHANGELOG.md).
 | Go to definition | `M-.` | **Works:** `CTRL-]` (and `CTRL-W ]`), through `'tagfunc'`. |
 | Go to definition with the mouse | `mouse-2` | **Works, by Neovim:** `CTRL-LeftMouse` and `g<LeftMouse>` do `CTRL-]` at the click. |
 | Go back | `M-,` | **Works:** `CTRL-T`, through the tag stack. |
-| Input method | `\` sequences | **Works, differently:** insert-mode mappings (`agda-input.vim`).  Neovim shows the keys typed so far; the candidates (which Emacs shows) only with a plugin such as which-key.nvim or mini.clue (see the README).  **Missing:** some sequences are defined twice. |
+| Input method | `\` sequences | **Works, differently:** mappings in insert and command-line mode (`lua/agda/input.lua`).  Neovim shows the keys typed so far; the candidates (which Emacs shows) only with a plugin such as which-key.nvim or mini.clue (see the README).  **Missing:** some sequences are defined twice. |
 
 Commands the plugin has that the Emacs mode does not: `\e` edits the
 goal's content in a window, where the goal commands work on it; `\q`

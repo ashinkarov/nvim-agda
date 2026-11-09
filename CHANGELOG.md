@@ -4,6 +4,11 @@
 
 ### Changed
 
+- The input sequences are a table in `lua/agda/input.lua`;
+  `agda-input.vim` only sets them, e.g. for `:runtime agda-input.vim` in
+  other buffers.  Sequences that a later line replaced are gone (the
+  first `\bn`, `\bz`, `\bq`, `\br`, `\bc`, `\bp`, `\bb` and `\~`, which
+  were never in effect), and a test checks that none is defined twice.
 - The plugin no longer needs the `lua-utf8` library; it only needs
   Neovim 0.11 or newer.
 - Messages from Agda no longer ask to press ENTER.  Long messages are
