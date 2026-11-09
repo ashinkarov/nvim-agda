@@ -1063,7 +1063,8 @@ end
 local function handle_give(msg)
     reset_prompt()
     -- We always send noRange, so Agda never uses our text literally and
-    -- `giveResult` is always {str = ...}, never {paren = ...}.
+    -- `giveResult` is always {str = ...}, never {paren = ...} (see
+    -- "Ranges" in doc/emacs-mode.md).
     replace_goal(msg.interactionPoint.id, msg.giveResult.str)
 end
 

@@ -74,10 +74,19 @@ closes the popup.
 * **Compute mode**: **Works.**  `DefaultCompute` without a number, and
   as in the Emacs mode's order of prefixes, `\1n` `IgnoreAbstract`,
   `\2n` `UseShowInstance` and `\3n` `HeadCompute`.
-* **Ranges**: **Missing.**  All goal commands send `noRange`, so Agda
-  never uses the text of the goal as written (and `GiveAction` always
-  has `str`, never `paren`).  The Emacs mode sends the goal's range when
-  the input comes from the goal.
+* **Ranges**: **Won't implement.**  All goal commands send `noRange`;
+  the Emacs mode sends the goal's range when the input comes from the
+  goal.  Agda uses the range for three things: as the position where
+  parsing the goal's text starts, so that errors in the text point into
+  the file; as the new position of the goal; and for give and refine,
+  to tell the editor to keep the text as written when Agda does not
+  change it (`GiveAction` with `paren` rather than `str`).  The plugin
+  reloads the file before the next goal command when the buffer changed
+  (e.g. after give or refine) or a command failed, and right after a
+  case split, which recomputes all positions; errors in a goal's text only give positions
+  counted from the start of the text.  So the only difference left is
+  that given expressions are replaced by Agda's printing of them (e.g.
+  `λ x → x` for `\x -> x`).
 * **Load options**: `Cmd_load` gets only `--show-implicit` and
   `--show-irrelevant` (when set).  The Emacs mode passes the user's
   `agda2-program-args` there; the plugin passes `agda_args` (see the
