@@ -38,8 +38,8 @@
 
 ### Added
 
-- `\_0`…`\_9`, `\_-`, `\_+`, `\_=`, `\_(` and `\_)` insert subscripts,
-  like the superscripts and as in the Emacs mode (`\0`…`\9` still work).
+- `\_-`, `\_+`, `\_=`, `\_(` and `\_)` insert subscripts, like the
+  superscripts (subscript digits are `\0`…`\9`).
 - Input sequences for the corner triangles (`\tdrb` ◢, `\tdrw` ◿,
   `\tdlb` ◣, `\tdlw` ◺, `\tulb` ◤, `\tulw` ◸, `\turb` ◥, `\turw` ◹) and
   the half black ones (`\Tuhl` ◭, `\Tuhr` ◮).
