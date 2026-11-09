@@ -17,6 +17,11 @@ vim.cmd("augroup filetypedetect | runtime! ftdetect/*.vim | augroup END")
 vim.cmd("runtime! plugin/agda.vim")
 package.path = root .. "/tests/?.lua;" .. package.path
 
+-- The Neovims that the tests start (the replaying Agda in tests/bin/agda
+-- and the UI in tests/test_msg.lua) are this one, not the first nvim in
+-- $PATH, so that `make test NVIM=...` tests that version throughout.
+vim.env.AGDA_TEST_NVIM = vim.env.AGDA_TEST_NVIM or vim.v.progpath
+
 -- Make lua-utf8 available when installed with
 -- `luarocks install --local --lua-version=5.1 luautf8`; tests/test_utf8.lua
 -- then also compares against it.

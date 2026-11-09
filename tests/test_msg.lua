@@ -40,7 +40,8 @@ local function with_ui(cmd, check)
             vim.wait(300)
             return vim.rpcrequest(ch, "nvim_get_mode").blocking
         end
-        local long = string.rep("long ", 12)
+        -- Longer than any terminal: Neovim 0.11 ignores the width above.
+        local long = string.rep("long ", 50)
         vim.rpcrequest(ch, "nvim_exec_lua", [[
             local root, long = ...
             vim.opt.rtp:prepend(root)
@@ -88,6 +89,10 @@ t.test("messages do not ask to press ENTER", function()
 end)
 
 t.test("messages with the new message UI", function()
+    if not pcall(require, "vim._core.ui2") then
+        io.stdout:write("     (no ui2 in this Neovim, skipped)\n")
+        return
+    end
     with_ui("lua require('vim._core.ui2').enable({})", function(ch, term, long)
         -- The messages are added whole, without the trailing newline.
         t.eq(table.concat({ "error\nwhen checking", vim.trim(long), "Checking Basic.",
