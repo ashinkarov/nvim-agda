@@ -53,3 +53,7 @@ t.test("tilde, not in and the triangle with a dot", function()
     t.eq("x∉y", typed("x\\niny"))
     t.eq("◬", typed("\\T.uw"))
 end)
+
+t.test("corner and half black triangles", function()
+    t.eq("◢◿◣◺◤◸◥◹◭◮", typed("\\tdrb\\tdrw\\tdlb\\tdlw\\tulb\\tulw\\turb\\turw\\Tuhl\\Tuhr"))
+end)

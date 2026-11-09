@@ -131,7 +131,15 @@ M.sequences = {
     {"tuw", "▵"},
     {"tdb", "▾"},
     {"tdw", "▿"},
-    -- FIXME add codes for these ◢◿◣◺◤◸◥◹
+    -- Corners: down-right, down-left, up-left, up-right.
+    {"tdrb", "◢"},
+    {"tdrw", "◿"},
+    {"tdlb", "◣"},
+    {"tdlw", "◺"},
+    {"tulb", "◤"},
+    {"tulw", "◸"},
+    {"turb", "◥"},
+    {"turw", "◹"},
     {"Tlb", "◀"},
     {"Tlw", "◁"},
     {"Trb", "▶"},
@@ -141,7 +149,9 @@ M.sequences = {
     {"Tdb", "▼"},
     {"Tdw", "▽"},
     {"T.uw", "◬"},
-    -- FIXME add codes for these ◭◮
+    -- Up, with the left or the right half black.
+    {"Tuhl", "◭"},
+    {"Tuhr", "◮"},
 
     {"[[", "⟦"},
     {"]]", "⟧"},

@@ -38,6 +38,9 @@
 
 ### Added
 
+- Input sequences for the corner triangles (`\tdrb` ◢, `\tdrw` ◿,
+  `\tdlb` ◣, `\tdlw` ◺, `\tulb` ◤, `\tulw` ◸, `\turb` ◥, `\turw` ◹) and
+  the half black ones (`\Tuhl` ◭, `\Tuhr` ◮).
 - The error, the warnings and the unsolved metas of a load are Neovim
   diagnostics, so `CTRL-W d` shows their messages at their places and
   `]d`/`[d` go to them (unsolved constraints have none, as Agda does
