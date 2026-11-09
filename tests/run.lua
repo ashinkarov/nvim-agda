@@ -22,6 +22,11 @@ package.path = root .. "/tests/?.lua;" .. package.path
 -- $PATH, so that `make test NVIM=...` tests that version throughout.
 vim.env.AGDA_TEST_NVIM = vim.env.AGDA_TEST_NVIM or vim.v.progpath
 
+-- No clipboard provider (macOS always has one, pbcopy): the tests expect
+-- copied text in the unnamed register, and must not change the system
+-- clipboard.
+vim.g.loaded_clipboard_provider = 1
+
 -- Make lua-utf8 available when installed with
 -- `luarocks install --local --lua-version=5.1 luautf8`; tests/test_utf8.lua
 -- then also compares against it.
