@@ -139,6 +139,9 @@ In insert and command-line mode, `<LocalLeader>` (`\` by default)
 starts an input sequence, mostly as in the Emacs mode: `\to` gives `→`,
 `\ga` `α`, `\bN` `ℕ`, `\1` `₁`; see `lua/agda/input.lua` for the
 full list.  In other buffers, `:runtime agda-input.vim` sets them too.
+On the command line, where some sequences are also Vim's regex syntax
+(`\<`, `\.`, `\1`, ...), type `CTRL-V` before the backslash to get the
+backslash itself: `/` `CTRL-V` `\<foo` searches for `\<foo`.
 While you type a sequence Neovim shows the keys typed so far, but not
 how the sequence can continue.  A plugin that shows the possible
 continuations of a mapping can do that, as the sequences are ordinary
