@@ -24,6 +24,13 @@ local function with_ui(cmd, check)
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     local sock = dir .. "/nvim.sock"
+    -- The longest path of a Unix socket (sun_path without the final NUL);
+    -- with a longer one the Neovim below would not start.
+    local max = vim.uv.os_uname().sysname == "Darwin" and 103 or 107
+    if #sock > max then
+        error(("the path of the socket %s is %d bytes, longer than the %d of Unix sockets; "
+               .. "set TMPDIR to a shorter directory"):format(sock, #sock, max), 0)
+    end
     vim.cmd("enew")
     local term = vim.api.nvim_get_current_buf()
     local job = vim.fn.jobstart({ vim.env.AGDA_TEST_NVIM or "nvim", "--clean", "--listen", sock,
