@@ -153,6 +153,13 @@
 - Moving between goals follows the order of the file and no longer
   fails once goal 0 has been filled, or after a case split.
 
+#### Input
+
+- `\~` gave `≋` instead of `∼` (a later line replaced it); `≋` is now
+  `\~~~`, as in the Emacs mode.
+- `\nin` inserted a space after `∉`.
+- `◬` needed a backslash in its sequence (`\T\.uw`); it is `\T.uw`.
+
 #### Windows and highlighting
 
 - Highlighting that arrived after the buffer was edited during a load

@@ -5,7 +5,8 @@
 --
 -- Each entry is {sequence, character}.  A sequence may be the start of
 -- longer ones (`\o` and `\o+`): Neovim then waits for the next key.
--- tests/test_input.lua checks that no sequence is defined twice.
+-- tests/test_input.lua checks that no sequence is defined twice and
+-- that each gives one character.
 
 local M = {}
 
@@ -22,7 +23,7 @@ M.sequences = {
     {"bot", "⊥"},
     {"x", "×"},
 
-    {"nin", "∉ "},
+    {"nin", "∉"},
     {"in", "∈"},
     {"ni", "∋"},
     {"neg", "¬"},
@@ -38,7 +39,8 @@ M.sequences = {
     {"~n", "≁"},
     {"~~", "≈"},
     {"~~n", "≉"},
-    {"~", "≋"},
+    {"~", "∼"},
+    {"~~~", "≋"},
     {":~", "∻"},
     {"~-", "≃"},
     {"~-n", "≄"},
@@ -138,7 +140,7 @@ M.sequences = {
     {"Tuw", "△"},
     {"Tdb", "▼"},
     {"Tdw", "▽"},
-    {"T\\.uw", "◬"},
+    {"T.uw", "◬"},
     -- FIXME add codes for these ◭◮
 
     {"[[", "⟦"},
