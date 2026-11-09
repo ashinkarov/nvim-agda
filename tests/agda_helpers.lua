@@ -101,7 +101,11 @@ end
 function M.open(name, opts)
     opts = opts or {}
     local fixture = opts.fixture or "Basic.agda"
+    -- Without symlinks (/tmp is /private/tmp on macOS), as the plugin
+    -- sends the path of the buffer, which has them resolved.
     local dir = vim.fn.tempname()
+    vim.fn.mkdir(dir, "p")
+    dir = vim.uv.fs_realpath(dir)
     local fdir = opts.subdir and (dir .. "/" .. opts.subdir) or dir
     vim.fn.mkdir(fdir, "p")
     local file = fdir .. "/" .. fixture
