@@ -12,6 +12,20 @@ and pass the name of this repository:
 ```lua
 paq 'ashinkarov/nvim-agda'
 ```
+With [lazy.nvim](https://github.com/folke/lazy.nvim), add this to your
+plugin specs (`ft` and `init` are optional):
+```lua
+{
+  "ashinkarov/nvim-agda",
+  ft = "agda",     -- load the plugin when an Agda file is opened
+  init = function()
+    -- Settings (see Configuration) must be set before the plugin loads.
+    vim.g.nvim_agda_settings = { agda = "/path/to/agda" }
+  end,
+}
+```
+With `ft = "agda"` the plugin is loaded for `.agda`, `.lagda` and
+`.lagda.md` files.
 Alternatively, you can install the plugin manually as follows:
 ```sh
 $ mkdir -p ~/.local/share/nvim/site/pack/git-plugins/start

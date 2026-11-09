@@ -38,6 +38,7 @@
 
 ### Added
 
+- The README shows how to install the plugin with lazy.nvim (#12).
 - `\''`, `\'''` and `\''''` insert the double, triple and quadruple
   primes ″ ‴ ⁗ (`\'` is ′).
 - Input sequences for calligraphic letters (`\McA` 𝒜, `\McF` ℱ, …),
