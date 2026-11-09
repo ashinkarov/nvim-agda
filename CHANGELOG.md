@@ -33,6 +33,10 @@
 
 ### Added
 
+- The error, the warnings and the unsolved metas of a load are Neovim
+  diagnostics, so `CTRL-W d` shows their messages at their places and
+  `]d`/`[d` go to them (unsolved constraints have none, as Agda does
+  not say where they are).
 - The README describes the input sequences and how which-key.nvim or
   mini.clue can show their continuations while typing.
 - `b:agda_status` and `AgdaStatus()` describe what Agda is doing (e.g.

@@ -762,6 +762,59 @@ t.test("highlighting after edits during the load", function()
          vim.inspect(h.messages))
 end)
 
+-- The error, the warnings and the unsolved metas of a load become
+-- diagnostics: {line, col, end line, end col (0-based, bytes), severity,
+-- code, first line of the message}.
+local function diagnostics()
+    local ds = {}
+    for _, d in ipairs(vim.diagnostic.get(0)) do
+        table.insert(ds, { d.lnum, d.col, d.end_lnum, d.end_col,
+                           vim.diagnostic.severity[d.severity], d.code,
+                           (d.message:match("^[^\n]*")) })
+    end
+    table.sort(ds, function(a, b) return a[1] < b[1] end)
+    return ds
+end
+
+t.test("diagnostics for an error and the warnings before it", function()
+    h.open("diagnostics_error", { fixture = "Warnings.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    h.take_errors()
+    t.eq({ { 5, 0, 6, 9, "ERROR", "TerminationIssue",
+             "Termination checking failed for the following functions:" },
+           { 9, 4, 9, 6, "ERROR", "CannotApply",
+             "Expression used as function but does not have function type:" } },
+         diagnostics())
+    -- A load clears them.
+    vim.api.nvim_buf_set_lines(0, 9, 10, true, { "g = tt" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.eq({ { 5, 0, 6, 9, "ERROR", "TerminationIssue",
+             "Termination checking failed for the following functions:" } }, diagnostics())
+end)
+
+t.test("diagnostics for warnings", function()
+    h.open("diagnostics_warnings", { fixture = "Problems.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.eq({ { 11, 0, 11, 13, "ERROR", "CoverageIssue",
+             "Incomplete pattern matching for incomplete. Missing cases:" },
+           { 16, 0, 16, 19, "WARN", "-W[no]UnreachableClauses", "Unreachable clause" } },
+         diagnostics())
+end)
+
+-- Unsolved metas get diagnostics, unsolved constraints none, as Agda
+-- does not say where they are.
+t.test("diagnostics for unsolved metas", function()
+    h.open("diagnostics_metas", { fixture = "Constraints.agda" })
+    vim.cmd("AgdaLoad")
+    h.wait_idle()
+    t.eq({ { 7, 8, 7, 9, "WARN", "UnsolvedMeta", "Unsolved meta _5 : 𝔹" },
+           { 18, 4, 18, 5, "WARN", "UnsolvedMeta", "Unsolved meta _x_13 : 𝔹" } },
+         diagnostics())
+end)
+
 t.test("showing implicit arguments survives reloads", function()
     load("implicit_args")
     vim.cmd("ShowImplicit")

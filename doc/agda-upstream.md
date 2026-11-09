@@ -156,3 +156,20 @@ new option).
 
 *Plugin:* reads stdout only for responses; non-json lines are reported
 as errors, and stderr output is reported as well.
+
+## 11. Constraints come without their places
+
+The constraints that `Cmd_constraints` sends have `"range": []` (for
+example for `G _x = tt : 𝔹`), and the `UnsolvedConstraints` warning of
+a load has no place in its message, unlike other warnings
+(`Problems.agda:12.1-14: error: [CoverageIssue] ...`).  Agda knows the
+place: it highlights it as `UnsolvedConstraint`, using the range of the
+constraint's environment (`envRange`, in `constraintsHighlighting` in
+`Interaction/Highlighting/Generate.hs`).
+
+*Plugin:* shows no diagnostics for unsolved constraints, only the
+highlighting, which has no text (doc/emacs-mode.md).
+
+*Proposal:* send the range that the highlighting uses with each
+constraint (the `range` field of `Constraints` entries), so that
+editors can show each constraint at its place.

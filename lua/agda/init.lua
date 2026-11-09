@@ -578,6 +578,96 @@ local function pos_now(offset)
     return l and {l, p[2]}
 end
 
+------ Diagnostics ------
+
+-- The error, the warnings and the unsolved metas of the last load as
+-- Neovim diagnostics, so that their messages can be shown at their
+-- places (CTRL-W d) and visited (]d, [d).  Agda's highlighting marks
+-- the places already, so the diagnostics are not underlined.
+-- Unsolved constraints are left out, as Agda does not say where they
+-- are (see doc/agda-upstream.md).
+local diag_ns = vim.api.nvim_create_namespace("agda-diagnostics")
+vim.diagnostic.config({underline = false}, diag_ns)
+local diagnostics = {}
+
+-- The diagnostic for `line`.`col` to `end_line`.`end_col` (1-based, in
+-- code points, the end exclusive, as Agda counts in the text it
+-- loaded), or nil if the place was edited since the load.
+local function diagnostic(line, col, end_line, end_col, severity, code, message)
+    local function pos(l, c)
+        local text = main_content[l]
+        local now = text and line_now(l - 1)
+        local b = now and utf8.offset(text, c)
+        return b and {now, b - 1}
+    end
+    local s, e = pos(line, col), pos(end_line, end_col)
+    if s == nil or e == nil then
+        return nil
+    end
+    return {lnum = s[1], col = s[2], end_lnum = e[1], end_col = e[2],
+            severity = severity, code = code, message = message, source = "agda"}
+end
+
+-- Add the diagnostic for an error or warning message of Agda, which
+-- starts with its place in the file, as in
+--     /path/Problems.agda:12.1-14: error: [CoverageIssue]
+--     Incomplete pattern matching for incomplete. ...
+-- Messages about other files, or without a place, are left out.
+local function add_message_diagnostic(text)
+    local first, rest = text:match("^([^\n]*)\n?(.*)$")
+    local file, l1, c1, l2, c2, tag
+    file, l1, c1, l2, c2, tag = first:match("^(.+):(%d+)%.(%d+)%-(%d+)%.(%d+): (.*)$")
+    if file == nil then
+        file, l1, c1, c2, tag = first:match("^(.+):(%d+)%.(%d+)%-(%d+): (.*)$")
+        l2 = l1
+    end
+    if file == nil then
+        file, l1, c1, tag = first:match("^(.+):(%d+)%.(%d+): (.*)$")
+        l2, c2 = l1, c1 and tonumber(c1) + 1
+    end
+    if file == nil or main_file == nil
+       or vim.uv.fs_realpath(file) ~= vim.uv.fs_realpath(main_file) then
+        return
+    end
+    local level, name = tag:match("^(%a+): *(.*)$")
+    local severity = level == "warning" and vim.diagnostic.severity.WARN
+                     or vim.diagnostic.severity.ERROR
+    local code = name and name:match("^%[(.*)%]$") or name
+    local d = diagnostic(tonumber(l1), tonumber(c1), tonumber(l2), tonumber(c2), severity,
+                         code, rest ~= "" and rest or tag)
+    if d then
+        table.insert(diagnostics, d)
+    end
+end
+
+-- Add the diagnostic of an unsolved meta from AllGoalsWarnings.
+local function add_meta_diagnostic(goal)
+    local r = goal.constraintObj.range
+    if r == nil or #r == 0 then
+        return
+    end
+    local s, e = r[1].start, r[#r]["end"]
+    local d = diagnostic(s.line, s.col, e.line, e.col, vim.diagnostic.severity.WARN,
+                         "UnsolvedMeta", "Unsolved meta " .. constraint.show(goal))
+    if d then
+        table.insert(diagnostics, d)
+    end
+end
+
+-- Show the diagnostics collected in `diagnostics`.
+local function set_diagnostics()
+    vim.diagnostic.set(diag_ns, main_buf, diagnostics)
+end
+
+-- The messages of Agda's warnings or errors, which are a list of
+-- {message} or (in older versions) a string.
+local function messages_of(ws)
+    if type(ws) == "table" then
+        return vim.tbl_map(function (w) return w.message end, ws)
+    end
+    return (type(ws) == "string" and ws ~= "") and {ws} or {}
+end
+
 local function handle_hl(msg)
     -- Highlight the text from `s` to `e` (exclusive), which is the range
     -- `key`, with `groups`.  During a load Agda sends the same ranges
@@ -744,18 +834,21 @@ local function handle_displayinfo(msg)
             sfunc = nil
             sargs = nil
         end
-        if load_state == "loading" then
-            load_state = "failed"
-        end
         show_error(text)
         -- The warnings found before the error (e.g. termination problems),
         -- which Agda sends only here when a load fails.
-        local ws = inf.warnings
-        if type(ws) == "table" then
-            ws = table.concat(vim.tbl_map(function (w) return w.message end, ws), "\n")
+        local ws = messages_of(inf.warnings)
+        if #ws > 0 then
+            display("Warnings\n    " .. table.concat(ws, "\n"):gsub("\n", "\n    "))
         end
-        if type(ws) == "string" and ws ~= "" then
-            display("Warnings\n    " .. ws:gsub("\n", "\n    "))
+        if load_state == "loading" then
+            load_state = "failed"
+            diagnostics = {}
+            add_message_diagnostic(text)
+            for _, w in ipairs(ws) do
+                add_message_diagnostic(w)
+            end
+            set_diagnostics()
         end
     elseif inf.kind == "Context" then
         mk_window(add_sep(context_lines(inf.context), "Context"))
@@ -834,6 +927,17 @@ local function handle_displayinfo(msg)
                 table.insert(m, indent .. constraint.show_at(v, v.constraintObj.range))
             end
         end
+        diagnostics = {}
+        for _, w in ipairs(messages_of(inf.errors)) do
+            add_message_diagnostic(w)
+        end
+        for _, w in ipairs(messages_of(inf.warnings)) do
+            add_message_diagnostic(w)
+        end
+        for _, v in ipairs(inf.invisibleGoals) do
+            add_meta_diagnostic(v)
+        end
+        set_diagnostics()
         display(#m > 0 and table.concat(m, "\n") or "No goals, warnings or errors")
     elseif inf.kind == "Constraints" then
         if #inf.constraints == 0 then
@@ -1418,6 +1522,8 @@ function M.agda_load (file)
     main_tick = vim.api.nvim_buf_get_changedtick(main_buf)
     main_diff = nil
     skipped = {}
+    diagnostics = {}
+    set_diagnostics()
 
     -- Precompute offset positions for the beginning and end of
     -- each line.  This will be used in the highlighting procedures.

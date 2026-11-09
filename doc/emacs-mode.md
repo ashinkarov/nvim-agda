@@ -107,8 +107,15 @@ uses interactively: `Cmd_load_no_metas`, `Cmd_highlight`,
   is busy and the number of goals, in `b:agda_status` for the user's
   status line (see the README).
 * **Messages on highlighted ranges** (`note`, e.g. the text of the error
-  at its range): **Missing.**  The Emacs mode shows them when the mouse
-  is over the range; they could become Neovim diagnostics.
+  at its range): **Works, differently.**  The Emacs mode shows them when
+  the mouse is over the range.  Agda attaches messages only to the
+  error, so the plugin instead makes Neovim diagnostics of the error,
+  the warnings and the unsolved metas, from their messages (which start
+  with the place) and ranges (see "Diagnostics" in the README).
+  **Missing (for the future):** unsolved constraints, as Agda does not
+  send where they are (see [agda-upstream.md](agda-upstream.md)); their
+  places are highlighted (`AgdaUnsolvedConstraint`), but without text,
+  and with several constraints the two cannot be matched.
 * **Highlighting details**: `remove` and `tokenBased`, and `tokenBased`
   of `ClearHighlighting`.  The plugin never removes highlighting for a
   range and clears all of it, whereas Agda distinguishes token-based

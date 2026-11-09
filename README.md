@@ -117,6 +117,16 @@ opens or imports are not in scope there.  To ask in the scope of a
 place inside a module, put a goal (`?`) there and use the command in
 the goal.
 
+### Diagnostics
+After a load, the error, the warnings (termination and coverage
+problems, unreachable clauses, ...) and the unsolved metas are also
+Neovim diagnostics, with Agda's message.  `CTRL-W d` shows the message
+at the cursor, `]d` and `[d` go to the next and previous one, and
+`:lua vim.diagnostic.setloclist()` lists them.  They are not underlined,
+as the highlighting marks these places already; virtual text and signs
+follow your `vim.diagnostic.config()`.  Unsolved constraints have no
+diagnostics, as Agda does not say where they are.
+
 ### Typing Unicode
 In insert and command-line mode, `<LocalLeader>` (`\` by default)
 starts an input sequence, mostly as in the Emacs mode: `\to` gives `→`,
@@ -197,12 +207,11 @@ warning says how many places were left out until the next load.
 ### Missing functionality
 Compared with the Emacs mode, the plugin does not have aborting a
 command (use `:AgdaStop`, which has the same effect), compiling, or
-backend commands.  The messages that Agda attaches to highlighted
-ranges (such as errors) are not shown, and while typing an input
-sequence such as `\ga` the possible continuations are shown only with
-a plugin (see "Typing Unicode").  See
-[doc/emacs-mode.md](doc/emacs-mode.md) for a comparison with the Emacs
-mode.
+backend commands.  Unsolved constraints are not shown at their places
+(see "Diagnostics"), and while typing an input sequence such as `\ga`
+the possible continuations are shown only with a plugin (see "Typing
+Unicode").  See [doc/emacs-mode.md](doc/emacs-mode.md) for a comparison
+with the Emacs mode.
 
 # Development
 
