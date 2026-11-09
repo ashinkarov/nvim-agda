@@ -904,7 +904,13 @@ t.test("version", function()
     vim.cmd("AgdaVersion")
     h.wait_idle()
     t.eq(1, #h.messages, vim.inspect(h.messages))
-    t.ok(h.messages[1]:match("^Agda version %d+%.%d+"), h.messages[1])
+    t.ok(h.messages[1]:match("^nvim%-agda %d+%.%d+%.%d+, Agda version %d+%.%d+"), h.messages[1])
+end)
+
+t.test("the version is the one of the changelog", function()
+    local changelog = io.open(t.root .. "/CHANGELOG.md"):read("a")
+    t.eq(require("agda").version, changelog:match("\n## (%S+)"))
+    t.ok(require("agda").version:match("^%d+%.%d+%.%d+$"), "semantic version")
 end)
 
 -- The termination problem of `f` comes only with the error of `g`.

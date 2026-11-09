@@ -32,6 +32,15 @@ $ mkdir -p ~/.local/share/nvim/site/pack/git-plugins/start
 $ git clone https://github.com/ashinkarov/nvim-agda.git --depth=1 ~/.local/share/nvim/site/pack/git-plugins/start/nvim-agda
 ```
 
+## Versions
+
+The plugin follows [semantic versioning](https://semver.org); releases
+are tagged `vX.Y.Z` and their changes are listed in
+[CHANGELOG.md](CHANGELOG.md).  `:AgdaVersion` shows the version you
+have.  The plugin managers install master by default; to install the
+latest release instead, add `version = "*"` to the lazy.nvim spec, or
+clone with `--branch vX.Y.Z`.
+
 ## Configuration
 
 The plugin is configured with the global dictionary
@@ -112,7 +121,8 @@ closes the window (as does `:q`).
 Commands without keys: `:AgdaContext` (the context of the goal alone),
 `:AgdaShowConstraints`, `:ShowImplicit` and `:HideImplicit`,
 `:ShowIrrelevant` and `:HideIrrelevant` (show or hide implicit or
-irrelevant arguments; the choice lasts across reloads), `:AgdaVersion`,
+irrelevant arguments; the choice lasts across reloads), `:AgdaVersion`
+(the versions of the plugin and of Agda),
 and `:AgdaStart` and `:AgdaStop` (start or stop the Agda process; any
 command starts it when needed).
 
@@ -250,6 +260,11 @@ with the Emacs mode.
 
 `make test` runs the test-suite; see [tests/README.md](tests/README.md).
 GitHub runs it for every pull request.
+
+To release a version, set it in `M.version` in `lua/agda/init.lua` and
+in the first heading of CHANGELOG.md (a test checks that they agree,
+and the heading gets the date instead of "unreleased"), then tag the
+commit on master as `vX.Y.Z` and push the tag.
 
 # Credit
   * https://github.com/coot/vim-agda-integration

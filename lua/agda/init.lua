@@ -6,6 +6,9 @@ local diag = require('agda.diagnostics')
 local messages = require('agda.msg')
 
 local M = {}
+-- The version of the plugin (https://semver.org); the first heading of
+-- CHANGELOG.md names the same version.
+M.version = "0.2.0"
 -- Different for every instance of the module (the ftplugin creates one
 -- per buffer, and a new one when it runs again).
 M.instance = tostring(M)
@@ -931,7 +934,7 @@ local function handle_displayinfo(msg)
         end
         mk_window(add_sep(p, "Definitions about " .. inf.search))
     elseif inf.kind == "Version" then
-        display("Agda version " .. inf.version)
+        display("nvim-agda " .. M.version .. ", Agda version " .. inf.version)
     elseif inf.kind == "IntroNotFound" then
         display("No introduction forms found.")
     elseif inf.kind == "IntroConstructorUnknown" then
@@ -2001,8 +2004,8 @@ function M.agda_search_about(file, rewrite)
     end, file)
 end
 
--- Show the version of the running Agda, with the commit it was built
--- from if it knows it.
+-- Show the version of the plugin and of the running Agda, with the
+-- commit Agda was built from if it knows it.
 function M.agda_version(file)
     agda_feed(file, "Cmd_show_version")
 end

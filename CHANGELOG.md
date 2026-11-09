@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+The plugin follows [semantic versioning](https://semver.org).  Before
+1.0, a minor version may change commands, keys or settings; the changes
+are listed here.  Versions before 0.2.0 were not numbered.
+
+## 0.2.0 (unreleased)
 
 ### Changed
 
@@ -71,7 +75,7 @@
   mention the goal, like the Emacs mode.
 - Search about (`\z`, `:AgdaSearchAbout`) lists the definitions whose
   types mention the given names, like `C-c C-z` in the Emacs mode.
-- `:AgdaVersion` shows the version of the running Agda.
+- `:AgdaVersion` shows the version of the plugin and of the running Agda.
 - `:ShowIrrelevant` and `:HideIrrelevant` show or hide irrelevant
   arguments, and the choice lasts across reloads.
 - Elaborate and give (`\m`, `:AgdaElaborateGive`) fills the goal with
